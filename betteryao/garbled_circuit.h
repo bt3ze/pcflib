@@ -65,8 +65,9 @@ inline void recv(garbled_circuit_t &cct, const Bytes &i_data)
 
 inline const Bytes send(garbled_circuit_t &cct)
 {
-	Bytes o_data;
+	static Bytes o_data;
 	o_data.swap(cct.m_o_bufr);
+	cct.m_o_bufr.clear();
 	return o_data;
 }
 

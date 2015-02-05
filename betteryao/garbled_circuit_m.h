@@ -62,19 +62,24 @@ inline void trim_output(garbled_circuit_m_t &cct)
 	cct.m_evl_out.resize((cct.m_evl_out_ix+7)/8);
 }
 
+
+
 inline void recv(garbled_circuit_m_t &cct, const Bytes &i_data)
 {
 	cct.m_i_bufr.clear();
 	cct.m_i_bufr += i_data;
+        //assert(cct.m_i_bufr.size() > 0);
 	cct.m_i_bufr_ix = cct.m_i_bufr.begin();
 }
 
 inline const Bytes send(garbled_circuit_m_t &cct)
 {
-	Bytes o_data;
+	static Bytes o_data;
 	o_data.swap(cct.m_o_bufr);
+	cct.m_o_bufr.clear();
 	return o_data;
 }
+
 
 #define  _mm_extract_epi8(x, imm) \
 	((((imm) & 0x1) == 0) ?   \

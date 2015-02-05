@@ -1,5 +1,19 @@
 #include "garbled_circuit_m.h"
 
+
+
+
+
+Bytes setBytes( __m128i & i)
+{
+
+        Bytes q;
+        q.resize(16,0);
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(&q[0]), i);
+
+        return q;
+}
+
 const Bytes get_const_key(garbled_circuit_m_t &cct, byte c, byte b)
 {
 	assert(c == 0 || c == 1); // wire for constant 0 or 1
@@ -120,7 +134,8 @@ void *gen_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 
 		uint8_t bit = cct.m_gen_inp_mask.get_ith_bit(gen_inp_ix);
 
-		assert(cct.m_gen_inp_decom.size() == 2*gen_inp_ix);
+		//std::cout <<"dconsize: "<<cct.m_gen_inp_decom.size()<<"  input ix: "<< gen_inp_ix<<"\n";
+		assert(cct.m_gen_inp_decom.size() == 2*cct.m_gen_inp_ix);
 
 		_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), a[bit]);
 		cct.m_gen_inp_decom.push_back(
@@ -130,10 +145,22 @@ void *gen_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 		cct.m_gen_inp_decom.push_back(
 			Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes())+cct.m_prng.rand(Env::k()));
 
-		cct.m_o_bufr += cct.m_gen_inp_decom[2*gen_inp_ix+0].hash(Env::k());
-		cct.m_o_bufr += cct.m_gen_inp_decom[2*gen_inp_ix+1].hash(Env::k());
+		cct.m_o_bufr += cct.m_gen_inp_decom[2*cct.m_gen_inp_ix+0].hash(Env::k());
+		cct.m_o_bufr += cct.m_gen_inp_decom[2*cct.m_gen_inp_ix+1].hash(Env::k());
 
 		cct.m_gen_inp_ix++; // after PCF compiler, this isn't really necessary
+
+
+	
+		__m128i onev = _mm_xor_si128(cct.m_R, current_zero_key);
+	
+		/*if(Env::is_root())
+		{
+			std::cout <<"GENbuffr: "<<cct.m_o_bufr.to_hex()<<"\n";		
+			std::cout <<"GEN: gate: "<<cct.m_gate_ix<<" : "<< setBytes(current_zero_key).to_hex()<<" "<< setBytes(onev).to_hex() <<"  "<<current_gate->tag<<"\n";	
+		}*/
+
+
 	}
 	else if (current_gate->tag == TAG_INPUT_B)
 	{
@@ -320,20 +347,29 @@ void *evl_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 
 	if (current_gate->tag == TAG_INPUT_A)
 	{
+		//std::cout <<cct.m_gen_inp_mask.size()*8<<" " <<cct.m_gen_inp_ix <<" \n";
+
 		uint8_t bit = cct.m_gen_inp_mask.get_ith_bit(cct.m_gen_inp_ix);
 		Bytes::const_iterator it = cct.m_i_bufr_ix + bit*Env::key_size_in_bytes();
 
 		uint32_t gen_inp_ix = current_gate->wire1;
 
-		assert(cct.m_gen_inp_com.size() == gen_inp_ix);
+		assert(cct.m_gen_inp_com.size() == cct.m_gen_inp_ix);
 
 		//cct.m_gen_inp_com[gen_inp_ix] = Bytes(it, it+Env::key_size_in_bytes());
 		cct.m_gen_inp_com.push_back(Bytes(it, it+Env::key_size_in_bytes()));
 
-		it = cct.m_gen_inp_decom[gen_inp_ix].begin();
+		it = cct.m_gen_inp_decom[cct.m_gen_inp_ix].begin();
 		tmp.assign(it, it+Env::key_size_in_bytes());
 		tmp.resize(16, 0);
 		current_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
+
+
+		/*if(Env::is_root())
+		{
+			std::cout <<"EVLbuffr: "<<cct.m_i_bufr.to_hex()<<"\n";
+			std::cout <<"EVL: gate: "<<cct.m_gate_ix<<" : "<< setBytes(current_key).to_hex() <<"\n";	
+		}*/
 
 		cct.m_gen_inp_ix++;
 	}

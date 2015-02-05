@@ -25,6 +25,9 @@ Yao::Yao(EnvParams &params) : YaoBase(params), m_gcs(0)
 
 	m_gen_inp.resize((m_gen_inp_cnt+7)/8);
 	m_gen_inp.back() &= MASK[m_gen_inp_cnt%8];
+
+	std::cout << "gencount: "<<m_gen_inp_cnt<<"\n";
+	std::cout << "evlcount: "<<m_evl_inp_cnt<<"\n";
 }
 
 
@@ -404,7 +407,9 @@ void Yao::circuit_evaluate()
 		m_timer_evl += MPI_Wtime() - start;
 	EVL_END
 
-
+	std::cout << "gencount: "<<m_gcs[0].m_gen_inp_ix<<"\n";
+	std::cout << "evlcount: "<<m_gcs[0].m_evl_inp_ix<<"\n";
+	
 	step_report("circuit-evl");
 
 	trim_output(m_gcs[0]);

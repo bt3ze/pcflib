@@ -1,6 +1,17 @@
 #include "garbled_circuit.h"
 
 
+/*
+Bytes setBytes( __m128i & i)
+{
+
+        Bytes q;
+        q.resize(16,0);
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(&q[0]), i);
+
+        return q;
+}*/
+
 void *copy_key(void *old_key)
 {
 	__m128i *new_key = 0;
@@ -159,6 +170,16 @@ void *gen_next_gate(struct PCFState *st, struct PCFGate *current_gate)
 		cct.m_o_bufr.insert(cct.m_o_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
 
 		cct.m_gen_inp_ix++; // after PCF compiler, this isn't really necessary
+
+	
+	__m128i onev = _mm_xor_si128(cct.m_R, current_zero_key);
+	
+
+	//std::cout <<"GENbuffr: "<<cct.m_o_bufr.to_hex()<<"\n";		
+	//std::cout <<"GEN: gate: "<<cct.m_gate_ix<<" : "<< setBytes(current_zero_key).to_hex()<<" "<< setBytes(onev).to_hex() <<"  "<<current_gate->tag<<"\n";	
+
+
+
 	}
 	else if (current_gate->tag == TAG_INPUT_B)
 	{
@@ -295,7 +316,18 @@ void *gen_next_gate(struct PCFState *st, struct PCFGate *current_gate)
 		}
 	}
 
+
+
+
 	cct.m_gate_ix++;
+
+
+	if(cct.m_gate_ix < 100)
+	{
+	
+	}
+
+
 	return &current_zero_key;
 }
 
@@ -314,7 +346,12 @@ void * evl_next_gate(struct PCFState *st, struct PCFGate *current_gate)
 		tmp.resize(16, 0);
 		current_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 
+		cct.m_i_bufr_ix += Env::key_size_in_bytes();
 		cct.m_gen_inp_ix++;
+
+		//std::cout <<"EVLbuffr: "<<cct.m_i_bufr.to_hex()<<"\n";
+		//std::cout <<"EVL: gate: "<<cct.m_gate_ix<<" : "<< setBytes(current_key).to_hex() <<"\n";	
+	
 	}
 	else if (current_gate->tag == TAG_INPUT_B)
 	{
@@ -399,7 +436,11 @@ void * evl_next_gate(struct PCFState *st, struct PCFGate *current_gate)
                         //assert(*cct.m_i_bufr_ix < 2);
 			uint8_t out_bit = _mm_extract_epi8(current_key, 0) & 0x01;
 			out_bit ^= *cct.m_i_bufr_ix;
+			out_bit&=0x01;
+			//std::cout << "startout\n";
 			cct.m_gen_out.set_ith_bit(cct.m_gen_out_ix, out_bit);
+			//std::cout << "startend\n";
+
 			cct.m_i_bufr_ix++;
 
 			cct.m_gen_out_ix++;
@@ -414,15 +455,25 @@ void * evl_next_gate(struct PCFState *st, struct PCFGate *current_gate)
 
 			uint8_t out_bit = _mm_extract_epi8(current_key, 0) & 0x01;
 			out_bit ^= *cct.m_i_bufr_ix;
+			
+			out_bit&=0x01;
+			//std::cout << "startout\n";
 			cct.m_evl_out.set_ith_bit(cct.m_evl_out_ix, out_bit);
+			//std::cout << "startend\n";
+
 			cct.m_i_bufr_ix++;
 
 			cct.m_evl_out_ix++;
 		}
 	}
 
-	update_hash(cct, cct.m_i_bufr);
+//	update_hash(cct, cct.m_i_bufr);
 	cct.m_gate_ix++;
+
+	if(cct.m_gate_ix < 100)
+	{
+
+	}
 
 	return &current_key;
 }

@@ -960,7 +960,7 @@ void BetterYao4::circuit_evaluate()
 						if (!(m_gen_inp_decom[ix][jx] == m_gcs[ix].m_gen_inp_decom[jx]))
 						{
 							LOG4CXX_FATAL(logger, "Commitment Verification Failure (check circuit)");
-							MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+							//MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 						}
 					}
 				}
@@ -969,7 +969,7 @@ void BetterYao4::circuit_evaluate()
 					if (!pass_check(m_gcs[ix]))
 					{
 						LOG4CXX_FATAL(logger, "Commitment Verification Failure (evaluation circuit)");
-						MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+						//MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 					}
 
 					if (gen_inp_hash.size() == 0)
@@ -979,7 +979,7 @@ void BetterYao4::circuit_evaluate()
 					else if (!(gen_inp_hash == m_gen_inp_hash[ix]))
 					{
 						LOG4CXX_FATAL(logger, "Generator Input Hash Inconsistent Failure (evaluation circuit)");
-						MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+						//MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 					}
 				}
 
