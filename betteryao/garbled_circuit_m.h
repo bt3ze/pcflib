@@ -13,44 +13,48 @@ extern "C" {
 
 typedef struct
 {
-	Bytes               m_bufr;
-	Hash                m_hash;
+  Bytes               m_bufr;
+  Hash                m_hash;
 
-	__m128i             m_R;
+  __m128i             m_R; // constant used for free-XOR
 
-	const std::vector<Bytes>  *m_ot_keys;
+  const std::vector<Bytes>  *m_ot_keys; // pointer to constant ot keys
+  
+  Prng                m_prng; // pseudorandom number generator
+  
+  uint64_t            m_gate_ix; // gate index?
 
-	Prng                m_prng;
+  // input indices
+  uint32_t            m_gen_inp_hash_ix;
+  uint32_t            m_gen_inp_ix;
+  uint32_t            m_evl_inp_ix;
+  uint32_t            m_gen_out_ix;
+  uint32_t            m_evl_out_ix;
 
-	uint64_t            m_gate_ix;
+  __m128i             m_clear_mask; // what is the purpose of this mask?
 
-	uint32_t            m_gen_inp_hash_ix;
-	uint32_t            m_gen_inp_ix;
-	uint32_t            m_evl_inp_ix;
-	uint32_t            m_gen_out_ix;
-	uint32_t            m_evl_out_ix;
-
-	__m128i             m_clear_mask;
-
+  // gen and eval inputs
 	Bytes               m_gen_inp_mask;
 	Bytes               m_gen_inp;
 	Bytes               m_evl_inp;
 	Bytes               m_gen_out;
 	Bytes               m_evl_out;
 
-	std::vector<Bytes>  m_gen_inp_com;
-	std::vector<Bytes>  m_gen_inp_decom;
-	Bytes               m_gen_inp_hash;
+  std::vector<Bytes>  m_gen_inp_com; // commitments?
+  std::vector<Bytes>  m_gen_inp_decom; // decommitments?
+  Bytes               m_gen_inp_hash;
 
-	Bytes               m_o_bufr;
-	Bytes               m_i_bufr;
-	Bytes::iterator     m_i_bufr_ix;
+  Bytes               m_o_bufr; // out buffer?
+  Bytes               m_i_bufr; // in buffer?
+  Bytes::iterator     m_i_bufr_ix; // pointer to buffer element
 
-	struct PCFState    *m_st;
-	uint32_t            m_gen_inp_cnt;
-	uint32_t            m_evl_inp_cnt;
-	__m128i             m_const_wire[2]; // keys for constant 0 and 1
+  struct PCFState    *m_st; // pointer to the PCF state
+  uint32_t            m_gen_inp_cnt; // gen input count
+  uint32_t            m_evl_inp_cnt; // evl input count
+  __m128i             m_const_wire[2]; // keys for constant 0 and 1
+
 }
+
 garbled_circuit_m_t;
 
 void gen_init(garbled_circuit_m_t &cct, const std::vector<Bytes> &keys, const Bytes &gen_inp_mask, const Bytes &seed);
@@ -135,7 +139,7 @@ inline void init(garbled_circuit_m_t &cct)
 	cct.m_gen_inp_hash.assign(Env::key_size_in_bytes(), 0);
 
 	Bytes tmp(16);
-	for (size_t ix = 0; ix < Env::k(); ix++) tmp.set_ith_bit(ix, 1);
+	for (size_t ix = 0; ix < Env::k(); ix++) { tmp.set_ith_bit(ix, 1); }
 	cct.m_clear_mask = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 }
 
