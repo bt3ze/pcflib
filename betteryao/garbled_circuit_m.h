@@ -109,6 +109,10 @@ void *evl_next_gate_m(struct PCFState *st, struct PCFGate *gate);
 void gen_next_gen_inp_com(garbled_circuit_m_t &cct, const Bytes &row, size_t kx);
 void evl_next_gen_inp_com(garbled_circuit_m_t &cct, const Bytes &row, size_t kx);
 
+
+void *copy_key(void *);
+void delete_key(void *);
+
 #ifdef __CPLUSPLUS
 }
 #endif

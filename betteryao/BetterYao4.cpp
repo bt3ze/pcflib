@@ -1,5 +1,5 @@
 #include "BetterYao4.h"
-#include "garbled_circuit.h"
+// #include "garbled_circuit.h"
 #include <algorithm>
 
 #include <log4cxx/logger.h>
