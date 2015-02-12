@@ -52,7 +52,7 @@ typedef struct wire {
   /* The key(s) associated with this wire, which will be set by some
      external function. */
   void * keydata;
-}wire;
+} wire;
 
   void * getWireKey(struct wire *);
   void setWireKey(struct wire *, void *);

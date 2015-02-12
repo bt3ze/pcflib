@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <iomanip>
 
 #include <netdb.h>
@@ -315,8 +316,10 @@ void YaoBase::step_report_no_sync(std::string step_name)
 void YaoBase::final_report()
 {
 	if (!Env::is_root())
-		return;
-
+          {
+            std::cout << "end child process" << std::endl;
+            return;
+          }
 	LOG4CXX_INFO(logger, "========================================================");
 	LOG4CXX_INFO(logger, "Yao protocol completed");
 	LOG4CXX_INFO(logger, "========================================================");

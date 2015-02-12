@@ -815,6 +815,7 @@ PCFOP * read_instr(struct PCFState * st, const char * line, uint32_t iptr)
   assert(line[0] == '(');
   line++;
 
+  // step through the line, copying the parts that we actually want
   while((line[0] != ' ') && (line[0] != ')'))
     {
       bitr[0] = line[0];
@@ -880,7 +881,7 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void *(*c
   ret->labels = (struct hsearch_data *)malloc(sizeof(struct hsearch_data));
   check_alloc(ret->labels);
 
-  ret->wires = (struct wire *)malloc(1000000 * sizeof(struct wire));
+  ret->wires = (struct wire *)malloc(1000000 * sizeof(struct wire)); // !note here the limit on size of the wire table
   check_alloc(ret->wires);
 
   for(i = 0; i < 200000; i++)
@@ -946,6 +947,9 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void *(*c
 
 void finalize(PCFState * st)
 {
+
+  fprintf(stderr, "finalize");
+
   uint32_t i = 0;
   for(i = 0; i < 200000; i++)
     {
@@ -958,20 +962,29 @@ void finalize(PCFState * st)
 
 struct PCFGate * get_next_gate(struct PCFState * st)
 {
+
+  fprintf(stderr, "get next gate");
+  //  std::cout << "get next gate" << std::endl;
+
   st->curgate = 0;
   while((st->curgate == 0) && (st->done == 0))
     {
+      fprintf(stderr, "zeros");
       st->ops[st->PC].op(st, &st->ops[st->PC]);
+      fprintf(stderr,"x");
       st->PC++;
+      fprintf(stderr,"y");
       assert((st->PC < st->icount));
+      fprintf(stderr,"z");
     }
   if((st->curgate == 0) || (st->done != 0))
     {
       finalize(st);
       return 0;
     }
-  else
+  else {
     return st->curgate;
+  }
 }
 
 void * get_wire_key(struct PCFState * st, uint32_t idx)

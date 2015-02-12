@@ -59,8 +59,10 @@ int main(int argc, char **argv)
 		break;
 
 	default:
-		MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-	}
+          std::cout << "Argument Failure" << std::endl;
+          MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+          break;
+        }
 #else
 
 
@@ -89,4 +91,3 @@ int main(int argc, char **argv)
 
 	return 0;
 }
-

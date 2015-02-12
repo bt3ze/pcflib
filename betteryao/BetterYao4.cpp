@@ -54,6 +54,8 @@ void BetterYao4::oblivious_transfer()
 	G X[2], Y[2], gr, hr;
 	Z s[2], t[2],  y,  a,  r;
 
+        //std::cout << "OT Step 1" << std::endl;
+
 	// step 1: generating the CRS: g[0], h[0], g[1], h[1]
 	if (Env::is_root())
 	{
@@ -117,8 +119,12 @@ void BetterYao4::oblivious_transfer()
 	m_timer_evl += MPI_Wtime() - start;
 	m_timer_gen += MPI_Wtime() - start;
 
+        // std::cout << "OT Step 2" << std::endl;
+
 	// Step 2: ZKPoK of (g[0], g[1], h[0], h[1])
 	// TODO
+
+        // std::cout << "OT Step 3" << std::endl;
 
 	// Step 3: gr=g[b]^r, hr=h[b]^r, where b is the evaluator's bit
 	if (Env::is_root())
@@ -181,7 +187,9 @@ void BetterYao4::oblivious_transfer()
 			bufr_chunks = bufr.split(Env::elm_size_in_bytes());
 		m_timer_gen += MPI_Wtime() - start;
 	GEN_END
-
+          
+          //  std::cout << "OT Step 4" << std::endl;
+        
 	// Step 4: the generator computes X[0], Y[0], X[1], Y[1]
 	GEN_BEGIN
 		for (size_t bix = 0; bix < m_evl_inp_cnt; bix++)
@@ -236,9 +244,13 @@ void BetterYao4::oblivious_transfer()
 		}
 	GEN_END
 
+          // std::cout << "OT Step 5" << std::endl;
+          
 	// Step 5: the evaluator computes K = Y[b]/X[b]^r
 	EVL_BEGIN
-		for (size_t bix = 0; bix < m_evl_inp_cnt; bix++)
+          
+          // std::cout << "OT 5 part 1" << std::endl;
+          for (size_t bix = 0; bix < m_evl_inp_cnt; bix++)
 		{
 			start = MPI_Wtime();
 				int bit_value = m_evl_inp.get_ith_bit(bix);
@@ -265,6 +277,8 @@ void BetterYao4::oblivious_transfer()
 				m_timer_evl += MPI_Wtime() - start;
 			}
 		}
+                
+                // std::cout << "OT 5 part 2" << std::endl;
 
 		for (size_t ix = 0; ix < m_ot_keys.size(); ix++)
 		{
@@ -753,6 +767,8 @@ void BetterYao4::cut_and_choose2_chk_circuit(size_t ix)
 
 void BetterYao4::consistency_check()
 {
+  // std::cout << "const check start" << std::endl;
+
 	step_init();
 
 	Bytes bufr;
@@ -765,7 +781,7 @@ void BetterYao4::consistency_check()
 
 	start = MPI_Wtime();
 		bufr.resize(Env::k()*((m_gen_inp_cnt+7)/8));
-	m_timer_evl += MPI_Wtime() - start;
+                m_timer_evl += MPI_Wtime() - start;
 	m_timer_gen += MPI_Wtime() - start;
 
 	start = MPI_Wtime();
@@ -776,6 +792,8 @@ void BetterYao4::consistency_check()
 		m_matrix = bufr.split(bufr.size()/Env::k());
 	m_timer_evl += MPI_Wtime() - start;
 	m_timer_gen += MPI_Wtime() - start;
+
+        // std::cout << "agree on UHF" << std::endl;
 
 	// now everyone agrees on the UHF given by m_matrix
 	for (size_t ix = 0; ix < m_gcs.size(); ix++)
@@ -810,6 +828,8 @@ void BetterYao4::consistency_check()
 		m_comm_sz += bufr.size();
 	}
 
+        // std::cout << "EVL check hashes" << std::endl;
+
 	EVL_BEGIN
 		for (size_t ix = 0; ix < m_gcs.size(); ix++)
 			if (!m_chks[ix])
@@ -830,6 +850,8 @@ void BetterYao4::circuit_evaluate()
 	int verify = 1;
 	Bytes bufr;
 
+        std::cout << "begin circuit evaluate" << std::endl;
+
 	for (size_t ix = 0; ix < m_gcs.size(); ix++)
 	{
 		GEN_BEGIN
@@ -841,6 +863,8 @@ void BetterYao4::circuit_evaluate()
 		GEN_END
 
 		EVL_BEGIN
+                  std::cout << "eval start evaluating" << std::endl;
+                
 			start = MPI_Wtime();
 				if (m_chks[ix]) // check-circuits
 				{
@@ -857,6 +881,7 @@ void BetterYao4::circuit_evaluate()
 //std::cout << ix << " evl const 1: " << get_const_key(m_gcs[ix], 1, 1).to_hex() << std::endl;
 		EVL_END
 
+                  std::cout << "load pcf file" << std:: endl;
 		start = MPI_Wtime();
 			m_gcs[ix].m_st = 
 				load_pcf_file(Env::pcf_file(), m_gcs[ix].m_const_wire, m_gcs[ix].m_const_wire+1, copy_key);
@@ -870,6 +895,8 @@ void BetterYao4::circuit_evaluate()
 		m_timer_evl += MPI_Wtime() - start;
 
 		GEN_BEGIN // generate and send the circuit gate-by-gate
+
+                  std::cout << "gen generate and send" << std::endl;
 			start = MPI_Wtime();
 				set_callback(m_gcs[ix].m_st, gen_next_gate_m);
 				while (get_next_gate(m_gcs[ix].m_st))
@@ -891,8 +918,11 @@ void BetterYao4::circuit_evaluate()
 		GEN_END
 
 		EVL_BEGIN // receive and evaluate the circuit gate-by-gate
+
+                  std::cout << "eval receive and evaluate" << std::endl;
 			if (m_chks[ix]) // check circuit
 			{
+                          std::cout << "eval check circuit" << m_chks[ix] << std::endl;
 				start = MPI_Wtime();
 					set_callback(m_gcs[ix].m_st, gen_next_gate_m);
 					while (get_next_gate(m_gcs[ix].m_st))
@@ -915,20 +945,32 @@ void BetterYao4::circuit_evaluate()
 			}
 			else // evaluation circuit
 			{
+                          std::cout << "eval evaluate circuit" << std::endl;
 				start = MPI_Wtime();
 					set_callback(m_gcs[ix].m_st, evl_next_gate_m);
+                                        std::cout<< "enter do loop" << std::endl;
 					do {
+                                          // std::cout << "timing stuff" << std::endl;
 						m_timer_evl += MPI_Wtime() - start;
 	
 						start = MPI_Wtime();
 							bufr = EVL_RECV();
 						m_timer_com += MPI_Wtime() - start;
-	
+                                                
+                                                // std::cout << "buffer size add" << std::endl;
+
 						m_comm_sz += bufr.size();
 
 						start = MPI_Wtime();
-							recv(m_gcs[ix], bufr);
+                                                recv(m_gcs[ix], bufr);
+                                                
+                                                //std::cout << "received" << std::endl;
+                                                fprintf(stderr, "received");
+
+                                                // std::cout << "got a gate" << std::endl;                  
 					} while (get_next_gate(m_gcs[ix].m_st));
+
+                                        std::cout << "complete" << std::endl;
 				m_timer_evl += MPI_Wtime() - start;
 			}
 		EVL_END
@@ -937,6 +979,7 @@ void BetterYao4::circuit_evaluate()
 	EVL_BEGIN // check the hash of all the garbled circuits
 		int all_verify = 0;
 
+        std::cout << "evl check hash of garbled circuits" << std::endl;
 		start = MPI_Wtime();
 			MPI_Reduce(&verify, &all_verify, 1, MPI_INT, MPI_LAND, 0, m_mpi_comm);
 		m_timer_mpi += MPI_Wtime() - start;
@@ -991,10 +1034,10 @@ void BetterYao4::circuit_evaluate()
 	step_report("circuit-evl");
 
 	if (m_gcs[0].m_evl_out_ix != 0)
-		proc_evl_out();
-
-    if (m_gcs[0].m_gen_out_ix != 0)
-        proc_gen_out();
+          proc_evl_out();
+        
+        if (m_gcs[0].m_gen_out_ix != 0)
+          proc_gen_out();
 }
 
 

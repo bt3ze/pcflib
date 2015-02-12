@@ -8,7 +8,7 @@
 #include "Hash.h"
 
 extern "C" {
-#include "pcflib.h"
+#include "../pcflib.h"
 }
 
 typedef struct
