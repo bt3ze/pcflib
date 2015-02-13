@@ -971,14 +971,15 @@ struct PCFGate * get_next_gate(struct PCFState * st)
     {
       fprintf(stderr, "zeros");
       st->ops[st->PC].op(st, &st->ops[st->PC]);
-      fprintf(stderr,"x");
-      st->PC++;
+      fprintf(stderr,"x %d", st->PC);
+      st->PC++; // bombs out
       fprintf(stderr,"y");
       assert((st->PC < st->icount));
       fprintf(stderr,"z");
     }
   if((st->curgate == 0) || (st->done != 0))
     {
+      fprintf(stderr,"finalize");
       finalize(st);
       return 0;
     }

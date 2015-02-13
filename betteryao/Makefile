@@ -18,10 +18,10 @@ pcflib: pcflib.o
 	gcc -shared -fPIC ../pcflib.o -o pcflib.so
 
 debug-test: debug
-	gcc -o pcftest pcflib.o test.c -g -lpthread
+	gcc -o ../pcftest ../pcflib.o test.c -g -lpthread
 
-debug: pcflib.c pcflib.h
-	gcc -Wall -Werror -c -fPIC pcflib.c -g
+debug: ../pcflib.c ../pcflib.h
+	gcc -Wall -Werror -c -fPIC ../pcflib.c -g
 
 pcflib.o: ../pcflib.c ../pcflib.h
 	gcc -Wall -Werror -c -fPIC ../pcflib.c -g -DBETTERYAO
