@@ -2,6 +2,8 @@
 // #include "garbled_circuit.h"
 #include <algorithm>
 
+#include <unistd.h>
+
 #include <log4cxx/logger.h>
 static log4cxx::LoggerPtr logger(log4cxx::Logger::getLogger("BetterYao4.cpp"));
 
@@ -763,7 +765,6 @@ void BetterYao4::cut_and_choose2_chk_circuit(size_t ix)
 	}
 }
 
-#include <unistd.h>
 
 void BetterYao4::consistency_check()
 {
@@ -856,7 +857,10 @@ void BetterYao4::circuit_evaluate()
 	{
 		GEN_BEGIN
 			start = MPI_Wtime();
-				gen_init(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);
+			gen_init(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);
+
+                        
+
 //std::cout << ix << " gen const 0: " << get_const_key(m_gcs[ix], 0, 0).to_hex() << std::endl;
 //std::cout << ix << " gen const 1: " << get_const_key(m_gcs[ix], 1, 1).to_hex() << std::endl;
 			m_timer_gen += MPI_Wtime() - start;
@@ -965,7 +969,7 @@ void BetterYao4::circuit_evaluate()
                                                 recv(m_gcs[ix], bufr);
                                                 
                                                 //std::cout << "received" << std::endl;
-                                                fprintf(stderr, "received");
+                                                //fprintf(stderr, "received");
 
                                                 // std::cout << "got a gate" << std::endl;                  
 					} while (get_next_gate(m_gcs[ix].m_st));

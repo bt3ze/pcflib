@@ -962,20 +962,20 @@ void finalize(PCFState * st)
 
 struct PCFGate * get_next_gate(struct PCFState * st)
 {
-
-  fprintf(stderr, "get next gate");
+  
+  //fprintf(stderr, "get next gate");
   //  std::cout << "get next gate" << std::endl;
 
   st->curgate = 0;
   while((st->curgate == 0) && (st->done == 0))
     {
-      fprintf(stderr, "zeros");
+      //fprintf(stderr, "zeros");
       st->ops[st->PC].op(st, &st->ops[st->PC]);
-      fprintf(stderr,"x %d", st->PC);
+      //fprintf(stderr,"x %d", st->PC);
       st->PC++; // bombs out
-      fprintf(stderr,"y");
+      //fprintf(stderr,"y");
       assert((st->PC < st->icount));
-      fprintf(stderr,"z");
+      //fprintf(stderr,"z");
     }
   if((st->curgate == 0) || (st->done != 0))
     {

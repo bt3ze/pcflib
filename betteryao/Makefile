@@ -15,7 +15,7 @@ betteryao: $(MAINS) $(OBJS)
 	$(MPI_CXX) -o gen -DGEN_CODE $(CXX_CFLAGS) $^ $(LIBS)
 
 pcflib: pcflib.o
-	gcc -shared -fPIC ../pcflib.o -o pcflib.so
+	gcc -shared -fPIC pcflib.o -o pcflib.so
 
 debug-test: debug
 	gcc -o ../pcftest ../pcflib.o test.c -g -lpthread

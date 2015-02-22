@@ -25,7 +25,6 @@ typedef struct PCFGate {
   uint32_t wire2;
   uint32_t reswire;
 
-
   /* The truth table is laid out like this:
      reswire = truth_table{wire1 + 2 * wire2}
 
@@ -43,7 +42,15 @@ typedef struct PCFGate {
   uint32_t tag;
 }PCFGate;
 
+
+  // gates are assigned the following values as their "tags"
+  // input and output retrievals are also considered gates
   enum {TAG_INTERNAL = 0, TAG_INPUT_A = 2, TAG_INPUT_B = 4, TAG_OUTPUT_A = 6, TAG_OUTPUT_B = 8};
+
+  // wires are assigned these values as their "flags"
+  // wires can either be known to all parties, or unknown
+  // if unknown, the information they hold must not be leaked
+  enum {KNOWN_WIRE = 0, UNKNOWN_WIRE = 1};
 
 typedef struct wire {
   uint32_t value;
@@ -57,7 +64,7 @@ typedef struct wire {
   void * getWireKey(struct wire *);
   void setWireKey(struct wire *, void *);
 
-  enum {KNOWN_WIRE = 0, UNKNOWN_WIRE = 1};
+
 
 struct activation_record {
   uint32_t ret_pc;
@@ -69,42 +76,55 @@ struct activation_record {
   void check_alloc(void * ptr);
 
 typedef struct PCFState {
+  // base pointer on the circuit's emulated stack
+  uint32_t base;
+  // program counter on the circuit's emulated machine
   uint32_t PC;
+
+  // pointer to the wire table
   wire * wires;
   uint32_t wire_table_size;
 
-  uint32_t base;
-
+  // pointer to the ops
+  // come back to this one
   PCFOP * ops;
 
   uint32_t icount;
 
+  // the labels data structure holds the addresses of all of the functions
+  // used for function calls
   struct hsearch_data * labels;
+
+  // input size counters
   uint32_t alice_in_size;
   uint32_t bob_in_size;
-  PCFGate * curgate;
+  // and pointers to the input and output wires
   wire * alice_inputs;
   wire * bob_inputs;
   wire * alice_outputs;
   wire * bob_outputs;
+  // these two are indices that deal with how inputs are collected
+  int32_t inp_i; // not sure specific purpose
+  uint32_t inp_idx; // not sure specific purpose
 
+
+  // pointer to the currently evaluated gates
+  PCFGate * curgate;
+
+  // pointer to two constants: 0 and 1
   void * constant_keys[2];
 
+  // PCFState contains an input gate that it uses when processing inputs
   PCFGate input_g;
-
-  int32_t inp_i;
-  uint32_t inp_idx;
 
   struct activation_record * call_stack;
 
-  uint8_t done;
-
-  PCFGate g_copy;
+  uint8_t done; // flag for whether the computation is done
 
   /* This is the state of the program that is utilizing this library,
      which may be needed by the callback function to generate the keys
      for the wires in the circuit. */
-  void * external_state;
+  void * external_state; // used to hold a reference to one of the garbled circuits (m_gcs)
 
   /* This function is called when a gate should be emitted.  It should
      create the appropriate keys for the output wire of the gate, and

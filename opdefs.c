@@ -164,33 +164,44 @@ void call_op (struct PCFState * st, struct PCFOP * op)
   ENTRY * ent = data->target;
   ENTRY * r = 0;
 
+
   if(strcmp(data->target->key, "alice") == 0)
     {
+
       uint32_t i = 0, idx = 0;
-      // Get the argument to this function
-      if(st->inp_i == 0)
-        {
+
+      fprintf(stderr,"alice::\tPC: %x\ticount: %x\tbase: %x\tinp_i: %x\tinp_idx: %x\n",st->PC,st->icount,st->base,st->inp_i, st->inp_idx);
+
+      // Get the argument to this function. the inputs will be included in the 32 wires preceding the "call" op's newbase, since they are passed as the only argument to alice()
+      // so step backwards through them, shifting the accumulator. remember that the LSB is the lowest wire
+
+      //     if(st->inp_i == 0) // not sure why the check for inp_i must be 0 for this.
+               //   {
           for(i = 1; i <= 32; i++)
             {
+              fprintf(stderr, "idx: %x\tinp_i: %x\tinp_idx %x\ti: %x\n",idx,st->inp_i,st->inp_idx,i);
               idx = idx << 1;
               assert(st->wires[st->base + data->newbase - i].value < 2);
+              assert(st->wires[st->base + data->newbase - i].flags == KNOWN_WIRE); // index of an input MUST be a known wire.
               idx += st->wires[st->base + data->newbase - i].value;
             }
           st->inp_idx = idx;
-        }
+          //}
+  //      // idx (similarly, st->idx) now has the argument that was passed to alice()
+
 
       if(st->inp_i < 32)
-        {
+        { // why this if/else branch when i is between 0 and 32?
           i = st->inp_i;
           st->inp_i++;
           st->input_g.wire1 = st->inp_idx + i;
           st->input_g.wire2 = st->inp_idx + i;
           st->input_g.reswire = st->base + data->newbase + i;
-          st->input_g.truth_table = 5;
+          st->input_g.truth_table = 5; //0101?
           st->input_g.tag = TAG_INPUT_A;
 
-          if(st->wires[st->input_g.reswire].keydata != 0)
-            st->delete_key(st->wires[st->input_g.reswire].keydata);
+          if(st->wires[st->input_g.reswire].keydata != 0) {
+            st->delete_key(st->wires[st->input_g.reswire].keydata); }
 
           if(st->inp_idx + i < st->alice_in_size)
             {
@@ -201,14 +212,16 @@ void call_op (struct PCFState * st, struct PCFOP * op)
             {
               st->wires[st->input_g.reswire].keydata = st->copy_key(st->constant_keys[0]);
             }
+
           st->wires[st->input_g.reswire].flags = UNKNOWN_WIRE;
           // Not yet done with function call
           st->PC--;
         }
       else
-        {
+        { // what is the point of this? reset inp_i so that it can go back to the top?
+          // doesn't this miss good inputs?
           st->inp_i = 0;
-        }
+        } 
     }
   else if(strcmp(data->target->key, "bob") == 0)
     {
@@ -372,6 +385,8 @@ void gate_op(struct PCFState * st, struct PCFOP * op)
 
 
 #ifdef BETTERYAO
+      // construct the truth table according to some method that should be dependent on the
+      // input gates' permutation bits
       tab = 
         ((data->truth_table & 1) << 3) |
         ((data->truth_table & 2) << 1) |
