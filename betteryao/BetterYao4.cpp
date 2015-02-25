@@ -361,7 +361,7 @@ void BetterYao4::cut_and_choose()
 			Prng prng;
 			prng.srand(coins); // use the coins to generate more random bits
 
-			// make 60-40 check-vs-evaluateion circuit ratio
+			// make 60-40 check-vs-evaluation circuit ratio
 			m_all_chks.assign(Env::s(), 1);
 
 			// FisherÐYates shuffle
@@ -500,14 +500,14 @@ void BetterYao4::cut_and_choose2_precomputation()
                                 m_gcs[ix].m_st->alice_in_size = m_gen_inp_cnt;
                                 m_gcs[ix].m_st->bob_in_size = m_evl_inp_cnt;
 
-				set_external_state(m_gcs[ix].m_st, &m_gcs[ix]);
+				set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
 				set_key_copy_function(m_gcs[ix].m_st, copy_key);
 				set_key_delete_function(m_gcs[ix].m_st, delete_key);
 				set_callback(m_gcs[ix].m_st, gen_next_gate_m);
 
 				while ((m_gcs[ix].m_gen_inp_decom.size()/2 < m_gen_inp_cnt) && get_next_gate(m_gcs[ix].m_st))
 				{
-					send(m_gcs[ix]); // discard the garbled gates for now
+					get_and_clear_out_bufr(m_gcs[ix]); // discard the garbled gates for now
 				}
 
 finalize(m_gcs[ix].m_st);
@@ -803,7 +803,7 @@ void BetterYao4::consistency_check()
 		GEN_BEGIN
 			start = MPI_Wtime();
 				gen_next_gen_inp_com(m_gcs[ix], m_matrix[kx], kx);
-				bufr = send(m_gcs[ix]);
+				bufr = get_and_clear_out_bufr(m_gcs[ix]);
 			m_timer_gen += MPI_Wtime() - start;
 
 			start = MPI_Wtime();
@@ -892,7 +892,7 @@ void BetterYao4::circuit_evaluate()
                         m_gcs[ix].m_st->alice_in_size = m_gen_inp_cnt;
                         m_gcs[ix].m_st->bob_in_size = m_evl_inp_cnt;
 	
-			set_external_state(m_gcs[ix].m_st, &m_gcs[ix]);
+			set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
 			set_key_copy_function(m_gcs[ix].m_st, copy_key);
 			set_key_delete_function(m_gcs[ix].m_st, delete_key);
 		m_timer_gen += MPI_Wtime() - start;
@@ -905,16 +905,16 @@ void BetterYao4::circuit_evaluate()
 				set_callback(m_gcs[ix].m_st, gen_next_gate_m);
 				while (get_next_gate(m_gcs[ix].m_st))
 				{
-						bufr = send(m_gcs[ix]);
-					m_timer_gen += MPI_Wtime() - start;
-	
-					start = MPI_Wtime();
-						GEN_SEND(bufr);
-					m_timer_com += MPI_Wtime() - start;
-	
-					m_comm_sz += bufr.size();
-
-					start = MPI_Wtime(); // start m_timer_gen
+                                  bufr = get_and_clear_out_bufr(m_gcs[ix]);
+                                  m_timer_gen += MPI_Wtime() - start;
+                                  
+                                  start = MPI_Wtime();
+                                  GEN_SEND(bufr);
+                                  m_timer_com += MPI_Wtime() - start;
+                                  
+                                  m_comm_sz += bufr.size();
+                                  
+                                  start = MPI_Wtime(); // start m_timer_gen
 				}
 			m_timer_gen += MPI_Wtime() - start;
 
@@ -931,17 +931,18 @@ void BetterYao4::circuit_evaluate()
 					set_callback(m_gcs[ix].m_st, gen_next_gate_m);
 					while (get_next_gate(m_gcs[ix].m_st))
 					{
-							bufr = send(m_gcs[ix]);
-						m_timer_evl += MPI_Wtime() - start;
-	
-						start = MPI_Wtime();
-							Bytes recv = EVL_RECV();
-						m_timer_com += MPI_Wtime() - start;
-	
-						m_comm_sz += bufr.size();
-
-						start = MPI_Wtime(); // start m_timer_evl
-							verify &= (bufr == recv);
+                                          
+                                          bufr = get_and_clear_out_bufr(m_gcs[ix]);
+                                          m_timer_evl += MPI_Wtime() - start;
+                                          
+                                          start = MPI_Wtime();
+                                          Bytes recv = EVL_RECV();
+                                          m_timer_com += MPI_Wtime() - start;
+                                          
+                                          m_comm_sz += bufr.size();
+                                          
+                                          start = MPI_Wtime(); // start m_timer_evl
+                                          verify &= (bufr == recv);
 					}
 				m_timer_gen += MPI_Wtime() - start;
 

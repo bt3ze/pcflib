@@ -76,12 +76,23 @@ inline void recv(garbled_circuit_m_t &cct, const Bytes &i_data)
 	cct.m_i_bufr_ix = cct.m_i_bufr.begin();
 }
 
+/*
+// this function has been renamed get_out_bufr because it doesn't
+// actually send anything. instead, its contents are copied then cleared
 inline const Bytes send(garbled_circuit_m_t &cct)
 {
 	static Bytes o_data;
 	o_data.swap(cct.m_o_bufr);
 	cct.m_o_bufr.clear();
 	return o_data;
+}
+*/
+
+inline const Bytes get_and_clear_out_bufr(garbled_circuit_m_t &cct){
+  static Bytes o_data;
+  o_data.swap(cct.m_o_bufr);
+  cct.m_o_bufr.clear();
+  return o_data;
 }
 
 

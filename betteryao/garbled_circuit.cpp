@@ -146,7 +146,7 @@ void evl_init(garbled_circuit_t &cct, const vector<Bytes> &ot_keys, const Bytes 
 void *gen_next_gate(struct PCFState *st, struct PCFGate *current_gate)
 {
 	garbled_circuit_t &cct =
-		*reinterpret_cast<garbled_circuit_t*>(get_external_state(st));
+		*reinterpret_cast<garbled_circuit_t*>(get_external_circuit(st));
 
 	static __m128i current_zero_key;
 
@@ -333,7 +333,7 @@ void *gen_next_gate(struct PCFState *st, struct PCFGate *current_gate)
 
 void * evl_next_gate(struct PCFState *st, struct PCFGate *current_gate)
 {
-	garbled_circuit_t &cct = *reinterpret_cast<garbled_circuit_t*>(get_external_state(st));
+	garbled_circuit_t &cct = *reinterpret_cast<garbled_circuit_t*>(get_external_circuit(st));
 
 	static __m128i current_key;
 	__m128i a;

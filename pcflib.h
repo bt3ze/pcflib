@@ -65,14 +65,15 @@ typedef struct wire {
   void setWireKey(struct wire *, void *);
 
 
-
+  // the activation record is used as one would expect an activation record to be used
+  // it's a linked list that contains return addresses and base pointers of all the function calls performed by the circuit
 struct activation_record {
   uint32_t ret_pc;
   uint32_t base;
   struct activation_record * rest;
 };
 
-  struct activation_record * copy_activation_record(struct activation_record *);
+  // check_alloc is used frequently to ensure that memory has been allocated properly from the heap. if not, the program quits
   void check_alloc(void * ptr);
 
 typedef struct PCFState {
@@ -89,10 +90,14 @@ typedef struct PCFState {
   // come back to this one
   PCFOP * ops;
 
-  uint32_t icount;
+  // instruction count?
+  // appears to be a counter for number of instructions
+  // as a safety mechanism to ensure PC hasn't gone awry
+  uint32_t icount; 
 
-  // the labels data structure holds the addresses of all of the functions
-  // used for function calls
+  // the labels data structure holds the addresses
+  // of all of the functions and is used to look them up
+  // during function calls
   struct hsearch_data * labels;
 
   // input size counters
@@ -124,7 +129,7 @@ typedef struct PCFState {
   /* This is the state of the program that is utilizing this library,
      which may be needed by the callback function to generate the keys
      for the wires in the circuit. */
-  void * external_state; // used to hold a reference to one of the garbled circuits (m_gcs)
+  void * external_circuit; // used to hold a reference to one of the garbled circuits (m_gcs)
 
   /* This function is called when a gate should be emitted.  It should
      create the appropriate keys for the output wire of the gate, and
@@ -142,20 +147,17 @@ typedef struct PCFState {
 
   enum {ALICE = 0, BOB = 1};
 
-  void set_external_state(struct PCFState *, void *);
-  void * get_external_state(struct PCFState *);
+  void set_external_circuit(struct PCFState *, void *);
+  void * get_external_circuit(struct PCFState *);
   void set_key_delete_function(struct PCFState *, void (*)(void*));
   void set_key_copy_function(struct PCFState *, void *(*)(void*));
   void set_callback(struct PCFState *, void* (*)(struct PCFState *, struct PCFGate *));
   PCFGate * get_next_gate(PCFState *);
-  void reinitialize(PCFState *);
   PCFState * load_pcf_file(const char *, void *, void *, void *(*)(void*));
 
   void set_constant_keys(PCFState *, void *, void*);
 
   uint32_t get_input_size(PCFState *, uint32_t);
-
-  PCFState * copy_pcf_state(struct PCFState *);
 
   wire * getWire(struct PCFState *, uint32_t);
   void * get_wire_key(struct PCFState *, uint32_t);
@@ -163,7 +165,13 @@ typedef struct PCFState {
 
   uint32_t read_alice_length(const char *);
   uint32_t read_bob_length(const char *); 
-  void make_internal_thread(PCFState * st);
+
+  /*
+    obsolete:
+    void reinitialize(PCFState *);
+    PCFState * copy_pcf_state(struct PCFState *);
+    void make_internal_thread(PCFState * st);
+  */
 
 #ifdef __cplusplus
 }

@@ -164,29 +164,39 @@ void call_op (struct PCFState * st, struct PCFOP * op)
   ENTRY * ent = data->target;
   ENTRY * r = 0;
 
-
   if(strcmp(data->target->key, "alice") == 0)
     {
 
       uint32_t i = 0, idx = 0;
 
-      fprintf(stderr,"alice::\tPC: %x\ticount: %x\tbase: %x\tinp_i: %x\tinp_idx: %x\n",st->PC,st->icount,st->base,st->inp_i, st->inp_idx);
+      fprintf(stderr,"alice pre ::\tPC: %x\tbase: %x\tinp_i: %x\tinp_idx: %x\n",st->PC,st->base,st->inp_i, st->inp_idx);     
 
-      // Get the argument to this function. the inputs will be included in the 32 wires preceding the "call" op's newbase, since they are passed as the only argument to alice()
-      // so step backwards through them, shifting the accumulator. remember that the LSB is the lowest wire
-
-      //     if(st->inp_i == 0) // not sure why the check for inp_i must be 0 for this.
-               //   {
+      // Get the argument to this function.
+      // the inputs will be included in the 32 wires preceding the "call" op's newbase,
+      // since they are passed as the only argument to alice().
+      // so step backwards through them, shifting the accumulator.
+      // remember that the LSB is the lowest wire
+      
+      if(st->inp_i == 0) // not sure why the check for inp_i must be 0 for this.
+        {
           for(i = 1; i <= 32; i++)
             {
-              fprintf(stderr, "idx: %x\tinp_i: %x\tinp_idx %x\ti: %x\n",idx,st->inp_i,st->inp_idx,i);
+
+              // shift over to make room for next bit
               idx = idx << 1;
+
+              // each wire holding the address must have  a wire value (0,1)
               assert(st->wires[st->base + data->newbase - i].value < 2);
-              assert(st->wires[st->base + data->newbase - i].flags == KNOWN_WIRE); // index of an input MUST be a known wire.
+               // index of an input MUST be a known wire.
+              assert(st->wires[st->base + data->newbase - i].flags == KNOWN_WIRE);
+
+              // gather bit into index accumulator
               idx += st->wires[st->base + data->newbase - i].value;
             }
+          
+          // store this index to identify which input to grab
           st->inp_idx = idx;
-          //}
+        }
   //      // idx (similarly, st->idx) now has the argument that was passed to alice()
 
 
@@ -200,19 +210,21 @@ void call_op (struct PCFState * st, struct PCFOP * op)
           st->input_g.truth_table = 5; //0101?
           st->input_g.tag = TAG_INPUT_A;
 
+          // if input wire already has a value, delete it
           if(st->wires[st->input_g.reswire].keydata != 0) {
             st->delete_key(st->wires[st->input_g.reswire].keydata); }
 
           if(st->inp_idx + i < st->alice_in_size)
-            {
+            { // if alice provided a value for this wire, then get it
               st->wires[st->input_g.reswire].keydata = st->copy_key(st->callback(st, &st->input_g));
               st->curgate = &st->input_g;
             }
-          else
-            {
+          else 
+            { // otherwise, fill with zeros
+              // fprintf(stderr,"filling zeros for uninitialized wire");
               st->wires[st->input_g.reswire].keydata = st->copy_key(st->constant_keys[0]);
             }
-
+          
           st->wires[st->input_g.reswire].flags = UNKNOWN_WIRE;
           // Not yet done with function call
           st->PC--;
@@ -220,11 +232,17 @@ void call_op (struct PCFState * st, struct PCFOP * op)
       else
         { // what is the point of this? reset inp_i so that it can go back to the top?
           // doesn't this miss good inputs?
+          fprintf(stderr, "reset alice\n");
           st->inp_i = 0;
         } 
+      
+      fprintf(stderr,"alice post::\tPC: %x\tbase: %x\tinp_i: %x\tinp_idx: %x\n",st->PC,st->base,st->inp_i, st->inp_idx);     
+
     }
   else if(strcmp(data->target->key, "bob") == 0)
     {
+      fprintf(stderr,"bob pre ::\tPC: %x\tbase: %x\tinp_i: %x\tinp_idx: %x\n",st->PC,st->base,st->inp_i, st->inp_idx);     
+
       uint32_t i = 0, idx = 0;
 // Get the argument to this function
       if(st->inp_i == 0)
@@ -268,6 +286,9 @@ void call_op (struct PCFState * st, struct PCFOP * op)
         {
           st->inp_i = 0;
         }
+      fprintf(stderr,"bob post::\tPC: %x\tbase: %x\tinp_i: %x\tinp_idx: %x\n",st->PC,st->base,st->inp_i, st->inp_idx);     
+
+
     }
   else if(strcmp(data->target->key, "output_alice") == 0)
     {
@@ -410,13 +431,19 @@ void gate_op(struct PCFState * st, struct PCFOP * op)
       // Check that we are dealing only with bits
       assert((st->wires[op1idx].value < 2) && (st->wires[op2idx].value < 2));
       assert(((st->wires[op1idx].value) + (2*(st->wires[op2idx].value))) < 4);
-      if((bits[(st->wires[op1idx].value) + (2*(st->wires[op2idx].value))]) >= 2)
+      
+      if((bits[(st->wires[op1idx].value) + (2*(st->wires[op2idx].value))]) >= 2){
         fprintf(stderr, "Problem!\n");
+      }
+      
       assert((bits[(st->wires[op1idx].value) + (2*(st->wires[op2idx].value))]) < 2);
 
       st->wires[destidx].keydata = st->copy_key(st->constant_keys[bits[(st->wires[op1idx].value) + (2*(st->wires[op2idx].value))]]);
 
-      if(tmp != 0) st->delete_key(tmp);
+      if(tmp != 0) {
+        st->delete_key(tmp);
+      }
+      
       st->wires[destidx].value = bits[(st->wires[op1idx].value) + (2*(st->wires[op2idx].value))];
       st->wires[destidx].flags = KNOWN_WIRE;
     }

@@ -24,7 +24,7 @@ int main(int argc, char **argv)
 			<< "  [pcf_file]: from the PCF compiler" << std::endl
 			<< " [ip_server]: the IP (not domain name) of the IP exchanger" << std::endl
 			<< " [port_base]: for the \"IP address in use\" hassles" << std::endl
-			<< "      [mode]: 0=>honest-but-curious, 4=>malicious" << std::endl
+			<< "      [mode]: 0=>honest-but-curious, 1=>malicious" << std::endl
 			<< std::endl;
 		exit(EXIT_FAILURE);
 	}

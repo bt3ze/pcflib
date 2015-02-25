@@ -2,8 +2,6 @@
 
 
 
-
-
 Bytes setBytes( __m128i & i)
 {
 
@@ -115,7 +113,7 @@ void evl_init(garbled_circuit_m_t &cct, const vector<Bytes> &ot_keys, const Byte
 void *gen_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 {
 	garbled_circuit_m_t &cct =
-		*reinterpret_cast<garbled_circuit_m_t*>(get_external_state(st));
+		*reinterpret_cast<garbled_circuit_m_t*>(get_external_circuit(st));
 
 	static __m128i current_zero_key;
 
@@ -339,7 +337,7 @@ std::cerr << ", " << Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes()).to
 
 void *evl_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 {
-	garbled_circuit_m_t &cct = *reinterpret_cast<garbled_circuit_m_t*>(get_external_state(st));
+	garbled_circuit_m_t &cct = *reinterpret_cast<garbled_circuit_m_t*>(get_external_circuit(st));
 
 	static __m128i current_key;
 	__m128i a;

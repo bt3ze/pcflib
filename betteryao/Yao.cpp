@@ -357,13 +357,15 @@ void Yao::circuit_evaluate()
         m_gcs[0].m_st->alice_in_size = m_gen_inp_cnt;
         m_gcs[0].m_st->bob_in_size = m_evl_inp_cnt;
 
-	set_external_state(m_gcs[0].m_st, &m_gcs[0]);
+	set_external_circuit(m_gcs[0].m_st, &m_gcs[0]);
 	set_key_copy_function(m_gcs[0].m_st, copy_key);
 	set_key_delete_function(m_gcs[0].m_st, delete_key);
+        /*
+          // obsolete 
 #ifdef USE_THREADS
         make_internal_thread(m_gcs[0].m_st);
 #endif
-
+        */
 	step_report("pre-cir-evl");
 	step_init();
 

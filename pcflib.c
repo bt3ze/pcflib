@@ -873,6 +873,7 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void *(*c
   ret->alice_outputs = 0;
   ret->bob_outputs = 0;
   ret->inp_i = 0;
+  ret->inp_idx = 0; // should not be strictly necessary because will be set before first use
   ret->constant_keys[0] = copy_key(key0);
   ret->constant_keys[1] = copy_key(key1);
   ret->copy_key = copy_key;
@@ -969,21 +970,24 @@ struct PCFGate * get_next_gate(struct PCFState * st)
   st->curgate = 0;
   while((st->curgate == 0) && (st->done == 0))
     {
-      //fprintf(stderr, "zeros");
+      // if curgate is 0, why are we executing things?
+
+      // call the instruction's op function
       st->ops[st->PC].op(st, &st->ops[st->PC]);
-      //fprintf(stderr,"x %d", st->PC);
-      st->PC++; // bombs out
-      //fprintf(stderr,"y");
+      // then increment the program counter
+      st->PC++;
+      // and verify that the PC has not eclipsed the instruction count
       assert((st->PC < st->icount));
-      //fprintf(stderr,"z");
     }
   if((st->curgate == 0) || (st->done != 0))
     {
+      // no more gates and the PCFState thinks it's done
       fprintf(stderr,"finalize");
       finalize(st);
       return 0;
     }
   else {
+    // return the next gate
     return st->curgate;
   }
 }
@@ -1003,14 +1007,14 @@ wire * getWire(struct PCFState * st, uint32_t idx)
   return &st->wires[idx];
 }
 
-void set_external_state(struct PCFState * st, void * et)
+void set_external_circuit(struct PCFState * st, void * ec)
 {
-  st->external_state = et;
+  st->external_circuit = ec;
 }
 
-void * get_external_state(struct PCFState * st)
+void * get_external_circuit(struct PCFState * st)
 {
-  return st->external_state;
+  return st->external_circuit;
 }
 
 void * getWireKey(struct wire * w)
