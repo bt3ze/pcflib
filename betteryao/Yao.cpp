@@ -40,7 +40,7 @@ void Yao::start()
 
 void Yao::oblivious_transfer()
 {
-	step_init();
+	reset_timers();
 
 	double start; // time marker
 
@@ -286,7 +286,7 @@ void Yao::oblivious_transfer()
 
 void Yao::circuit_evaluate()
 {
-	step_init();
+	reset_timers();
 
 	double start;
 
@@ -306,7 +306,7 @@ void Yao::circuit_evaluate()
 		m_timer_com += MPI_Wtime() - start;
 
 		start = MPI_Wtime();
-			gen_init(m_gcs[0], m_ot_keys[0], m_gen_inp_masks[0], m_rnds[0]);
+			gen_init_circuit(m_gcs[0], m_ot_keys[0], m_gen_inp_masks[0], m_rnds[0]);
 			m_gcs[0].m_gen_inp = m_gen_inp;
 		m_timer_gen += MPI_Wtime() - start;
 	GEN_END
@@ -367,7 +367,7 @@ void Yao::circuit_evaluate()
 #endif
         */
 	step_report("pre-cir-evl");
-	step_init();
+	reset_timers();
 
 	GEN_BEGIN // generate and send the circuit gate-by-gate
 		set_callback(m_gcs[0].m_st, gen_next_gate);
@@ -426,7 +426,7 @@ void Yao::circuit_evaluate()
 
 void Yao::proc_evl_out()
 {
-	step_init();
+	reset_timers();
 
 	EVL_BEGIN
 		double start = MPI_Wtime();
@@ -439,7 +439,7 @@ void Yao::proc_evl_out()
 
 void Yao::proc_gen_out()
 {
-	step_init();
+	reset_timers();
 
 	double start;
 

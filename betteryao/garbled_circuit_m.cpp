@@ -60,7 +60,7 @@ void update_hash(garbled_circuit_m_t &cct, const Bytes &data)
 };
 
 
-void gen_init(garbled_circuit_m_t &cct, const vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed)
+void gen_init_circuit(garbled_circuit_m_t &cct, const vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed)
 {
 	cct.m_ot_keys = &ot_keys;
 	cct.m_gen_inp_mask = gen_inp_mask;
@@ -83,23 +83,29 @@ void gen_init(garbled_circuit_m_t &cct, const vector<Bytes> &ot_keys, const Byte
 	tmp.resize(16, 0);
 	cct.m_const_wire[1] = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&tmp[0]));
 
-	init(cct);
+	initialize_circuit_mal(cct);
 
 	cct.m_gen_inp_decom.clear();
 }
 
+/**
+   initialize the circuit with ot keys, masked get input, and eval input
+   clear the output buffers
+   
+ */
 void evl_init(garbled_circuit_m_t &cct, const vector<Bytes> &ot_keys, const Bytes &masked_gen_inp, const Bytes &evl_inp)
 {
+
+	initialize_circuit_mal(cct);
+
 	cct.m_ot_keys = &ot_keys;
-	cct.m_gen_inp_mask = masked_gen_inp;
+	cct.m_gen_inp_mask = masked_gen_inp; // this was overwritten in the last version
 	cct.m_evl_inp = evl_inp;
 
 	cct.m_evl_out.reserve(MAX_OUTPUT_SIZE);
 	cct.m_evl_out.clear(); // will grow dynamically
 	cct.m_gen_out.reserve(MAX_OUTPUT_SIZE);
 	cct.m_gen_out.clear(); // will grow dynamically
-
-	init(cct);
 
 	cct.m_bufr.reserve(CIRCUIT_HASH_BUFFER_SIZE);
 	cct.m_bufr.clear();
@@ -407,6 +413,9 @@ void *evl_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 		{
 			__m128i aes_key[2], aes_plaintext, aes_ciphertext;
 
+                        // why is this the aes plaintext? we use the circuit number for it?
+                        // intitializes both 64-bit components of the __mi128 to the gate index
+                        // the circuit garbling is not messed up, so i am leaving this alone for the time being
 			aes_plaintext = _mm_set1_epi64x(cct.m_gate_ix);
 
 			aes_key[0] = *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire1));

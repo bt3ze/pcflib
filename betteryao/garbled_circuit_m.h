@@ -53,11 +53,9 @@ typedef struct
   uint32_t            m_evl_inp_cnt; // evl input count
   __m128i             m_const_wire[2]; // keys for constant 0 and 1
 
-}
+} garbled_circuit_m_t;
 
-garbled_circuit_m_t;
-
-void gen_init(garbled_circuit_m_t &cct, const std::vector<Bytes> &keys, const Bytes &gen_inp_mask, const Bytes &seed);
+void gen_init_circuit(garbled_circuit_m_t &cct, const std::vector<Bytes> &keys, const Bytes &gen_inp_mask, const Bytes &seed);
 void evl_init(garbled_circuit_m_t &cct, const std::vector<Bytes> &keys, const Bytes &masked_gen_inp, const Bytes &seed);
 
 inline void trim_output(garbled_circuit_m_t &cct)
@@ -140,7 +138,14 @@ inline bool pass_check(const garbled_circuit_m_t &cct)
 	return pass_chk;
 }
 
-inline void init(garbled_circuit_m_t &cct)
+
+/**
+   set all gate and input indices to 0
+   clear the out buffer
+   fill the inp hash with as many 0s as the security param
+   set <security param> bits in the clear mask to 1 
+ */
+inline void initialize_circuit_mal(garbled_circuit_m_t &cct)
 {
 	cct.m_gate_ix = 0;
 
@@ -154,7 +159,8 @@ inline void init(garbled_circuit_m_t &cct)
 	cct.m_gen_inp_hash.assign(Env::key_size_in_bytes(), 0);
 
 	Bytes tmp(16);
-	for (size_t ix = 0; ix < Env::k(); ix++) { tmp.set_ith_bit(ix, 1); }
+	for (size_t ix = 0; ix < Env::k(); ix++)
+          { tmp.set_ith_bit(ix, 1); }
 	cct.m_clear_mask = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 }
 

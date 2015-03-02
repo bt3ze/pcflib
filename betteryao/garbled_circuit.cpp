@@ -76,7 +76,7 @@ void update_hash(garbled_circuit_t &cct, const Bytes &data)
 
 };
 
-void gen_init(garbled_circuit_t &cct, const vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed)
+void gen_init_circuit(garbled_circuit_t &cct, const vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed)
 {
 	cct.m_ot_keys = &ot_keys;
 	cct.m_gen_inp_mask = gen_inp_mask;

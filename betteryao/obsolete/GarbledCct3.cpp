@@ -1,7 +1,7 @@
 
 #include "GarbledCct3.h"
 
-void GarbledCct3::init()
+void GarbledCct3::Garbled_Circuit_3_init()
 {
 	m_gate_ix = 0;
 
@@ -22,7 +22,7 @@ void GarbledCct3::init()
 	m_clear_mask = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 }
 
-void GarbledCct3::gen_init(const vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed)
+void GarbledCct3::gen_init_circuit(const vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed)
 {
 	m_ot_keys = &ot_keys;
 	m_gen_inp_mask = gen_inp_mask;
@@ -36,7 +36,7 @@ void GarbledCct3::gen_init(const vector<Bytes> &ot_keys, const Bytes &gen_inp_ma
 	tmp.resize(16, 0);
 	m_R = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&tmp[0]));
 
-	init();
+	Garbled_Circuit_3_init();
 
 	if (m_w == 0)
 	{
@@ -52,7 +52,7 @@ const int CIRCUIT_HASH_BUFFER_SIZE = 10*1024*1024;
 
 void GarbledCct3::com_init(const vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed)
 {
-	gen_init(ot_keys, gen_inp_mask, seed);
+	gen_init_circuit(ot_keys, gen_inp_mask, seed);
 	m_bufr.reserve(CIRCUIT_HASH_BUFFER_SIZE);
 	m_bufr.clear();
 	m_hash.init();
@@ -61,7 +61,7 @@ void GarbledCct3::com_init(const vector<Bytes> &ot_keys, const Bytes &gen_inp_ma
 
 void GarbledCct3::evl_init(const vector<Bytes> &ot_keys, const Bytes &masked_gen_inp, const Bytes &evl_inp)
 {
-	init();
+	Garbled_Circuit_3_init();
 
 	m_ot_keys = &ot_keys;
 	m_gen_inp_mask = masked_gen_inp;

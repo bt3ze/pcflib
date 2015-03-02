@@ -2,7 +2,7 @@
 #define BETTERYAO4_H_
 
 #include "YaoBase.h"
-#include "GarbledCct3.h"
+//#include "GarbledCct3.h"
 #include "garbled_circuit_m.h"
 
 class BetterYao4 : public YaoBase
@@ -51,15 +51,14 @@ private:
 	vector<Bytes>                   m_gen_inp_masks;
 	vector<Bytes>                   m_coms;
 	vector<Bytes>                   m_rnds;
-    vector<GarbledCct3>              m_ccts;
 	vector<garbled_circuit_m_t>     m_gcs; 
 
-    // variables for Gen's input check
-    vector<Bytes>                   m_gen_inp_hash;
+        // variables for Gen's input check
+        vector<Bytes>                   m_gen_inp_hash;
 	vector<vector<Bytes> >          m_gen_inp_decom;
 	vector<Bytes>                   m_matrix;
 
-	vector<Prng>					m_prngs;
+	vector<Prng>			m_prngs;
 	uint32_t                        m_gen_inp_cnt;
 	uint32_t                        m_evl_inp_cnt;
 };

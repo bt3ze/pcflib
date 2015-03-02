@@ -5,7 +5,7 @@ MPI_CXX    = mpicxx
 LIBS       = -lpbc -lgmp -lcrypto -llog4cxx -lpthread
 HEADERS    = Algebra.h Bytes.h Circuit.h Env.h garbled_circuit.h NetIO.h Prng.h ClawFree.h 
 OBJS       = Algebra.o Bytes.o Circuit.o Env.o garbled_circuit.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o \
-	garbled_circuit_m.o GarbledCct3.o
+	garbled_circuit_m.o # GarbledCct3.o
 MAINS      = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp
 
 all : sim pcflib

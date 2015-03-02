@@ -46,7 +46,7 @@ typedef struct
 }
 garbled_circuit_t;
 
-void gen_init(garbled_circuit_t &cct, const std::vector<Bytes> &keys, const Bytes &gen_inp_mask, const Bytes &seed);
+void gen_init_circuit(garbled_circuit_t &cct, const std::vector<Bytes> &keys, const Bytes &gen_inp_mask, const Bytes &seed);
 void evl_init(garbled_circuit_t &cct, const std::vector<Bytes> &keys, const Bytes &masked_gen_inp, const Bytes &seed);
 
 inline void trim_output(garbled_circuit_t &cct)

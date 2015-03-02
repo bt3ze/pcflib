@@ -68,7 +68,7 @@ protected:
 	void send_data(int dst_node, const Bytes &data);
 
 	// subroutines for profiling
-	void step_init();
+	void reset_timers();
 	void step_report(std::string step_name);
 	void step_report_no_sync(std::string step_name);
 	void final_report();

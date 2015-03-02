@@ -9,13 +9,13 @@
 
 class GarbledCct3
 {
-	void init();
+	void Garbled_Circuit_3_init();
 
 public:
-	GarbledCct3() : m_w(0), m_pass_chk(true) { init(); }
+	GarbledCct3() : m_w(0), m_pass_chk(true) { Garbled_Circuit_3_init(); }
 	~GarbledCct3() { delete [] m_w; }
 
-	void gen_init(const std::vector<Bytes> &keys, const Bytes &gen_inp_mask, const Bytes &seed);
+	void gen_init_circuit(const std::vector<Bytes> &keys, const Bytes &gen_inp_mask, const Bytes &seed);
 	void gen_next_gate(const Gate &g);
 
 	void com_init(const std::vector<Bytes> &keys, const Bytes &gen_inp_mask, const Bytes &seed);

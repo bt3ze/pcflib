@@ -270,7 +270,7 @@ inline std::string print_longlong(uint64_t l)
 }
 
 
-void YaoBase::step_init()
+void YaoBase::reset_timers()
 {
     m_timer_gen = m_timer_evl = m_timer_mpi = m_timer_com = 0;
     m_comm_sz = 0;

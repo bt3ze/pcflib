@@ -12,11 +12,14 @@ BetterYao4::BetterYao4(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
 {
 	// Init variables
 	m_rnds.resize(Env::node_load());
-	m_ccts.resize(Env::node_load());
+	//m_ccts.resize(Env::node_load());
 	m_gcs.resize(Env::node_load());
 
-	for (size_t ix = 0; ix < m_gcs.size(); ix++) { init(m_gcs[ix]); }
-
+	for (size_t ix = 0; ix < m_gcs.size(); ix++)
+          {
+            initialize_circuit_mal(m_gcs[ix]);
+          }
+        
 	m_gen_inp_hash.resize(Env::node_load());
 	m_gen_inp_masks.resize(Env::node_load());
 	m_gen_inp_decom.resize(Env::node_load());
@@ -46,7 +49,7 @@ void BetterYao4::start()
 
 void BetterYao4::oblivious_transfer()
 {
-	step_init();
+	reset_timers();
 
 	double start; // time marker
 
@@ -313,15 +316,15 @@ Bytes BetterYao4::flip_coins(size_t len_in_bytes)
 
 			start = MPI_Wtime();
 				GEN_SEND(comm);
-				remote_coins = GEN_RECV();				// Step 2: receive alice's coins
-				GEN_SEND(open);							// Step 3: decommit to the coins
+				remote_coins = GEN_RECV();     	// Step 2: receive alice's coins
+				GEN_SEND(open);			// Step 3: decommit to the coins
 			m_timer_com += MPI_Wtime() - start;
 		GEN_END
 
 		EVL_BEGIN
 			start = MPI_Wtime();
-				comm = EVL_RECV();						// Step 1: receive bob's commitment
-				EVL_SEND(coins);						// Step 2: send coins to bob
+				comm = EVL_RECV();	    	// Step 1: receive bob's commitment
+				EVL_SEND(coins);	     	// Step 2: send coins to bob
 				open = EVL_RECV();
 			m_timer_com += MPI_Wtime() - start;
 
@@ -349,7 +352,7 @@ Bytes BetterYao4::flip_coins(size_t len_in_bytes)
 
 void BetterYao4::cut_and_choose()
 {
-	step_init();
+	reset_timers();
 
 	double start;
 
@@ -415,7 +418,7 @@ void BetterYao4::cut_and_choose()
 
 void BetterYao4::cut_and_choose2()
 {
-	step_init();
+	reset_timers();
 
 	cut_and_choose2_ot();
 	cut_and_choose2_precomputation();
@@ -493,7 +496,7 @@ void BetterYao4::cut_and_choose2_precomputation()
 				m_rnds[ix] = m_prng.rand(Env::k());
 				m_gen_inp_masks[ix] = m_prng.rand(m_gen_inp_cnt);
 
-				gen_init(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);
+				gen_init_circuit(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);
 
 				m_gcs[ix].m_st = 
 					load_pcf_file(Env::pcf_file(), m_gcs[ix].m_const_wire, m_gcs[ix].m_const_wire+1, copy_key);
@@ -770,7 +773,7 @@ void BetterYao4::consistency_check()
 {
   // std::cout << "const check start" << std::endl;
 
-	step_init();
+	reset_timers();
 
 	Bytes bufr;
 	std::vector<Bytes> bufr_chunks;
@@ -786,11 +789,11 @@ void BetterYao4::consistency_check()
 	m_timer_gen += MPI_Wtime() - start;
 
 	start = MPI_Wtime();
-		MPI_Bcast(&bufr[0], bufr.size(), MPI_BYTE, 0, m_mpi_comm);
+                MPI_Bcast(&bufr[0], bufr.size(), MPI_BYTE, 0, m_mpi_comm);
 	m_timer_mpi += MPI_Wtime() - start;
 
 	start = MPI_Wtime();
-		m_matrix = bufr.split(bufr.size()/Env::k());
+                m_matrix = bufr.split(bufr.size()/Env::k());
 	m_timer_evl += MPI_Wtime() - start;
 	m_timer_gen += MPI_Wtime() - start;
 
@@ -844,7 +847,7 @@ void BetterYao4::consistency_check()
 
 void BetterYao4::circuit_evaluate()
 {
-	step_init();
+	reset_timers();
 
 	double start;
 
@@ -855,131 +858,130 @@ void BetterYao4::circuit_evaluate()
 
 	for (size_t ix = 0; ix < m_gcs.size(); ix++)
 	{
-		GEN_BEGIN
-			start = MPI_Wtime();
-			gen_init(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);
-
-                        
-
-//std::cout << ix << " gen const 0: " << get_const_key(m_gcs[ix], 0, 0).to_hex() << std::endl;
-//std::cout << ix << " gen const 1: " << get_const_key(m_gcs[ix], 1, 1).to_hex() << std::endl;
-			m_timer_gen += MPI_Wtime() - start;
-		GEN_END
-
-		EVL_BEGIN
-                  std::cout << "eval start evaluating" << std::endl;
+          GEN_BEGIN
+            start = MPI_Wtime();
+            gen_init_circuit(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);
+          
+            //std::cout << ix << " gen const 0: " << get_const_key(m_gcs[ix], 0, 0).to_hex() << std::endl;
+            //std::cout << ix << " gen const 1: " << get_const_key(m_gcs[ix], 1, 1).to_hex() << std::endl;
+            m_timer_gen += MPI_Wtime() - start;
+            GEN_END
+              
+              EVL_BEGIN
+              std::cout << "eval start evaluating" << std::endl;
+            
+            start = MPI_Wtime();
+            if (m_chks[ix]) // check-circuits
+              {
+                gen_init_circuit(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);
+                //std::cout << "check ";
+              }
+            else // evaluation-circuits
+              {
+                evl_init(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_evl_inp);
+                //std::cout << "evl ";
+              }
+            m_timer_evl += MPI_Wtime() - start;
+            //std::cout << ix << " evl const 0: " << get_const_key(m_gcs[ix], 0, 0).to_hex() << std::endl;
+            //std::cout << ix << " evl const 1: " << get_const_key(m_gcs[ix], 1, 1).to_hex() << std::endl;
+            EVL_END
+              
+              std::cout << "load pcf file" << std:: endl;
+            start = MPI_Wtime();
+            m_gcs[ix].m_st = 
+              load_pcf_file(Env::pcf_file(), m_gcs[ix].m_const_wire, m_gcs[ix].m_const_wire+1, copy_key);
+            m_gcs[ix].m_st->alice_in_size = m_gen_inp_cnt;
+            m_gcs[ix].m_st->bob_in_size = m_evl_inp_cnt;
+            
+            set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
+            set_key_copy_function(m_gcs[ix].m_st, copy_key);
+            set_key_delete_function(m_gcs[ix].m_st, delete_key);
+            m_timer_gen += MPI_Wtime() - start;
+            m_timer_evl += MPI_Wtime() - start;
+            
+            GEN_BEGIN // generate and send the circuit gate-by-gate
+              
+              std::cout << "gen generate and send" << std::endl;
+            start = MPI_Wtime();
+            set_callback(m_gcs[ix].m_st, gen_next_gate_m);
+            while (get_next_gate(m_gcs[ix].m_st))
+              {
+                bufr = get_and_clear_out_bufr(m_gcs[ix]);
+                m_timer_gen += MPI_Wtime() - start;
                 
-			start = MPI_Wtime();
-				if (m_chks[ix]) // check-circuits
-				{
-					gen_init(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);
-//std::cout << "check ";
-				}
-				else // evaluation-circuits
-				{
-					evl_init(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_evl_inp);
-//std::cout << "evl ";
-				}
-			m_timer_evl += MPI_Wtime() - start;
-//std::cout << ix << " evl const 0: " << get_const_key(m_gcs[ix], 0, 0).to_hex() << std::endl;
-//std::cout << ix << " evl const 1: " << get_const_key(m_gcs[ix], 1, 1).to_hex() << std::endl;
-		EVL_END
+                start = MPI_Wtime();
+                GEN_SEND(bufr);
+                m_timer_com += MPI_Wtime() - start;
+                
+                m_comm_sz += bufr.size();
+                
+                start = MPI_Wtime(); // start m_timer_gen
+              }
+            m_timer_gen += MPI_Wtime() - start;
+            
+            GEN_SEND(Bytes(0)); // a redundant value to prevent the evlauator from hanging
+            GEN_END
+              
+              EVL_BEGIN // receive and evaluate the circuit gate-by-gate
+              
+              std::cout << "eval receive and evaluate" << std::endl;
+            if (m_chks[ix]) // check circuit
+              {
+                std::cout << "eval check circuit" << m_chks[ix] << std::endl;
+                start = MPI_Wtime();
+                set_callback(m_gcs[ix].m_st, gen_next_gate_m);
+                while (get_next_gate(m_gcs[ix].m_st))
+                  {
+                    
+                    bufr = get_and_clear_out_bufr(m_gcs[ix]);
+                    m_timer_evl += MPI_Wtime() - start;
+                    
+                    start = MPI_Wtime();
+                    Bytes recv = EVL_RECV();
+                    m_timer_com += MPI_Wtime() - start;
+                    
+                    m_comm_sz += bufr.size();
+                    
+                    start = MPI_Wtime(); // start m_timer_evl
+                    verify &= (bufr == recv);
+                  }
+                m_timer_gen += MPI_Wtime() - start;
+                
+                EVL_RECV(); // a redundant value to prevent the evlauator from hanging
+              }
+            else // evaluation circuit
+              {
+                std::cout << "eval evaluate circuit" << std::endl;
+                start = MPI_Wtime();
+                set_callback(m_gcs[ix].m_st, evl_next_gate_m);
+                std::cout<< "enter do loop" << std::endl;
+                do {
+                  // std::cout << "timing stuff" << std::endl;
+                  m_timer_evl += MPI_Wtime() - start;
+                  
+                  start = MPI_Wtime();
+                  bufr = EVL_RECV();
+                  m_timer_com += MPI_Wtime() - start;
+                  
+                  // std::cout << "buffer size add" << std::endl;
 
-                  std::cout << "load pcf file" << std:: endl;
-		start = MPI_Wtime();
-			m_gcs[ix].m_st = 
-				load_pcf_file(Env::pcf_file(), m_gcs[ix].m_const_wire, m_gcs[ix].m_const_wire+1, copy_key);
-                        m_gcs[ix].m_st->alice_in_size = m_gen_inp_cnt;
-                        m_gcs[ix].m_st->bob_in_size = m_evl_inp_cnt;
-	
-			set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
-			set_key_copy_function(m_gcs[ix].m_st, copy_key);
-			set_key_delete_function(m_gcs[ix].m_st, delete_key);
-		m_timer_gen += MPI_Wtime() - start;
-		m_timer_evl += MPI_Wtime() - start;
-
-		GEN_BEGIN // generate and send the circuit gate-by-gate
-
-                  std::cout << "gen generate and send" << std::endl;
-			start = MPI_Wtime();
-				set_callback(m_gcs[ix].m_st, gen_next_gate_m);
-				while (get_next_gate(m_gcs[ix].m_st))
-				{
-                                  bufr = get_and_clear_out_bufr(m_gcs[ix]);
-                                  m_timer_gen += MPI_Wtime() - start;
-                                  
-                                  start = MPI_Wtime();
-                                  GEN_SEND(bufr);
-                                  m_timer_com += MPI_Wtime() - start;
-                                  
-                                  m_comm_sz += bufr.size();
-                                  
-                                  start = MPI_Wtime(); // start m_timer_gen
-				}
-			m_timer_gen += MPI_Wtime() - start;
-
-			GEN_SEND(Bytes(0)); // a redundant value to prevent the evlauator from hanging
-		GEN_END
-
-		EVL_BEGIN // receive and evaluate the circuit gate-by-gate
-
-                  std::cout << "eval receive and evaluate" << std::endl;
-			if (m_chks[ix]) // check circuit
-			{
-                          std::cout << "eval check circuit" << m_chks[ix] << std::endl;
-				start = MPI_Wtime();
-					set_callback(m_gcs[ix].m_st, gen_next_gate_m);
-					while (get_next_gate(m_gcs[ix].m_st))
-					{
-                                          
-                                          bufr = get_and_clear_out_bufr(m_gcs[ix]);
-                                          m_timer_evl += MPI_Wtime() - start;
-                                          
-                                          start = MPI_Wtime();
-                                          Bytes recv = EVL_RECV();
-                                          m_timer_com += MPI_Wtime() - start;
-                                          
-                                          m_comm_sz += bufr.size();
-                                          
-                                          start = MPI_Wtime(); // start m_timer_evl
-                                          verify &= (bufr == recv);
-					}
-				m_timer_gen += MPI_Wtime() - start;
-
-				EVL_RECV(); // a redundant value to prevent the evlauator from hanging
-			}
-			else // evaluation circuit
-			{
-                          std::cout << "eval evaluate circuit" << std::endl;
-				start = MPI_Wtime();
-					set_callback(m_gcs[ix].m_st, evl_next_gate_m);
-                                        std::cout<< "enter do loop" << std::endl;
-					do {
-                                          // std::cout << "timing stuff" << std::endl;
-						m_timer_evl += MPI_Wtime() - start;
-	
-						start = MPI_Wtime();
-							bufr = EVL_RECV();
-						m_timer_com += MPI_Wtime() - start;
-                                                
-                                                // std::cout << "buffer size add" << std::endl;
-
-						m_comm_sz += bufr.size();
-
-						start = MPI_Wtime();
-                                                recv(m_gcs[ix], bufr);
-                                                
-                                                //std::cout << "received" << std::endl;
-                                                //fprintf(stderr, "received");
-
-                                                // std::cout << "got a gate" << std::endl;                  
-					} while (get_next_gate(m_gcs[ix].m_st));
-
-                                        std::cout << "complete" << std::endl;
-				m_timer_evl += MPI_Wtime() - start;
-			}
-		EVL_END
-	}
+                  m_comm_sz += bufr.size();
+                  
+                  start = MPI_Wtime();
+                  recv(m_gcs[ix], bufr);
+                  
+                  //std::cout << "received" << std::endl;
+                  //fprintf(stderr, "received");
+                  
+                  // std::cout << "got a gate" << std::endl;                  
+                } while (get_next_gate(m_gcs[ix].m_st));
+                
+                std::cout << "complete" << std::endl;
+                m_timer_evl += MPI_Wtime() - start;
+              }
+            
+            EVL_END
+              }
 
 	EVL_BEGIN // check the hash of all the garbled circuits
 		int all_verify = 0;
@@ -1050,7 +1052,7 @@ void BetterYao4::circuit_evaluate()
 void BetterYao4::proc_evl_out()
 {
 	EVL_BEGIN
-		step_init();
+		reset_timers();
 
 		double start;
 		Bytes send, recv;
@@ -1093,7 +1095,7 @@ void BetterYao4::proc_evl_out()
 
 void BetterYao4::proc_gen_out()
 {
-	step_init();
+	reset_timers();
 
 	// TODO: implement Ki08
 	m_gen_out = m_gcs[0].m_gen_out;
@@ -1105,7 +1107,7 @@ void BetterYao4::proc_gen_out()
 
 	GEN_BEGIN
         m_gen_out = GEN_RECV();
-    GEN_END
+        GEN_END
 
 	step_report("chk-gen-out");
 }
