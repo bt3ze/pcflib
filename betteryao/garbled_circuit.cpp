@@ -76,7 +76,7 @@ void update_hash(garbled_circuit_t &cct, const Bytes &data)
 
 };
 
-void gen_init_circuit(garbled_circuit_t &cct, const vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed)
+void gen_init_circuit(garbled_circuit_t &cct, const std::vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed)
 {
 	cct.m_ot_keys = &ot_keys;
 	cct.m_gen_inp_mask = gen_inp_mask;
@@ -113,7 +113,7 @@ void gen_init_circuit(garbled_circuit_t &cct, const vector<Bytes> &ot_keys, cons
 	cct.m_clear_mask = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 }
 
-void evl_init(garbled_circuit_t &cct, const vector<Bytes> &ot_keys, const Bytes &masked_gen_inp, const Bytes &evl_inp)
+void evl_init(garbled_circuit_t &cct, const std::vector<Bytes> &ot_keys, const Bytes &masked_gen_inp, const Bytes &evl_inp)
 {
 	cct.m_ot_keys = &ot_keys;
 	cct.m_gen_inp_mask = masked_gen_inp;

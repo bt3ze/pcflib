@@ -22,13 +22,13 @@ private:
 	// variables for SS11 committing OT implementation
 	G                      m_ot_g[2];
 	G                      m_ot_h[2];
-	vector<vector<Bytes> > m_ot_keys; // ot output
+        std::vector<std::vector<Bytes> > m_ot_keys; // ot output
 
 	// variables for Yao protocol
-	vector<Bytes>          m_gen_inp_masks;
-	vector<Bytes>          m_rnds;
+        std::vector<Bytes>          m_gen_inp_masks;
+        std::vector<Bytes>          m_rnds;
 	//vector<GarbledCct>     m_ccts;
-	vector<garbled_circuit_t> m_gcs;
+        std::vector<garbled_circuit_t> m_gcs;
 
 	uint32_t               m_gen_inp_cnt;
 	uint32_t               m_evl_inp_cnt;

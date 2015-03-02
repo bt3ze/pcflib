@@ -2,6 +2,7 @@
 #define GARBLED_CIRCUIT_M_H_
 
 #include <emmintrin.h>
+#include <vector>
 
 #include "Env.h"
 #include "Prng.h"
@@ -10,6 +11,7 @@
 extern "C" {
 #include "../pcflib.h"
 }
+
 
 typedef struct
 {

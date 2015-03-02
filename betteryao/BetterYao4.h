@@ -4,6 +4,7 @@
 #include "YaoBase.h"
 //#include "GarbledCct3.h"
 #include "garbled_circuit_m.h"
+#include <vector>
 
 class BetterYao4 : public YaoBase
 {
@@ -38,27 +39,27 @@ private:
 
 	size_t                          m_ot_bit_cnt;
 	Bytes                           m_ot_recv_bits;
-	vector<Bytes>                   m_ot_send_pairs;
-	vector<Bytes>                   m_ot_out;
+        std::vector<Bytes>                   m_ot_send_pairs;
+        std::vector<Bytes>                   m_ot_out;
 
-	vector<vector<Bytes> >          m_ot_keys; // ot output
+        std::vector<std::vector<Bytes> >          m_ot_keys; // ot output
 
 	// variables for cut-and-choose
 	Bytes                           m_chks;
 	Bytes                           m_all_chks;
 
 	// variables for Yao protocol
-	vector<Bytes>                   m_gen_inp_masks;
-	vector<Bytes>                   m_coms;
-	vector<Bytes>                   m_rnds;
-	vector<garbled_circuit_m_t>     m_gcs; 
+        std::vector<Bytes>                   m_gen_inp_masks;
+        std::vector<Bytes>                   m_coms;
+        std::vector<Bytes>                   m_rnds;
+        std::vector<garbled_circuit_m_t>     m_gcs; 
 
         // variables for Gen's input check
-        vector<Bytes>                   m_gen_inp_hash;
-	vector<vector<Bytes> >          m_gen_inp_decom;
-	vector<Bytes>                   m_matrix;
+        std::vector<Bytes>                   m_gen_inp_hash;
+        std::vector<std::vector<Bytes> >      m_gen_inp_decom;
+        std::vector<Bytes>                   m_matrix;
 
-	vector<Prng>			m_prngs;
+        std::vector<Prng>		     m_prngs;
 	uint32_t                        m_gen_inp_cnt;
 	uint32_t                        m_evl_inp_cnt;
 };

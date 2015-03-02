@@ -3,6 +3,8 @@
 
 #include <string>
 #include <vector>
+#include <iostream>
+#include <fstream>
 
 #include "mpi.h"
 
@@ -85,12 +87,12 @@ protected:
 
 	uint64_t            m_comm_sz;
 
-	vector<double>      m_timer_cmp_vec;
-	vector<double>      m_timer_mpi_vec;
-	vector<double>      m_timer_cmm_vec;
+        std::vector<double>      m_timer_cmp_vec;
+        std::vector<double>      m_timer_mpi_vec;
+        std::vector<double>      m_timer_cmm_vec;
 
-	vector<std::string> m_step_name_vec;
-	vector<uint64_t>    m_comm_sz_vec;
+        std::vector<std::string> m_step_name_vec;
+        std::vector<uint64_t>    m_comm_sz_vec;
 
 	// variables for Yao protocol
 	Bytes               m_evl_inp;

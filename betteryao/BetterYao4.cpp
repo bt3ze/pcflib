@@ -494,7 +494,10 @@ void BetterYao4::cut_and_choose2_precomputation()
 			for (size_t ix = 0; ix < m_gcs.size(); ix++)
 			{
 				m_rnds[ix] = m_prng.rand(Env::k());
+
 				m_gen_inp_masks[ix] = m_prng.rand(m_gen_inp_cnt);
+                                // FLAG! INPUT MASKS HAS AS MANY BITS AS THE INPUT COUNT??
+                                //m_gen_inp_masks[ix]=m_prgn.rand(Env::k());
 
 				gen_init_circuit(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);
 
@@ -574,7 +577,7 @@ void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
 			if (!m_chks[ix]) // evaluation circuit
 			{
 				bufr ^= m_prngs[ix].rand(bufr.size()*8); // decrypt message
-				vector<Bytes> bufr_chunks = bufr.split(Env::key_size_in_bytes());
+                                std::vector<Bytes> bufr_chunks = bufr.split(Env::key_size_in_bytes());
 				set_const_key(m_gcs[ix], 0, bufr_chunks[0]);
 				set_const_key(m_gcs[ix], 1, bufr_chunks[1]);
 			}
@@ -630,7 +633,7 @@ void BetterYao4::cut_and_choose2_chk_circuit(size_t ix)
 	double start;
 
 	Bytes bufr;
-	vector<Bytes> bufr_chunks;
+        std::vector<Bytes> bufr_chunks;
 
 	// send m_gen_inp_masks[ix]
 	GEN_BEGIN
@@ -1081,7 +1084,11 @@ void BetterYao4::proc_evl_out()
 					chks_total += m_all_chks[ix];
 
 				// find majority by locating the median of output from evaluation-circuits
-				std::vector<Bytes> vec = recv.split((Env::circuit().evl_out_cnt()+7)/8);
+
+                                // this line is OBVIOUSLY wrong. evl_out_cnt was never anything but 0
+				// std::vector<Bytes> vec = recv.split((Env::circuit().evl_out_cnt()+7)/8);
+                                std::vector<Bytes> vec = recv.split(0);
+                                
 				size_t median_ix = (chks_total+vec.size())/2;
 				std::nth_element(vec.begin(), vec.begin()+median_ix, vec.end());
 

@@ -5,11 +5,14 @@
 #include <arpa/inet.h>
 #include <mpi.h>
 #include <cstring>
+#include <vector>
 
 #include "YaoBase.h"
 
 #include <log4cxx/logger.h>
 static log4cxx::LoggerPtr logger(log4cxx::Logger::getLogger("YaoBase.cpp"));
+
+using std::vector;
 
 
 inline std::string get_IP()

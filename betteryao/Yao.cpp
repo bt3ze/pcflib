@@ -291,7 +291,7 @@ void Yao::circuit_evaluate()
 	double start;
 
 	Bytes bufr;
-	vector<Bytes> bufr_chunks;
+        std::vector<Bytes> bufr_chunks;
 
 	G M;
 

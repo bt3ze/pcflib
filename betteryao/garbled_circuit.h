@@ -3,6 +3,7 @@
 
 #include <emmintrin.h>
 
+#include <vector>
 #include "Env.h"
 #include "Prng.h"
 #include "Hash.h"

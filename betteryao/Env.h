@@ -6,7 +6,7 @@
 #include "Algebra.h"
 #include "Bytes.h"
 #include "ClawFree.h"
-#include "Circuit.h"
+// #include "Circuit.h"
 #include "NetIO.h"
 
 
@@ -38,7 +38,7 @@ struct EnvParams
 	Socket       *remote;
 	ServerSocket *server;
 
-	Circuit       circuit;
+  // Circuit       circuit;
 	ClawFree      claw_free;
 
 	//const char   *circuit_file; // boolean circuit computing f(x,y) -> (f1, f2)
@@ -47,8 +47,8 @@ struct EnvParams
 	const char   *ipserve_addr;
 
 	const char   *pcf_file;
-
-  const char *input_file;
+  
+        const char *input_file;
 };
 
 class Env
@@ -121,11 +121,13 @@ public:
 		return instance->elm_length;
 	}
 
+        /*
 	static Circuit &circuit()
 	{
 		assert(instance != 0);
 		return instance->m_params.circuit;
 	}
+        */
 
 	static const char *pcf_file()
 	{
