@@ -357,7 +357,20 @@ void YaoBase::final_report()
 	}
 }
 
-/*
+
+void YaoBase::get_and_size_inputs(){
+  	static byte MASK[8] = { 0xFF, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F};
+
+	m_gen_inp_cnt = read_alice_length(Env::private_file());
+	m_evl_inp_cnt = read_bob_length(Env::private_file());
+
+	m_evl_inp.resize((m_evl_inp_cnt+7)/8);
+	m_evl_inp.back() &= MASK[m_evl_inp_cnt%8];
+
+	m_gen_inp.resize((m_gen_inp_cnt+7)/8);
+	m_gen_inp.back() &= MASK[m_gen_inp_cnt%8];
+}
+
 void YaoBase::oblivious_transfer()
 {
 	reset_timers();
@@ -607,5 +620,3 @@ void YaoBase::oblivious_transfer()
 
 	step_report("ob-transfer");
 }
-
-*/

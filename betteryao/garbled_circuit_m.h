@@ -27,7 +27,6 @@ typedef struct
   uint64_t            m_gate_ix; // gate index?
 
   // input indices
-  uint32_t            m_gen_inp_hash_ix;
   uint32_t            m_gen_inp_ix;
   uint32_t            m_evl_inp_ix;
   uint32_t            m_gen_out_ix;
@@ -36,25 +35,24 @@ typedef struct
   __m128i             m_clear_mask; // what is the purpose of this mask?
 
   // gen and eval inputs
-	Bytes               m_gen_inp_mask;
-	Bytes               m_gen_inp;
-	Bytes               m_evl_inp;
-	Bytes               m_gen_out;
-	Bytes               m_evl_out;
-
-  std::vector<Bytes>  m_gen_inp_com; // commitments?
-  std::vector<Bytes>  m_gen_inp_decom; // decommitments?
-  Bytes               m_gen_inp_hash;
+  Bytes               m_gen_inp_mask;
+  Bytes               m_gen_inp;
+  Bytes               m_evl_inp;
+  Bytes               m_gen_out;
+  Bytes               m_evl_out;
 
   Bytes               m_o_bufr; // out buffer?
   Bytes               m_i_bufr; // in buffer?
   Bytes::iterator     m_i_bufr_ix; // pointer to buffer element
 
   struct PCFState    *m_st; // pointer to the PCF state
-  uint32_t            m_gen_inp_cnt; // gen input count
-  uint32_t            m_evl_inp_cnt; // evl input count
   __m128i             m_const_wire[2]; // keys for constant 0 and 1
 
+  // 
+  std::vector<Bytes>  m_gen_inp_com; // commitments?
+  std::vector<Bytes>  m_gen_inp_decom; // decommitments?
+  Bytes               m_gen_inp_hash;
+    
 } garbled_circuit_m_t;
 
 void gen_init_circuit(garbled_circuit_m_t &cct, const std::vector<Bytes> &keys, const Bytes &gen_inp_mask, const Bytes &seed);
@@ -76,17 +74,6 @@ inline void recv(garbled_circuit_m_t &cct, const Bytes &i_data)
 	cct.m_i_bufr_ix = cct.m_i_bufr.begin();
 }
 
-/*
-// this function has been renamed get_out_bufr because it doesn't
-// actually send anything. instead, its contents are copied then cleared
-inline const Bytes send(garbled_circuit_m_t &cct)
-{
-	static Bytes o_data;
-	o_data.swap(cct.m_o_bufr);
-	cct.m_o_bufr.clear();
-	return o_data;
-}
-*/
 
 inline const Bytes get_and_clear_out_bufr(garbled_circuit_m_t &cct){
   static Bytes o_data;

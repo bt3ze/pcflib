@@ -2,7 +2,6 @@
 #define BETTERYAO4_H_
 
 #include "YaoBase.h"
-//#include "GarbledCct3.h"
 #include "garbled_circuit_m.h"
 #include <vector>
 
@@ -14,7 +13,7 @@ public:
 
 	virtual void start();
 
-	void oblivious_transfer();
+	//void oblivious_transfer();
 	void cut_and_choose();
 	void cut_and_choose2();
 	void consistency_check();
@@ -33,16 +32,11 @@ private:
 	void proc_gen_out();
 	void proc_evl_out();
 
-	// variables for IKNP03 OT-extension implementation
-	G                               m_ot_g[2];
-	G                               m_ot_h[2];
 
 	size_t                          m_ot_bit_cnt;
 	Bytes                           m_ot_recv_bits;
         std::vector<Bytes>                   m_ot_send_pairs;
         std::vector<Bytes>                   m_ot_out;
-
-        std::vector<std::vector<Bytes> >          m_ot_keys; // ot output
 
 	// variables for cut-and-choose
 	Bytes                           m_chks;
@@ -60,8 +54,7 @@ private:
         std::vector<Bytes>                   m_matrix;
 
         std::vector<Prng>		     m_prngs;
-	uint32_t                        m_gen_inp_cnt;
-	uint32_t                        m_evl_inp_cnt;
+
 };
 
 

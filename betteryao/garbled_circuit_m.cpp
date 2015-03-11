@@ -558,7 +558,7 @@ void gen_next_gen_inp_com(garbled_circuit_m_t &cct, const Bytes &row, size_t kx)
 	_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), out_key[1-bit]);
 	cct.m_o_bufr.insert(cct.m_o_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
 
-	cct.m_gen_inp_hash_ix++;
+	//cct.m_gen_inp_hash_ix++;
 }
 
 void evl_next_gen_inp_com(garbled_circuit_m_t &cct, const Bytes &row, size_t kx)
@@ -596,6 +596,5 @@ void evl_next_gen_inp_com(garbled_circuit_m_t &cct, const Bytes &row, size_t kx)
 	cct.m_gen_inp_hash.set_ith_bit(kx, bit);
 
 	cct.m_i_bufr_ix += 2*Env::key_size_in_bytes();
-
-	cct.m_gen_inp_hash_ix++;
+        
 }

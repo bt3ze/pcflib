@@ -11,6 +11,7 @@
 #include "Env.h"
 #include "NetIO.h"
 
+#include "../pcflib.h"
 
 #ifdef GEN_CODE
 
@@ -58,13 +59,13 @@ public:
 
         virtual void start() = 0;
         
-        // void oblivious_transfer();
+
 private:
 	void init_cluster(EnvParams &params);
 	void init_network(EnvParams &params);
 	void init_environ(EnvParams &params);
 	void init_private(EnvParams &params);
-//void oblivious_transfer();
+
 protected:
 	// subroutines for the communication in the Simulation mode
 	Bytes recv_data(int src_node);
@@ -75,6 +76,11 @@ protected:
 	void step_report(std::string step_name);
 	void step_report_no_sync(std::string step_name);
 	void final_report();
+
+        // subroutines for the protocol
+        void oblivious_transfer();
+        void get_and_size_inputs();
+
 
 protected:
 	// variables for MPI
@@ -102,6 +108,17 @@ protected:
 	Bytes               m_evl_out;
 
 	Prng                m_prng;
+
+        // variables for IKNP03 OT-extension implementation
+        // or SS11 committing OT implementation
+	G                               m_ot_g[2];
+	G                               m_ot_h[2];
+        std::vector<std::vector<Bytes> > m_ot_keys; // ot output
+
+        // variables for input counts
+	uint32_t               m_gen_inp_cnt;
+	uint32_t               m_evl_inp_cnt;
+
 };
 
 #endif

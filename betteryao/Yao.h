@@ -14,15 +14,10 @@ public:
 	virtual void start();
 
 private:
-	void oblivious_transfer();
+	//void oblivious_transfer();
 	void circuit_evaluate();
 	void proc_gen_out();
 	void proc_evl_out();
-
-	// variables for SS11 committing OT implementation
-	G                      m_ot_g[2];
-	G                      m_ot_h[2];
-        std::vector<std::vector<Bytes> > m_ot_keys; // ot output
 
 	// variables for Yao protocol
         std::vector<Bytes>          m_gen_inp_masks;
@@ -30,8 +25,6 @@ private:
 	//vector<GarbledCct>     m_ccts;
         std::vector<garbled_circuit_t> m_gcs;
 
-	uint32_t               m_gen_inp_cnt;
-	uint32_t               m_evl_inp_cnt;
 };
 
 #endif
