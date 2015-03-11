@@ -30,5 +30,4 @@ void *evl_next_gate(struct PCFState *st, struct PCFGate *gate);
 	_mm_extract_epi16((x), (imm) >> 1) & 0xff : \
 	_mm_extract_epi16( _mm_srli_epi16((x), 8), (imm) >> 1))
 
-
 #endif

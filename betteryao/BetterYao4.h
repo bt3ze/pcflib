@@ -3,6 +3,7 @@
 
 #include "YaoBase.h"
 #include "garbled_circuit_m.h"
+
 #include <vector>
 
 class BetterYao4 : public YaoBase

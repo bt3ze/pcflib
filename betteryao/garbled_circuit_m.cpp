@@ -1,16 +1,7 @@
+// garbled_circuit_m.cpp
+
 #include "garbled_circuit_m.h"
 
-
-
-Bytes setBytes( __m128i & i)
-{
-
-        Bytes q;
-        q.resize(16,0);
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(&q[0]), i);
-
-        return q;
-}
 
 const Bytes get_const_key(garbled_circuit_m_t &cct, byte c, byte b)
 {
@@ -598,3 +589,4 @@ void evl_next_gen_inp_com(garbled_circuit_m_t &cct, const Bytes &row, size_t kx)
 	cct.m_i_bufr_ix += 2*Env::key_size_in_bytes();
         
 }
+

@@ -40,6 +40,9 @@ typedef struct
 }
 garbled_circuit_t;
 
+
+// prototypes with analogous versions in malicious garbled circuit
+
 void gen_init_circuit(garbled_circuit_t &cct, const std::vector<Bytes> &keys, const Bytes &gen_inp_mask, const Bytes &seed);
 void evl_init_circuit(garbled_circuit_t &cct, const std::vector<Bytes> &keys, const Bytes &masked_gen_inp, const Bytes &seed);
 

@@ -4,8 +4,8 @@ MPI_CXX    = mpicxx
 
 LIBS       = -lpbc -lgmp -lcrypto -llog4cxx -lpthread
 HEADERS    = Algebra.h Aes.h Bytes.h Env.h garbled_circuit.h garbled_circuit_hbc.h garbled_circuit_m.h NetIO.h Prng.h ClawFree.h # Circuit.h 
-OBJS       = Algebra.o Bytes.o Env.o garbled_circuit.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o \
-	garbled_circuit_m.o # Circuit.o GarbledCct3.o
+OBJS       = Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o \
+	garbled_circuit.o garbled_circuit_hbc.o garbled_circuit_m.o # Circuit.o GarbledCct3.o
 MAINS      = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp
 
 all : sim pcflib
@@ -44,8 +44,11 @@ server : ipserver.cpp Bytes.o Env.o NetIO.o
 #GarbledCct3.o : Algebra.h Bytes.h Circuit.h Env.h Prng.h GarbledCct3.h GarbledCct3.cpp
 #	$(CXX) -msse2 $(CXX_CFLAGS) -c GarbledCct3.cpp
 
-garbled_circuit_hbc.o : Algebra.h Aes.h Bytes.h Env.h Prng.h garbled_circuit.h garbled_circuit_hbc.h garbled_circuit_hbc.cpp #Circuit.h
+garbled_circuit.o : Algebra.h Aes.h Bytes.h Env.h Prng.h garbled_circuit.h garbled_circuit.cpp
 	$(CXX) -msse2 $(CXX_CFLAGS) -c garbled_circuit.cpp
+
+garbled_circuit_hbc.o : Algebra.h Aes.h Bytes.h Env.h Prng.h garbled_circuit.h garbled_circuit_hbc.h garbled_circuit_hbc.cpp #Circuit.h
+	$(CXX) -msse2 $(CXX_CFLAGS) -c garbled_circuit_hbc.cpp
 
 garbled_circuit_m.o : Algebra.h Aes.h Bytes.h Env.h Prng.h garbled_circuit.h garbled_circuit_m.h garbled_circuit_m.cpp #Circuit.h
 	$(CXX) -msse2 $(CXX_CFLAGS) -c garbled_circuit_m.cpp

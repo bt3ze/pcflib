@@ -46,6 +46,10 @@ typedef struct
     
 } garbled_circuit_m_t;
 
+
+// prototypes with analogous versions in hbc garbled circuit
+
+
 void gen_init_circuit(garbled_circuit_m_t &cct, const std::vector<Bytes> &keys, const Bytes &gen_inp_mask, const Bytes &seed);
 void evl_init_circuit(garbled_circuit_m_t &cct, const std::vector<Bytes> &keys, const Bytes &masked_gen_inp, const Bytes &seed);
 
@@ -76,7 +80,15 @@ inline const Bytes get_and_clear_out_bufr(garbled_circuit_m_t &cct){
 
 void set_const_key(garbled_circuit_m_t &cct, byte c, const Bytes &key);
 const Bytes get_const_key(garbled_circuit_m_t &cct, byte c, byte b);
+// flag the above &
 
+
+// now, prototypes and functions specific to malicious
+
+void * evl_next_gate_m(struct PCFState *st, struct PCFGate *current_gate);
+void * gen_next_gate_m(struct PCFState *st, struct PCFGate *current_gate);
+void evl_next_gen_inp_com(garbled_circuit_m_t &cct, const Bytes &row, size_t kx);
+void gen_next_gen_inp_com(garbled_circuit_m_t &cct, const Bytes &row, size_t kx);
 
 inline bool pass_check(const garbled_circuit_m_t &cct)
 {
@@ -116,5 +128,5 @@ inline void initialize_circuit_mal(garbled_circuit_m_t &cct)
 	cct.m_clear_mask = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 }
 
-#endif
 
+#endif
