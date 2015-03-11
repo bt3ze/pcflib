@@ -53,17 +53,18 @@
 
 class YaoBase {
 public:
-	YaoBase(EnvParams &params);
-	virtual ~YaoBase();
+        YaoBase(EnvParams &params);
+        virtual ~YaoBase();
 
-	virtual void start() = 0;
-
+        virtual void start() = 0;
+        
+        // void oblivious_transfer();
 private:
 	void init_cluster(EnvParams &params);
 	void init_network(EnvParams &params);
 	void init_environ(EnvParams &params);
 	void init_private(EnvParams &params);
-
+//void oblivious_transfer();
 protected:
 	// subroutines for the communication in the Simulation mode
 	Bytes recv_data(int src_node);

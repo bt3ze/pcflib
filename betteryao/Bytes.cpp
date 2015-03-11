@@ -64,11 +64,15 @@ void Bytes::from_hex(const std::string &s)
 	for (size_t ix = 0; ix < s.size(); ix++)
 	{
 		if (REVERSE_HEX_TABLE[s[ix]] == -1)
-		{
-            std::cerr << "Invalid hex format: " << s;
-		}
-		(*this)[ix/2] += REVERSE_HEX_TABLE[s[ix]]*HEX_EXP[ix%2];
-	}
+                  {
+                    std::cerr << "Invalid hex format: " << s;
+                    //exit(0);
+                  } else {
+                  // this formula looks OK
+                  (*this)[ix/2] += REVERSE_HEX_TABLE[s[ix]]*HEX_EXP[ix%2];
+                }
+        }
+                
   // // Better way:  just read the hex nibbles one-by-one, straight up
   // uint8_t q;
   // for(int i = 0; i < s.size(); i++)

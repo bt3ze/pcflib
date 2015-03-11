@@ -165,6 +165,10 @@ public:
 		return instance->m_params.wrld_rank % 2;
 	}
 
+        static bool is_gen(){
+          return !is_evl();
+        }
+
 	static bool is_root()
 	{
 		assert(instance != 0);

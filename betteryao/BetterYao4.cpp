@@ -10,6 +10,8 @@ static log4cxx::LoggerPtr logger(log4cxx::Logger::getLogger("BetterYao4.cpp"));
 
 BetterYao4::BetterYao4(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
 {
+
+  std::cout << "node load: " << Env::node_load() << std::endl;
 	// Init variables
 	m_rnds.resize(Env::node_load());
 	//m_ccts.resize(Env::node_load());
@@ -24,14 +26,17 @@ BetterYao4::BetterYao4(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
 	m_gen_inp_masks.resize(Env::node_load());
 	m_gen_inp_decom.resize(Env::node_load());
 
-	m_gen_inp_cnt = read_alice_length(Env::private_file());
+	
+	static byte MASK[8] = { 0xFF, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F};
+        
+        // inputs are relatively fragile and dependent on the input file
+        m_gen_inp_cnt = read_alice_length(Env::private_file());
 	m_evl_inp_cnt = read_bob_length(Env::private_file());
 
-	static byte MASK[8] = { 0xFF, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F};
-
+        // resize to vectors of bytes that will fit the whole input
 	m_evl_inp.resize((m_evl_inp_cnt+7)/8);
 	m_evl_inp.back() &= MASK[m_evl_inp_cnt%8];
-
+        
 	m_gen_inp.resize((m_gen_inp_cnt+7)/8);
 	m_gen_inp.back() &= MASK[m_gen_inp_cnt%8];
 }
@@ -46,6 +51,7 @@ void BetterYao4::start()
 	circuit_evaluate();
 	final_report();
 }
+
 
 void BetterYao4::oblivious_transfer()
 {
@@ -117,8 +123,11 @@ void BetterYao4::oblivious_transfer()
 
 		// allocate memory for m_keys
 		m_ot_keys.resize(Env::node_load());
+                // in HBC, Env::node_load() should be 1
+                // in malicious, this will vary
 		for (size_t ix = 0; ix < m_ot_keys.size(); ix++)
 		{
+                  // hbc only executes once
 			m_ot_keys[ix].reserve(m_evl_inp_cnt*2);
 		}
 	m_timer_evl += MPI_Wtime() - start;
@@ -293,6 +302,7 @@ void BetterYao4::oblivious_transfer()
 
 	step_report("ob-transfer");
 }
+
 
 Bytes BetterYao4::flip_coins(size_t len_in_bytes)
 {
@@ -868,9 +878,9 @@ void BetterYao4::circuit_evaluate()
             //std::cout << ix << " gen const 0: " << get_const_key(m_gcs[ix], 0, 0).to_hex() << std::endl;
             //std::cout << ix << " gen const 1: " << get_const_key(m_gcs[ix], 1, 1).to_hex() << std::endl;
             m_timer_gen += MPI_Wtime() - start;
-            GEN_END
+          GEN_END
               
-              EVL_BEGIN
+           EVL_BEGIN
               std::cout << "eval start evaluating" << std::endl;
             
             start = MPI_Wtime();
@@ -881,7 +891,7 @@ void BetterYao4::circuit_evaluate()
               }
             else // evaluation-circuits
               {
-                evl_init(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_evl_inp);
+                evl_init_circuit(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_evl_inp);
                 //std::cout << "evl ";
               }
             m_timer_evl += MPI_Wtime() - start;
@@ -1278,7 +1288,7 @@ void BetterYao4::ot_random()
 				hr.from_bytes(recv_chunks[1]);
 
 				Y[0].random(); Y[1].random(); // K[0], K[1] sampled at random
-
+                                
 				m_ot_out.push_back(Y[0].to_bytes().hash(Env::k()));
 				m_ot_out.push_back(Y[1].to_bytes().hash(Env::k()));
 

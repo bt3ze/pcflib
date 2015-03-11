@@ -93,7 +93,7 @@ void gen_init_circuit(garbled_circuit_m_t &cct, const std::vector<Bytes> &ot_key
    clear the output buffers
    
  */
-void evl_init(garbled_circuit_m_t &cct, const std::vector<Bytes> &ot_keys, const Bytes &masked_gen_inp, const Bytes &evl_inp)
+void evl_init_circuit(garbled_circuit_m_t &cct, const std::vector<Bytes> &ot_keys, const Bytes &masked_gen_inp, const Bytes &evl_inp)
 {
 
 	initialize_circuit_mal(cct);

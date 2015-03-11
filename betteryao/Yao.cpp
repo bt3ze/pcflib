@@ -38,6 +38,7 @@ void Yao::start()
 	final_report();
 }
 
+
 void Yao::oblivious_transfer()
 {
 	reset_timers();
@@ -123,13 +124,12 @@ void Yao::oblivious_transfer()
 	{
 		EVL_BEGIN
 			start = MPI_Wtime();
-				//bufr.clear(); bufr.reserve(Env::exp_size_in_bytes()*Env::circuit().evl_inp_cnt());
+
 				bufr.clear();
 				bufr.reserve(Env::exp_size_in_bytes()*m_evl_inp_cnt);
-				//send.clear(); send.reserve(Env::elm_size_in_bytes()*Env::circuit().evl_inp_cnt()*2);
+
 				send.clear();
 				send.reserve(Env::elm_size_in_bytes()*m_evl_inp_cnt*2);
-				//for (size_t bix = 0; bix < Env::circuit().evl_inp_cnt(); bix++)
 				for (size_t bix = 0; bix < m_evl_inp_cnt; bix++)
 				{
 					r.random();
@@ -159,9 +159,9 @@ void Yao::oblivious_transfer()
 
 	EVL_BEGIN // forward rs to slave evaluators
 		start = MPI_Wtime();
-			//bufr.resize(Env::exp_size_in_bytes()*Env::circuit().evl_inp_cnt());
+        
 			bufr.resize(Env::exp_size_in_bytes()*m_evl_inp_cnt);
-		m_timer_evl += MPI_Wtime() - start;
+                m_timer_evl += MPI_Wtime() - start;
 
 		start = MPI_Wtime();
 			MPI_Bcast(&bufr[0], bufr.size(), MPI_BYTE, 0, m_mpi_comm); // now every evaluator has r's
@@ -238,14 +238,13 @@ void Yao::oblivious_transfer()
 
 		for (size_t ix = 0; ix < m_ot_keys.size(); ix++)
 		{
-			//assert(m_ot_keys[ix].size() == Env::circuit().evl_inp_cnt()*2);
+
 			assert(m_ot_keys[ix].size() == m_evl_inp_cnt*2);
 		}
 	GEN_END
 
 	// Step 5: the evaluator computes K = Y[b]/X[b]^r
 	EVL_BEGIN
-		//for (size_t bix = 0; bix < Env::circuit().evl_inp_cnt(); bix++)
 		for (size_t bix = 0; bix < m_evl_inp_cnt; bix++)
 		{
 			start = MPI_Wtime();
@@ -276,13 +275,12 @@ void Yao::oblivious_transfer()
 
 		for (size_t ix = 0; ix < m_ot_keys.size(); ix++)
 		{
-			//assert(m_ot_keys[ix].size() == Env::circuit().evl_inp_cnt());
 			assert(m_ot_keys[ix].size() == m_evl_inp_cnt);
 		}
 	EVL_END
-
 	step_report("ob-transfer");
 }
+
 
 void Yao::circuit_evaluate()
 {
@@ -317,7 +315,7 @@ void Yao::circuit_evaluate()
 		m_timer_com += MPI_Wtime() - start;
 
 		start = MPI_Wtime();
-			evl_init(m_gcs[0], m_ot_keys[0], m_gen_inp_masks[0], m_evl_inp);
+			evl_init_circuit(m_gcs[0], m_ot_keys[0], m_gen_inp_masks[0], m_evl_inp);
 		m_timer_evl += MPI_Wtime() - start;
 	EVL_END
 
