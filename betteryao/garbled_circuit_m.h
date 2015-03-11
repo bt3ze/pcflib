@@ -7,11 +7,11 @@
 #include "Env.h"
 #include "Prng.h"
 #include "Hash.h"
+#include "Aes.h"
 
 extern "C" {
 #include "../pcflib.h"
 }
-
 
 typedef struct
 {
@@ -41,14 +41,15 @@ typedef struct
   Bytes               m_gen_out;
   Bytes               m_evl_out;
 
-  Bytes               m_o_bufr; // out buffer?
-  Bytes               m_i_bufr; // in buffer?
-  Bytes::iterator     m_i_bufr_ix; // pointer to buffer element
+  Bytes               m_o_bufr; // out buffer
+  Bytes               m_i_bufr; // in buffer
+  Bytes::iterator     m_i_bufr_ix;
 
   struct PCFState    *m_st; // pointer to the PCF state
   __m128i             m_const_wire[2]; // keys for constant 0 and 1
 
-  // 
+
+  // specific to malicious circuit
   std::vector<Bytes>  m_gen_inp_com; // commitments?
   std::vector<Bytes>  m_gen_inp_decom; // decommitments?
   Bytes               m_gen_inp_hash;
@@ -88,11 +89,6 @@ inline const Bytes get_and_clear_out_bufr(garbled_circuit_m_t &cct){
 	_mm_extract_epi16((x), (imm) >> 1) & 0xff : \
 	_mm_extract_epi16( _mm_srli_epi16((x), 8), (imm) >> 1))
 
-Bytes KDF128(const Bytes &in, const Bytes &key);
-Bytes KDF256(const Bytes &in, const Bytes &key);
-
-void KDF128(const uint8_t *in, uint8_t *out, const uint8_t *key);
-void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key);
 
 void set_const_key(garbled_circuit_m_t &cct, byte c, const Bytes &key);
 const Bytes get_const_key(garbled_circuit_m_t &cct, byte c, byte b);

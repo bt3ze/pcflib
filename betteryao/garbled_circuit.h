@@ -2,11 +2,12 @@
 #define GARBLED_CIRCUIT_H_
 
 #include <emmintrin.h>
-
 #include <vector>
+
 #include "Env.h"
 #include "Prng.h"
 #include "Hash.h"
+#include "Aes.h"
 
 extern "C" {
 #include "../pcflib.h"
@@ -14,36 +15,38 @@ extern "C" {
 
 typedef struct
 {
-	Bytes               m_bufr;
-	Hash                m_hash;
+  Bytes               m_bufr;
+  Hash                m_hash;
 
-	__m128i             m_R;
+  __m128i             m_R; // constant for free-XOR
+  
+  const std::vector<Bytes>  *m_ot_keys; // pointer to keys
+  
+  Prng                m_prng; // generator
+  
+  uint64_t            m_gate_ix;
 
-	const std::vector<Bytes>  *m_ot_keys;
+  // input indices
+  uint32_t            m_gen_inp_ix;
+  uint32_t            m_evl_inp_ix;
+  uint32_t            m_gen_out_ix;
+  uint32_t            m_evl_out_ix;
+  
+  __m128i             m_clear_mask;
 
-	Prng                m_prng;
+  Bytes               m_gen_inp_mask;
+  Bytes               m_gen_inp;
+  Bytes               m_evl_inp;
+  Bytes               m_gen_out;
+  Bytes               m_evl_out;
+  
+  Bytes               m_o_bufr; // in buffer
+  Bytes               m_i_bufr; // out buffer
+  Bytes::iterator     m_i_bufr_ix;
+  
+  struct PCFState    *m_st; // pointer to the PCF state
+  __m128i             m_const_wire[2]; // keys for constant 0 and 1
 
-	uint64_t            m_gate_ix;
-
-	uint32_t            m_gen_inp_ix;
-	uint32_t            m_evl_inp_ix;
-	uint32_t            m_gen_out_ix;
-	uint32_t            m_evl_out_ix;
-
-	__m128i             m_clear_mask;
-
-	Bytes               m_gen_inp_mask;
-	Bytes               m_gen_inp;
-	Bytes               m_evl_inp;
-	Bytes               m_gen_out;
-	Bytes               m_evl_out;
-
-	Bytes               m_o_bufr;
-	Bytes               m_i_bufr;
-	Bytes::iterator     m_i_bufr_ix;
-
-	struct PCFState    *m_st;
-	__m128i             m_const_wire[2]; // keys for constant 0 and 1
 }
 garbled_circuit_t;
 
@@ -64,7 +67,7 @@ inline void recv(garbled_circuit_t &cct, const Bytes &i_data)
 	cct.m_i_bufr_ix = cct.m_i_bufr.begin();
 }
 
-inline const Bytes send(garbled_circuit_t &cct)
+inline const Bytes get_and_clear_out_bufr(garbled_circuit_t &cct)
 {
 	static Bytes o_data;
 	o_data.swap(cct.m_o_bufr);
@@ -77,11 +80,6 @@ inline const Bytes send(garbled_circuit_t &cct)
 	_mm_extract_epi16((x), (imm) >> 1) & 0xff : \
 	_mm_extract_epi16( _mm_srli_epi16((x), 8), (imm) >> 1))
 
-Bytes KDF128(const Bytes &in, const Bytes &key);
-Bytes KDF256(const Bytes &in, const Bytes &key);
-
-void KDF128(const uint8_t *in, uint8_t *out, const uint8_t *key);
-void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key);
 
 void set_const_key(garbled_circuit_t &cct, byte c, const Bytes &key);
 const Bytes &get_const_key(garbled_circuit_t &cct, byte c, byte b);

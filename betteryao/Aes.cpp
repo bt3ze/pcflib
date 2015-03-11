@@ -2,6 +2,7 @@
 #include <cassert>
 
 #include "Bytes.h"
+#include "aes.h"
 
 #if !defined (ALIGN16)
 # if defined (__GNUC__)
@@ -11,15 +12,6 @@
 # endif
 #endif
 
-extern "C"
-{
-void AES_128_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
-void AES_192_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
-void AES_256_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
-
-void AES_ECB_decrypt (const uint8_t *in, uint8_t *out, unsigned long length, const uint8_t *KS, int nr);
-void AES_ECB_encrypt (const uint8_t *in, uint8_t *out, unsigned long length, const uint8_t *KS, int nr);
-};
 
 #if defined AESNI
 

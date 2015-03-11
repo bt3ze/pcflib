@@ -3,7 +3,7 @@ CXX        = g++
 MPI_CXX    = mpicxx
 
 LIBS       = -lpbc -lgmp -lcrypto -llog4cxx -lpthread
-HEADERS    = Algebra.h Bytes.h Env.h garbled_circuit.h NetIO.h Prng.h ClawFree.h # Circuit.h 
+HEADERS    = Algebra.h Aes.h Bytes.h Env.h garbled_circuit.h NetIO.h Prng.h ClawFree.h # Circuit.h 
 OBJS       = Algebra.o Bytes.o Env.o garbled_circuit.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o \
 	garbled_circuit_m.o # Circuit.o GarbledCct3.o
 MAINS      = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp
@@ -38,16 +38,16 @@ test-circuit: test-circuit.cpp $(OBJS)
 server : ipserver.cpp Bytes.o Env.o NetIO.o
 	$(CXX) -pthread -o server $(CXX_CFLAGS) $(CXX_LFLAGS) $^ $(LIBS)
 
-GarbledCct.o : Algebra.h Bytes.h Circuit.h Env.h Prng.h GarbledCct.h GarbledCct.cpp
-	$(CXX) -msse2 $(CXX_CFLAGS) -c GarbledCct.cpp
+#GarbledCct.o : Algebra.h Bytes.h Circuit.h Env.h Prng.h GarbledCct.h GarbledCct.cpp
+#	$(CXX) -msse2 $(CXX_CFLAGS) -c GarbledCct.cpp
+#
+#GarbledCct3.o : Algebra.h Bytes.h Circuit.h Env.h Prng.h GarbledCct3.h GarbledCct3.cpp
+#	$(CXX) -msse2 $(CXX_CFLAGS) -c GarbledCct3.cpp
 
-GarbledCct3.o : Algebra.h Bytes.h Circuit.h Env.h Prng.h GarbledCct3.h GarbledCct3.cpp
-	$(CXX) -msse2 $(CXX_CFLAGS) -c GarbledCct3.cpp
-
-garbled_circuit.o : Algebra.h Bytes.h Env.h Prng.h garbled_circuit.h garbled_circuit.cpp #Circuit.h
+garbled_circuit.o : Algebra.h Aes.h Bytes.h Env.h Prng.h garbled_circuit.h garbled_circuit.cpp #Circuit.h
 	$(CXX) -msse2 $(CXX_CFLAGS) -c garbled_circuit.cpp
 
-garbled_circuit_m.o : Algebra.h Bytes.h Env.h Prng.h garbled_circuit_m.h garbled_circuit_m.cpp #Circuit.h
+garbled_circuit_m.o : Algebra.h Aes.h Bytes.h Env.h Prng.h garbled_circuit_m.h garbled_circuit_m.cpp #Circuit.h
 	$(CXX) -msse2 $(CXX_CFLAGS) -c garbled_circuit_m.cpp
 
 Env.o : Algebra.h Bytes.h ClawFree.h NetIO.h Env.h Env.cpp #Circuit.h 
@@ -59,13 +59,13 @@ NetIO.o : Bytes.h NetIO.h NetIO.cpp
 Algebra.o: Bytes.h Prng.h Algebra.h Algebra.cpp
 	$(CXX) $(CXX_CFLAGS) -c Algebra.cpp
 
-Circuit.o : Bytes.h Circuit.h Circuit.cpp
-	$(CXX) $(CXX_CFLAGS) -c Circuit.cpp
+#Circuit.o : Bytes.h Circuit.h Circuit.cpp
+#	$(CXX) $(CXX_CFLAGS) -c Circuit.cpp
 
 Prng.o: Bytes.h Prng.h Prng.cpp
 	$(CXX) $(CXX_CFLAGS) -c Prng.cpp
 
-Aes.o: Bytes.h Aes.cpp
+Aes.o: Bytes.h Aes.h Aes.cpp
 	$(CXX) $(CXX_CFLAGS) -c Aes.cpp
 
 Bytes.o: Bytes.h Hash.h Bytes.cpp

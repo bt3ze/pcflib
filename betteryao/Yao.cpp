@@ -121,7 +121,7 @@ void Yao::circuit_evaluate()
 		start = MPI_Wtime();
 			while (get_next_gate(m_gcs[0].m_st))
 			{
-                          bufr = send(m_gcs[0]);
+                          bufr = get_and_clear_out_bufr(m_gcs[0]);
                           m_timer_gen += MPI_Wtime() - start;
 
                           start = MPI_Wtime();
