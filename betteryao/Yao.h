@@ -2,7 +2,7 @@
 #define YAO_H_
 
 #include "YaoBase.h"
-#include "garbled_circuit.h"
+#include "garbled_circuit_hbc.h"
 
 class Yao : public YaoBase
 {

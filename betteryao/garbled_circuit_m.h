@@ -1,17 +1,7 @@
 #ifndef GARBLED_CIRCUIT_M_H_
 #define GARBLED_CIRCUIT_M_H_
 
-#include <emmintrin.h>
-#include <vector>
-
-#include "Env.h"
-#include "Prng.h"
-#include "Hash.h"
-#include "Aes.h"
-
-extern "C" {
-#include "../pcflib.h"
-}
+#include "garbled_circuit.h"
 
 typedef struct
 {
@@ -59,12 +49,12 @@ typedef struct
 void gen_init_circuit(garbled_circuit_m_t &cct, const std::vector<Bytes> &keys, const Bytes &gen_inp_mask, const Bytes &seed);
 void evl_init_circuit(garbled_circuit_m_t &cct, const std::vector<Bytes> &keys, const Bytes &masked_gen_inp, const Bytes &seed);
 
+
 inline void trim_output(garbled_circuit_m_t &cct)
 {
 	cct.m_gen_out.resize((cct.m_gen_out_ix+7)/8);
 	cct.m_evl_out.resize((cct.m_evl_out_ix+7)/8);
 }
-
 
 
 inline void recv(garbled_circuit_m_t &cct, const Bytes &i_data)
@@ -84,32 +74,9 @@ inline const Bytes get_and_clear_out_bufr(garbled_circuit_m_t &cct){
 }
 
 
-#define  _mm_extract_epi8(x, imm) \
-	((((imm) & 0x1) == 0) ?   \
-	_mm_extract_epi16((x), (imm) >> 1) & 0xff : \
-	_mm_extract_epi16( _mm_srli_epi16((x), 8), (imm) >> 1))
-
-
 void set_const_key(garbled_circuit_m_t &cct, byte c, const Bytes &key);
 const Bytes get_const_key(garbled_circuit_m_t &cct, byte c, byte b);
 
-#ifdef __CPLUSPLUS
-extern "C" {
-#endif
-
-void *gen_next_gate_m(struct PCFState *st, struct PCFGate *gate);
-void *evl_next_gate_m(struct PCFState *st, struct PCFGate *gate);
-
-void gen_next_gen_inp_com(garbled_circuit_m_t &cct, const Bytes &row, size_t kx);
-void evl_next_gen_inp_com(garbled_circuit_m_t &cct, const Bytes &row, size_t kx);
-
-
-void *copy_key(void *);
-void delete_key(void *);
-
-#ifdef __CPLUSPLUS
-}
-#endif
 
 inline bool pass_check(const garbled_circuit_m_t &cct)
 {
