@@ -95,7 +95,7 @@ public:
 
 	virtual void random(Prng &prng)
 	{
-		Bytes rnd = prng.rand(element_length_in_bytes(m_e)*8);
+		Bytes rnd = prng.rand_bits(element_length_in_bytes(m_e)*8);
 		element_from_bytes(m_e, &rnd[0]);
 	}
 
@@ -211,7 +211,7 @@ public:
 		m_fptr_exp = &exp; // preprocessing needs to be redone
 
 //		element_random(I.m_r);
-		Bytes rnd = prng.rand(element_length_in_bytes(I.m_r)*8);
+		Bytes rnd = prng.rand_bits(element_length_in_bytes(I.m_r)*8);
 		element_from_bytes(I.m_r, &rnd[0]);
 		element_pp_pow_zn(m_e, I.m_r, I.m_g_pp);
 	}

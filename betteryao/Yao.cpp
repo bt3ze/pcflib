@@ -44,8 +44,9 @@ void Yao::circuit_evaluate()
 
 	GEN_BEGIN
 		start = MPI_Wtime();
-			m_rnds[0] = m_prng.rand(Env::k());
-			m_gen_inp_masks[0] = m_prng.rand(m_gen_inp_cnt);
+			m_rnds[0] = m_prng.rand_bits(Env::k());
+			m_gen_inp_masks[0] = m_prng.rand_bits(m_gen_inp_cnt);
+                     
 		m_timer_gen += MPI_Wtime() - start;
 
 		start = MPI_Wtime();
@@ -107,12 +108,8 @@ void Yao::circuit_evaluate()
 	set_external_circuit(m_gcs[0].m_st, &m_gcs[0]);
 	set_key_copy_function(m_gcs[0].m_st, copy_key);
 	set_key_delete_function(m_gcs[0].m_st, delete_key);
-        /*
-          // obsolete 
-#ifdef USE_THREADS
-        make_internal_thread(m_gcs[0].m_st);
-#endif
-        */
+
+
 	step_report("pre-cir-evl");
 	reset_timers();
 

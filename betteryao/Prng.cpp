@@ -9,6 +9,7 @@
 
 const char *Prng::RANDOM_FILE = "/dev/urandom";
 
+
 static Bytes shen_sha256(const Bytes &data, const size_t bits)
 {
 	static const byte MASK[8] =
@@ -29,6 +30,8 @@ static Bytes shen_sha256(const Bytes &data, const size_t bits)
 
 const int AES_BLOCK_SIZE_IN_BITS = AES_BLOCK_SIZE*8;
 
+// seed random generator from random file
+// private function
 void Prng::srand()
 {
 	Bytes seed(AES_BLOCK_SIZE);
@@ -37,10 +40,10 @@ void Prng::srand()
 	fread(&seed[0], 1, seed.size(), fp);
 	fclose(fp);
 
-	srand(seed);
+	seed_rand(seed);
 }
 
-void Prng::srand(const Bytes &seed)
+void Prng::seed_rand(const Bytes &seed)
 {
 	Bytes hashed_seed = shen_sha256(seed, AES_BLOCK_SIZE_IN_BITS);
 	memset(&m_key, 0, sizeof(AES_KEY));
@@ -60,7 +63,7 @@ uint64_t Prng::rand_range(uint64_t n) // sample a number from { 0, 1, ..., n-1 }
 	uint64_t ret = 0;
 	do
 	{ // repeat if the sampled number is >= n
-		rnd = rand(bit_length);
+		rnd = rand_bits(bit_length);
 		hex_rnd = "0x" + rnd.to_hex();
 		ret = strtoll(hex_rnd.c_str(), &endptr, 16);
 
@@ -69,7 +72,10 @@ uint64_t Prng::rand_range(uint64_t n) // sample a number from { 0, 1, ..., n-1 }
 	return ret;
 }
 
-Bytes Prng::rand(size_t bits)
+/**
+   get 'bits' number of random bits
+ */
+Bytes Prng::rand_bits(size_t bits)
 {
 	static const byte MASK[8] =
 		{ 0xFF, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F };
@@ -92,6 +98,12 @@ Bytes Prng::rand(size_t bits)
 
 int Prng::cnt = 0;
 
+/**
+   private function
+   produces AES_BLOCK_SIZE random bits returned in a Bytes array
+   and updates state
+   returns block of random bits
+ */
 Bytes Prng::rand()
 {
 	Bytes rnd(AES_BLOCK_SIZE);

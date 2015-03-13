@@ -15,14 +15,16 @@ public:
 	static const char *RANDOM_FILE;
 
 	Prng() { srand(); }
-	Prng(const Bytes &seed) { srand(seed); }
+	Prng(const Bytes &seed) { seed_rand(seed); }
 	virtual ~Prng() {}
 
-	void srand();
-	void srand(const Bytes &seed);
-	Bytes rand();
-	Bytes rand(size_t bits);
+	void seed_rand(const Bytes &seed);
+	Bytes rand_bits(size_t bits);
 	uint64_t rand_range(uint64_t n);  // sample a number from { 0, 1, ..., n-1 }
+
+ private:
+        void srand();
+        Bytes rand();
 };
 
 #endif /* PRNG_H_ */

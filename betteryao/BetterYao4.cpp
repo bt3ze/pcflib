@@ -50,14 +50,14 @@ Bytes BetterYao4::flip_coins(size_t len_in_bytes)
 	if (Env::is_root())
 	{
 		start = MPI_Wtime();
-			Bytes coins = m_prng.rand(len_in_bytes*8);	// Step 0: flip coins
+			Bytes coins = m_prng.rand_bits(len_in_bytes*8);	// Step 0: flip coins
 			Bytes remote_coins, comm, open;
 		m_timer_gen += MPI_Wtime() - start;
 		m_timer_evl += MPI_Wtime() - start;
 
 		GEN_BEGIN
 			start = MPI_Wtime();
-				open = m_prng.rand(Env::k()) + coins;	// Step 1: commit to coins
+				open = m_prng.rand_bits(Env::k()) + coins;	// Step 1: commit to coins
 				comm = open.hash(Env::k());
 			m_timer_gen += MPI_Wtime() - start;
 
@@ -109,7 +109,7 @@ void BetterYao4::cut_and_choose()
 	{
 		start = MPI_Wtime();
 			Prng prng;
-			prng.srand(coins); // use the coins to generate more random bits
+			prng.seed_rand(coins); // use the coins to generate more random bits
 
 			// make 60-40 check-vs-evaluation circuit ratio
 			m_all_chks.assign(Env::s(), 1);
@@ -208,7 +208,7 @@ void BetterYao4::cut_and_choose2_ot()
 			m_prngs.resize(2*Env::node_load());
 			for (size_t ix = 0; ix < m_prngs.size(); ix++)
 			{
-				m_prngs[ix].srand(m_ot_out[ix]);
+				m_prngs[ix].seed_rand(m_ot_out[ix]);
 			}
 		m_timer_gen += MPI_Wtime() - start;
 	GEN_END
@@ -218,7 +218,7 @@ void BetterYao4::cut_and_choose2_ot()
 			m_prngs.resize(Env::node_load());
 			for (size_t ix = 0; ix < m_prngs.size(); ix++)
 			{
-				m_prngs[ix].srand(m_ot_out[ix]);
+				m_prngs[ix].seed_rand(m_ot_out[ix]);
 			}
 		m_timer_evl += MPI_Wtime() - start;
 	EVL_END
@@ -240,10 +240,9 @@ void BetterYao4::cut_and_choose2_precomputation()
 		start = MPI_Wtime();
 			for (size_t ix = 0; ix < m_gcs.size(); ix++)
 			{
-				m_rnds[ix] = m_prng.rand(Env::k());
+				m_rnds[ix] = m_prng.rand_bits(Env::k());
 
-				m_gen_inp_masks[ix] = m_prng.rand(m_gen_inp_cnt);
-                                // FLAG! INPUT MASKS HAS AS MANY BITS AS THE INPUT COUNT??
+				m_gen_inp_masks[ix] = m_prng.rand_bits(m_gen_inp_cnt);
                                 //m_gen_inp_masks[ix]=m_prgn.rand(Env::k());
 
 				gen_init_circuit(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);
@@ -279,7 +278,7 @@ void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
 	GEN_BEGIN
 		start = MPI_Wtime();
 			bufr = m_gen_inp_masks[ix] ^ m_gen_inp;
-			bufr ^= m_prngs[2*ix+0].rand(bufr.size()*8); // encrypt message
+			bufr ^= m_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
 		m_timer_gen += MPI_Wtime() - start;
 
 		start = MPI_Wtime();
@@ -295,7 +294,7 @@ void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
 		start = MPI_Wtime();
 			if (!m_chks[ix]) // evaluation circuit
 			{
-				bufr ^= m_prngs[ix].rand(bufr.size()*8); // decrypt message
+				bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
 				m_gen_inp_masks[ix] = bufr;
 			}
 		m_timer_evl += MPI_Wtime() - start;
@@ -307,7 +306,7 @@ void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
 	GEN_BEGIN
 		start = MPI_Wtime();
 			bufr = get_const_key(m_gcs[ix], 0, 0) + get_const_key(m_gcs[ix], 1, 1);
-			bufr ^= m_prngs[2*ix+0].rand(bufr.size()*8); // encrypt message
+			bufr ^= m_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
 		m_timer_gen += MPI_Wtime() - start;
 
 		start = MPI_Wtime();
@@ -323,7 +322,7 @@ void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
 		start = MPI_Wtime();
 			if (!m_chks[ix]) // evaluation circuit
 			{
-				bufr ^= m_prngs[ix].rand(bufr.size()*8); // decrypt message
+				bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
                                 std::vector<Bytes> bufr_chunks = bufr.split(Env::key_size_in_bytes());
 				set_const_key(m_gcs[ix], 0, bufr_chunks[0]);
 				set_const_key(m_gcs[ix], 1, bufr_chunks[1]);
@@ -348,7 +347,7 @@ void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
 			start = MPI_Wtime();
 				byte bit = m_gen_inp.get_ith_bit(jx) ^ m_gen_inp_masks[ix].get_ith_bit(jx);
 				bufr = m_gcs[ix].m_gen_inp_decom[2*jx+bit];
-				bufr ^= m_prngs[2*ix+0].rand(bufr.size()*8); // encrypt message
+				bufr ^= m_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
 			m_timer_gen += MPI_Wtime() - start;
 
 			start = MPI_Wtime();
@@ -364,7 +363,7 @@ void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
 			start = MPI_Wtime();
 				if (!m_chks[ix]) // evaluation circuit
 				{
-					bufr ^= m_prngs[ix].rand(bufr.size()*8); // decrypt message
+					bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
 					m_gcs[ix].m_gen_inp_decom[jx] = bufr;
 				}
 			m_timer_evl += MPI_Wtime() - start;
@@ -386,7 +385,7 @@ void BetterYao4::cut_and_choose2_chk_circuit(size_t ix)
 	GEN_BEGIN
 		start = MPI_Wtime();
 			bufr = m_gen_inp_masks[ix];
-			bufr ^= m_prngs[2*ix+1].rand(bufr.size()*8); // encrypt message
+			bufr ^= m_prngs[2*ix+1].rand_bits(bufr.size()*8); // encrypt message
 		m_timer_gen += MPI_Wtime() - start;
 
 		start = MPI_Wtime();
@@ -402,7 +401,7 @@ void BetterYao4::cut_and_choose2_chk_circuit(size_t ix)
 		start = MPI_Wtime();
 			if (m_chks[ix]) // check circuit
 			{
-				bufr ^= m_prngs[ix].rand(bufr.size()*8); // decrypt message
+				bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
 				m_gen_inp_masks[ix] = bufr;
 			}
 		m_timer_evl += MPI_Wtime() - start;
@@ -414,7 +413,7 @@ void BetterYao4::cut_and_choose2_chk_circuit(size_t ix)
 	GEN_BEGIN
 		start = MPI_Wtime();
 			bufr = m_rnds[ix];
-			bufr ^= m_prngs[2*ix+1].rand(bufr.size()*8); // encrypt message
+			bufr ^= m_prngs[2*ix+1].rand_bits(bufr.size()*8); // encrypt message
 		m_timer_gen += MPI_Wtime() - start;
 
 		start = MPI_Wtime();
@@ -430,7 +429,7 @@ void BetterYao4::cut_and_choose2_chk_circuit(size_t ix)
 		start = MPI_Wtime();
 			if (m_chks[ix]) // check circuit
 			{
-				bufr ^= m_prngs[ix].rand(bufr.size()*8); // decrypt message
+				bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
 				m_rnds[ix] = bufr;
 			}
 		m_timer_evl += MPI_Wtime() - start;
@@ -453,7 +452,7 @@ void BetterYao4::cut_and_choose2_chk_circuit(size_t ix)
 		GEN_BEGIN
 			start = MPI_Wtime();
 				bufr = m_ot_keys[ix][jx];
-				bufr ^= m_prngs[2*ix+1].rand(bufr.size()*8); // encrypt message
+				bufr ^= m_prngs[2*ix+1].rand_bits(bufr.size()*8); // encrypt message
 			m_timer_gen += MPI_Wtime() - start;
 
 			start = MPI_Wtime();
@@ -469,7 +468,7 @@ void BetterYao4::cut_and_choose2_chk_circuit(size_t ix)
 			start = MPI_Wtime();
 				if (m_chks[ix]) // check circuit
 				{
-					bufr ^= m_prngs[ix].rand(bufr.size()*8); // decrypt message
+					bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
 					m_ot_keys[ix][jx] = bufr;
 				}
 			m_timer_evl += MPI_Wtime() - start;
@@ -492,7 +491,7 @@ void BetterYao4::cut_and_choose2_chk_circuit(size_t ix)
 		GEN_BEGIN
 			start = MPI_Wtime();
 				bufr = m_gcs[ix].m_gen_inp_decom[jx];
-				bufr ^= m_prngs[2*ix+1].rand(bufr.size()*8); // encrypt message
+				bufr ^= m_prngs[2*ix+1].rand_bits(bufr.size()*8); // encrypt message
 			m_timer_gen += MPI_Wtime() - start;
 
 			start = MPI_Wtime();
@@ -508,7 +507,7 @@ void BetterYao4::cut_and_choose2_chk_circuit(size_t ix)
 			start = MPI_Wtime();
 				if (m_chks[ix]) // check circuit
 				{
-					bufr ^= m_prngs[ix].rand(bufr.size()*8); // decrypt message
+					bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
 					m_gen_inp_decom[ix][jx] = bufr;
 				}
 			m_timer_evl += MPI_Wtime() - start;
@@ -642,6 +641,7 @@ void BetterYao4::circuit_evaluate()
               load_pcf_file(Env::pcf_file(), m_gcs[ix].m_const_wire, m_gcs[ix].m_const_wire+1, copy_key);
             m_gcs[ix].m_st->alice_in_size = m_gen_inp_cnt;
             m_gcs[ix].m_st->bob_in_size = m_evl_inp_cnt;
+
             
             set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
             set_key_copy_function(m_gcs[ix].m_st, copy_key);
@@ -669,7 +669,7 @@ void BetterYao4::circuit_evaluate()
               }
             m_timer_gen += MPI_Wtime() - start;
             
-            GEN_SEND(Bytes(0)); // a redundant value to prevent the evlauator from hanging
+            GEN_SEND(Bytes(0)); // a redundant value to prevent the evaluator from hanging
             GEN_END
               
               EVL_BEGIN // receive and evaluate the circuit gate-by-gate

@@ -53,22 +53,22 @@ void gen_init_circuit(garbled_circuit_t &cct, const std::vector<Bytes> &ot_keys,
 {
 	cct.m_ot_keys = &ot_keys;
 	cct.m_gen_inp_mask = gen_inp_mask;
-	cct.m_prng.srand(seed);
+	cct.m_prng.seed_rand(seed);
 
 	// R is a random k-bit string whose 0-th bit has to be 1
 	Bytes tmp;
 
-	tmp = cct.m_prng.rand(Env::k());
+	tmp = cct.m_prng.rand_bits(Env::k());
 	tmp.set_ith_bit(0, 1);
 	tmp.resize(16, 0);
 	cct.m_R = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&tmp[0]));
 
 	// pick zero-keys for constant wires
-	tmp = cct.m_prng.rand(Env::k());
+	tmp = cct.m_prng.rand_bits(Env::k());
 	tmp.resize(16, 0);
 	cct.m_const_wire[0] = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&tmp[0]));
 
-	tmp = cct.m_prng.rand(Env::k());
+	tmp = cct.m_prng.rand_bits(Env::k());
 	tmp.resize(16, 0);
 	cct.m_const_wire[1] = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&tmp[0]));
 
@@ -127,7 +127,7 @@ void *gen_next_gate(struct PCFState *st, struct PCFGate *current_gate)
 	{
 		__m128i a[2];
 
-		Bytes tmp = cct.m_prng.rand(Env::k());
+		Bytes tmp = cct.m_prng.rand_bits(Env::k());
 		tmp.resize(16, 0);
 		current_zero_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 
@@ -158,7 +158,7 @@ void *gen_next_gate(struct PCFState *st, struct PCFGate *current_gate)
 	{
 		__m128i a[2];
 
-		Bytes tmp = cct.m_prng.rand(Env::k());
+		Bytes tmp = cct.m_prng.rand_bits(Env::k());
 		tmp.resize(16, 0);
 		current_zero_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 
@@ -232,7 +232,7 @@ void *gen_next_gate(struct PCFState *st, struct PCFGate *current_gate)
 			Z[1-bit] = _mm_xor_si128(Z[bit], cct.m_R);
 			current_zero_key = _mm_load_si128(Z);
 #else
-			tmp = cct.m_prng.rand(Env::k());
+			tmp = cct.m_prng.rand_bits(Env::k());
 			tmp.resize(16, 0);
 			Z[0] = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 			Z[1] = _mm_xor_si128(Z[0], cct.m_R);
