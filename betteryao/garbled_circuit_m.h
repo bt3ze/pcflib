@@ -61,7 +61,7 @@ inline void trim_output(garbled_circuit_m_t &cct)
 }
 
 
-inline void recv(garbled_circuit_m_t &cct, const Bytes &i_data)
+inline void clear_and_replace_in_bufr(garbled_circuit_m_t &cct, const Bytes &i_data)
 {
 	cct.m_i_bufr.clear();
 	cct.m_i_bufr += i_data;

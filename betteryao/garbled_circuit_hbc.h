@@ -52,7 +52,7 @@ inline void trim_output(garbled_circuit_t &cct)
 	cct.m_evl_out.resize((cct.m_evl_out_ix+7)/8);
 }
 
-inline void recv(garbled_circuit_t &cct, const Bytes &i_data)
+inline void clear_and_replace_in_bufr(garbled_circuit_t &cct, const Bytes &i_data)
 {
 	cct.m_i_bufr.clear();
 	cct.m_i_bufr += i_data;

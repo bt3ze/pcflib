@@ -148,7 +148,7 @@ void Yao::circuit_evaluate()
 				m_comm_sz += bufr.size();
 
 				start = MPI_Wtime();
-					recv(m_gcs[0], bufr);
+					clear_and_replace_in_bufr(m_gcs[0], bufr);
 			} while (get_next_gate(m_gcs[0].m_st));
 		m_timer_evl += MPI_Wtime() - start;
 	EVL_END

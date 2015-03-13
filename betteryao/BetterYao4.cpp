@@ -534,7 +534,7 @@ void BetterYao4::consistency_check()
 
 	start = MPI_Wtime();
 		bufr.resize(Env::k()*((m_gen_inp_cnt+7)/8));
-                m_timer_evl += MPI_Wtime() - start;
+        m_timer_evl += MPI_Wtime() - start;
 	m_timer_gen += MPI_Wtime() - start;
 
 	start = MPI_Wtime();
@@ -572,7 +572,7 @@ void BetterYao4::consistency_check()
 			if (!m_chks[ix]) // evaluation circuit
 			{
 				start = MPI_Wtime();
-					recv(m_gcs[ix], bufr);
+					clear_and_replace_in_bufr(m_gcs[ix], bufr);
 					evl_next_gen_inp_com(m_gcs[ix], m_matrix[kx], kx);
 				m_timer_evl += MPI_Wtime() - start;
 			}
@@ -718,7 +718,7 @@ void BetterYao4::circuit_evaluate()
                   m_comm_sz += bufr.size();
                   
                   start = MPI_Wtime();
-                  recv(m_gcs[ix], bufr);
+                  clear_and_replace_in_bufr(m_gcs[ix], bufr);
                   
                   //std::cout << "received" << std::endl;
                   //fprintf(stderr, "received");
