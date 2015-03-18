@@ -30,9 +30,9 @@ typedef struct
   Bytes               m_gen_out;
   Bytes               m_evl_out;
   
-  Bytes               m_o_bufr; // in buffer
-  Bytes               m_i_bufr; // out buffer
-  Bytes::iterator     m_i_bufr_ix;
+  Bytes               m_out_bufr; // in buffer
+  Bytes               m_in_bufr; // out buffer
+  Bytes::iterator     m_in_bufr_ix;
   
   struct PCFState    *m_st; // pointer to the PCF state
   __m128i             m_const_wire[2]; // keys for constant 0 and 1
@@ -54,17 +54,17 @@ inline void trim_output(garbled_circuit_t &cct)
 
 inline void clear_and_replace_in_bufr(garbled_circuit_t &cct, const Bytes &i_data)
 {
-	cct.m_i_bufr.clear();
-	cct.m_i_bufr += i_data;
-        //assert(cct.m_i_bufr.size() > 0);
-	cct.m_i_bufr_ix = cct.m_i_bufr.begin();
+	cct.m_in_bufr.clear();
+	cct.m_in_bufr += i_data;
+        //assert(cct.m_in_bufr.size() > 0);
+	cct.m_in_bufr_ix = cct.m_in_bufr.begin();
 }
 
 inline const Bytes get_and_clear_out_bufr(garbled_circuit_t &cct)
 {
 	static Bytes o_data;
-	o_data.swap(cct.m_o_bufr);
-	cct.m_o_bufr.clear();
+	o_data.swap(cct.m_out_bufr);
+	cct.m_out_bufr.clear();
 	return o_data;
 }
 

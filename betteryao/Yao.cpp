@@ -18,8 +18,8 @@ Yao::Yao(EnvParams &params) : YaoBase(params), m_gcs(0)
 
         get_and_size_inputs();
 
-	std::cout << "gencount: "<<m_gen_inp_cnt<<"\n";
-	std::cout << "evlcount: "<<m_evl_inp_cnt<<"\n";
+	std::cout << "gencount: "<< m_gen_inp_cnt <<"\n";
+	std::cout << "evlcount: "<< m_evl_inp_cnt <<"\n";
 }
 
 
@@ -42,6 +42,11 @@ void Yao::circuit_evaluate()
 
 	G M;
 
+
+        
+        // step 1:
+        // gen sends masked input to evl
+        // gen initializes circuit
 	GEN_BEGIN
 		start = MPI_Wtime();
 			m_rnds[0] = m_prng.rand_bits(Env::k());
