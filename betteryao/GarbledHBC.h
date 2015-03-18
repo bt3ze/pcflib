@@ -9,6 +9,7 @@ class GarbledHBC: public GarbledBase
  public:
   
   GarbledHBC();
+  ~GarbledHBC();
 
   virtual void * gen_next_gate(struct PCFState *st, struct PCFGate *current_gate); 
   virtual void * evl_next_gate(struct PCFState *st, struct PCFGate *current_gate);

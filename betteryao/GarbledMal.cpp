@@ -21,11 +21,11 @@ GarbledMal::GarbledMal() : GarbledBase() {
 }
 
 
-void * GarbledMal::gen_next_gate(){
+void * GarbledMal::gen_next_gate(PCFState *st, PCFGate *current_gate){
   return 0;
 }
 
-void * GarbledMal::evl_next_gate(){
+void * GarbledMal::evl_next_gate(PCFState *st, PCFGate *current_gate){
   return 0;
 }
 

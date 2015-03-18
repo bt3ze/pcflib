@@ -4,16 +4,16 @@
 #include "GarbledBase.h"
 #include "GarbledHBC.h"
 
-GarbledHBC::GarbledHBC(): public GarbledBase {
+GarbledHBC::GarbledHBC(): GarbledBase() {
   
 }
 
 
-void * GarbledHBC::gen_next_gate(){
+void * GarbledHBC::gen_next_gate(PCFState *st, PCFGate *current_gate){
   return 0;
 }
 
-void * GarbledHBC::evl_next_gate(){
+void * GarbledHBC::evl_next_gate(PCFState *st, PCFGate *current_gate){
   return 0;
 }
 
