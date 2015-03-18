@@ -14,6 +14,8 @@ betteryao: $(MAINS) $(OBJS)
 	$(MPI_CXX) -o evl -DEVL_CODE $(CXX_CFLAGS) $^ $(LIBS)
 	$(MPI_CXX) -o gen -DGEN_CODE $(CXX_CFLAGS) $^ $(LIBS)
 
+newgarble: GarbledBase.o GarbledHBC.o GarbledMal.o
+
 pcflib: pcflib.o
 	gcc -shared -fPIC pcflib.o -o pcflib.so
 
@@ -53,8 +55,14 @@ garbled_circuit_hbc.o : Algebra.h Aes.h Bytes.h Env.h Prng.h garbled_circuit.h g
 garbled_circuit_m.o : Algebra.h Aes.h Bytes.h Env.h Prng.h garbled_circuit.h garbled_circuit_m.h garbled_circuit_m.cpp #Circuit.h
 	$(CXX) -msse2 $(CXX_CFLAGS) -c garbled_circuit_m.cpp
 
-GarbledBase.o : Algebra.h Aes.h Bytes.h Env.h Hash.h Prng.h GarbledBase.h GarbledBase.cpp
+GarbledBase.o : Algebra.h Aes.h Bytes.h Env.h Prng.h GarbledBase.h GarbledBase.cpp
 	$(CXX) -msse2 $(CXX_CFLAGS) -c GarbledBase.cpp
+
+GarbledHBC.o : Algebra.o Aes.h Bytes.h Env.h Prng.h GarbledBase.h GarbledHBC.h GarbledHBC.cpp
+	$(CXX) -msse2 $(CXX_CFLAGS) -c GarbledHBC.cpp
+
+GarbledMal.o : Algebra.o Aes.h Bytes.h Env.h Prng.h GarbledBase.h GarbledMal.h GarbledMal.cpp
+	$(CXX) -msse2 $(CXX_CFLAGS) -c GarbledMal.cpp
 
 Env.o : Algebra.h Bytes.h ClawFree.h NetIO.h Env.h Env.cpp #Circuit.h 
 	$(CXX) $(CXX_CFLAGS) -c Env.cpp

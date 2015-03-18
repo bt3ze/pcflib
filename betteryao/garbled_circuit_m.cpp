@@ -43,7 +43,7 @@ void update_hash(garbled_circuit_m_t &cct, const Bytes &data)
 #ifdef RAND_SEED
 	if (cct.m_bufr.size() > CIRCUIT_HASH_BUFFER_SIZE) // hash the circuit by chunks
 	{
-		cct.m_hash.update(cct.m_bufr);
+          //cct.m_hash.update(cct.m_bufr);
 		cct.m_bufr.clear();
 	}
 #endif
@@ -102,7 +102,7 @@ void evl_init_circuit(garbled_circuit_m_t &cct, const std::vector<Bytes> &ot_key
 
 	cct.m_bufr.reserve(CIRCUIT_HASH_BUFFER_SIZE);
 	cct.m_bufr.clear();
-	cct.m_hash.init();
+	//cct.m_hash.init();
 
 	cct.m_gen_inp_com.clear();
 	//cct.m_gen_inp_decom.clear();

@@ -30,23 +30,23 @@ void set_const_key(garbled_circuit_t &cct, byte c, const Bytes &key)
 }
 
 namespace 
-{ // this already transferred
+{ // this already transferred to garbledbase
 const int CIRCUIT_HASH_BUFFER_SIZE = 1024*1024;
 const int MAX_OUTPUT_SIZE = 1024;
 
-  
-void update_hash(garbled_circuit_t &cct, const Bytes &data)
-{
-	cct.m_bufr += data;
+  // obsolete!!  
+// void update_hash(garbled_circuit_t &cct, const Bytes &data)
+// {
+// 	cct.m_bufr += data;
 
-#ifdef RAND_SEED
-	if (cct.m_bufr.size() > CIRCUIT_HASH_BUFFER_SIZE) // hash the circuit by chunks
-	{
-		cct.m_hash.update(cct.m_bufr);
-		cct.m_bufr.clear();
-	}
-#endif
-}
+// #ifdef RAND_SEED
+// 	if (cct.m_bufr.size() > CIRCUIT_HASH_BUFFER_SIZE) // hash the circuit by chunks
+// 	{
+//           //cct.m_hash.update(cct.m_bufr);
+// 		cct.m_bufr.clear();
+// 	}
+// #endif
+// }
 
 
 
@@ -116,7 +116,7 @@ void evl_init_circuit(garbled_circuit_t &cct, const std::vector<Bytes> &ot_keys,
 
 	cct.m_bufr.reserve(CIRCUIT_HASH_BUFFER_SIZE);
 	cct.m_bufr.clear();
-	cct.m_hash.init();
+	// cct.m_hash.init(); // obsolete!!!
 }
 
 
