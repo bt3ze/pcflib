@@ -5,7 +5,7 @@
 
 typedef struct
 {
-  Bytes               m_bufr;
+  //  Bytes               m_bufr;
   //  Hash                m_hash;
 
   __m128i             m_R; // constant used for free-XOR

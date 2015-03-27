@@ -35,7 +35,7 @@ namespace
 const int CIRCUIT_HASH_BUFFER_SIZE = 1024*1024;
 const int MAX_OUTPUT_SIZE = 1024;
 
-
+  /*
 void update_hash(garbled_circuit_m_t &cct, const Bytes &data)
 {
 	cct.m_bufr += data;
@@ -48,7 +48,7 @@ void update_hash(garbled_circuit_m_t &cct, const Bytes &data)
 	}
 #endif
 }
-
+  */
  
 };
 
@@ -100,8 +100,8 @@ void evl_init_circuit(garbled_circuit_m_t &cct, const std::vector<Bytes> &ot_key
 	cct.m_gen_out.reserve(MAX_OUTPUT_SIZE);
 	cct.m_gen_out.clear(); // will grow dynamically
 
-	cct.m_bufr.reserve(CIRCUIT_HASH_BUFFER_SIZE);
-	cct.m_bufr.clear();
+        //	cct.m_bufr.reserve(CIRCUIT_HASH_BUFFER_SIZE);
+	//cct.m_bufr.clear();
 	//cct.m_hash.init();
 
 	cct.m_gen_inp_com.clear();
@@ -466,18 +466,18 @@ void *evl_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 		}
 		else if (current_gate->tag == TAG_OUTPUT_B)
 		{
-			if (cct.m_evl_out.size()*8 <= cct.m_evl_out_ix)
-			{
-				// dynamically grown output array
-				cct.m_evl_out.resize((cct.m_evl_out.size()+1)*2, 0);
-			}
-
-			uint8_t out_bit = _mm_extract_epi8(current_key, 0) & 0x01;
-			out_bit ^= *cct.m_in_bufr_ix;
-			cct.m_evl_out.set_ith_bit(cct.m_evl_out_ix, out_bit);
-			cct.m_in_bufr_ix++;
-
-			cct.m_evl_out_ix++;
+                  if (cct.m_evl_out.size()*8 <= cct.m_evl_out_ix)
+                    {
+                      // dynamically grown output array
+                      cct.m_evl_out.resize((cct.m_evl_out.size()+1)*2, 0);
+                    }
+                  
+                  uint8_t out_bit = _mm_extract_epi8(current_key, 0) & 0x01;
+                  out_bit ^= *cct.m_in_bufr_ix;
+                  cct.m_evl_out.set_ith_bit(cct.m_evl_out_ix, out_bit);
+                  cct.m_in_bufr_ix++;
+                  
+                  cct.m_evl_out_ix++;
 		}
 	}
 /*
@@ -496,7 +496,7 @@ std::cout << "OUT_B "; break;
 	_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), current_key);
 std::cout << cct.m_gate_ix << ": " << Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes()).to_hex() << std::endl;
 */
-	update_hash(cct, cct.m_in_bufr);
+	//update_hash(cct, cct.m_in_bufr);
 	cct.m_gate_ix++;
 
 	return &current_key;

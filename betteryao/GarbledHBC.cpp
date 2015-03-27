@@ -20,7 +20,7 @@ void * GarbledHBC::evl_next_gate(PCFState *st, PCFGate *current_gate){
 }
 
 void GarbledHBC::initialize_circuit(){
-  //  return 0;
+
 };
 
 void GarbledHBC::gen_init_circuit(const std::vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed){

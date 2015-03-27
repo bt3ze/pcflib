@@ -114,8 +114,8 @@ void evl_init_circuit(garbled_circuit_t &cct, const std::vector<Bytes> &ot_keys,
 	for (size_t ix = 0; ix < Env::k(); ix++) tmp.set_ith_bit(ix, 1);
 	cct.m_clear_mask = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 
-	cct.m_bufr.reserve(CIRCUIT_HASH_BUFFER_SIZE);
-	cct.m_bufr.clear();
+        //	cct.m_bufr.reserve(CIRCUIT_HASH_BUFFER_SIZE);
+	// cct.m_bufr.clear();
 	// cct.m_hash.init(); // obsolete!!!
 }
 
@@ -298,12 +298,12 @@ void *gen_next_gate(struct PCFState *st, struct PCFGate *current_gate)
 
 	cct.m_gate_ix++;
 
-
+        /*
 	if(cct.m_gate_ix < 100)
 	{
 	
 	}
-
+        */
 
 	return &current_zero_key;
 }

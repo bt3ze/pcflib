@@ -30,10 +30,7 @@ void *evl_next_gate(struct PCFState *st, struct PCFGate *gate);
 	_mm_extract_epi16((x), (imm) >> 1) & 0xff : \
 	_mm_extract_epi16( _mm_srli_epi16((x), 8), (imm) >> 1))
 
-const int CIRCUIT_HASH_BUFFER_SIZE = 1024*1024;
 const int MAX_OUTPUT_SIZE = 1024;
-
-
 
 class GarbledBase {
 
@@ -46,8 +43,6 @@ public:
 
 protected:
 
-     Bytes               m_bufr;
-     
      __m128i             m_R; // constant for free-XOR
      
      const std::vector<Bytes>  *m_ot_keys; // pointer to keys
@@ -55,14 +50,15 @@ protected:
      Prng                m_prng; // generator
   
      uint64_t            m_gate_ix;
+     // the gate index is especially important because it is used as plaintext for AES encryption in masking wire keys
  
+     __m128i             m_clear_mask; // this is used to ensure that the length of keys is correct (by setting the lowest S bits to 1 and ANDing)
+
      // input indices
      uint32_t            m_gen_inp_ix;
      uint32_t            m_evl_inp_ix;
      uint32_t            m_gen_out_ix;
      uint32_t            m_evl_out_ix;
-  
-     __m128i             m_clear_mask;
 
      // inputs
      Bytes               m_gen_inp_mask;
