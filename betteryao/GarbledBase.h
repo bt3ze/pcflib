@@ -6,7 +6,6 @@
 
 #include "Env.h"
 #include "Prng.h"
-//#include "Hash.h"
 #include "Aes.h"
 #include "Bytes.h"
 
@@ -33,6 +32,8 @@ void *evl_next_gate(struct PCFState *st, struct PCFGate *gate);
 
 const int CIRCUIT_HASH_BUFFER_SIZE = 1024*1024;
 const int MAX_OUTPUT_SIZE = 1024;
+
+
 
 class GarbledBase {
 
@@ -63,6 +64,7 @@ protected:
   
      __m128i             m_clear_mask;
 
+     // inputs
      Bytes               m_gen_inp_mask;
      Bytes               m_gen_inp;
      Bytes               m_evl_inp;

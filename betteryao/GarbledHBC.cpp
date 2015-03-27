@@ -9,6 +9,8 @@ GarbledHBC::GarbledHBC(): GarbledBase() {
 }
 
 
+// virtual functions of GarbledBase to implement:
+
 void * GarbledHBC::gen_next_gate(PCFState *st, PCFGate *current_gate){
   return 0;
 }
@@ -17,6 +19,9 @@ void * GarbledHBC::evl_next_gate(PCFState *st, PCFGate *current_gate){
   return 0;
 }
 
+void GarbledHBC::initialize_circuit(){
+  //  return 0;
+};
 
 void GarbledHBC::gen_init_circuit(const std::vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed){
   m_ot_keys = &ot_keys;

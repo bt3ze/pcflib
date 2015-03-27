@@ -5,15 +5,16 @@
 #include "GarbledBase.h"
 
 
-GarbledBase::GarbledBase(){
-  // m_gate_ix(0), m_gen_inp_ix(0), m_evl_inp_ix(0), m_gen_out_ix(0), m_evl_out_ix(0) {
-  /*
+GarbledBase::GarbledBase():
+  m_gate_ix(0), m_gen_inp_ix(0), m_evl_inp_ix(0), m_gen_out_ix(0), m_evl_out_ix(0)
+{
+  
   assert(m_gate_ix == 0);
   assert(m_gen_inp_ix == 0);
   assert(m_evl_inp_ix == 0);
   assert(m_gen_out_ix == 0);
   assert(m_evl_out_ix == 0);
-  */
+  
   // set clear mask to as many 1s as k
   Bytes tmp(16);
 
@@ -26,7 +27,6 @@ GarbledBase::GarbledBase(){
   m_in_bufr.clear();
   m_out_bufr.clear();
   
-
 }
 
 

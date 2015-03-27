@@ -108,6 +108,8 @@ inline bool pass_check(const garbled_circuit_m_t &cct)
    clear the out buffer
    fill the inp hash with as many 0s as the security param
    set <security param> bits in the clear mask to 1 
+   
+   -- moved to constructor for GarbledBase
  */
 inline void initialize_circuit_mal(garbled_circuit_m_t &cct)
 {

@@ -45,8 +45,9 @@ void Yao::circuit_evaluate()
 
         
         // step 1:
+        // gen generates some random bit and random input mask
         // gen sends masked input to evl
-        // gen initializes circuit
+        // gen initializes circuit with 
 	GEN_BEGIN
 		start = MPI_Wtime();
 			m_rnds[0] = m_prng.rand_bits(Env::k());
@@ -153,7 +154,7 @@ void Yao::circuit_evaluate()
 				m_comm_sz += bufr.size();
 
 				start = MPI_Wtime();
-					clear_and_replace_in_bufr(m_gcs[0], bufr);
+                                clear_and_replace_in_bufr(m_gcs[0], bufr);
 			} while (get_next_gate(m_gcs[0].m_st));
 		m_timer_evl += MPI_Wtime() - start;
 	EVL_END
