@@ -1,37 +1,37 @@
-#ifndef BETTERYAO4_H_
-#define BETTERYAO4_H_
+#ifndef BETTERYAO5_H_
+#define BETTERYAO5_H_
 
 #include "YaoBase.h"
 #include "garbled_circuit_m.h"
 
 #include <vector>
 
-class BetterYao4 : public YaoBase
+class BetterYao5 : public YaoBase
 {
 public:
-	BetterYao4(EnvParams &params);
-	virtual ~BetterYao4() {}
+	BetterYao5(EnvParams &params);
+	virtual ~BetterYao5() {}
 
-	void start();
+	virtual void start();
 
 	//void oblivious_transfer();
-	void cut_and_choose();
-	void cut_and_choose2();
-	void consistency_check();
-	void circuit_evaluate();
+	virtual void cut_and_choose() = 0;
+	virtual void cut_and_choose2() = 0;
+	virtual void consistency_check() = 0;
+	virtual void circuit_evaluate() = 0;
 
 protected:
-	void ot_init();
-	void ot_random(); // sender has m pairs of l-bit strings, and receiver has m bits
-	void cut_and_choose2_ot();
-	void cut_and_choose2_precomputation();
-	void cut_and_choose2_evl_circuit(size_t ix);
-	void cut_and_choose2_chk_circuit(size_t ix);
+	virtual void ot_init() = 0;
+	virtual void ot_random() = 0; // sender has m pairs of l-bit strings, and receiver has m bits
+	virtual void cut_and_choose2_ot() = 0;
+	virtual void cut_and_choose2_precomputation() = 0;
+	virtual void cut_and_choose2_evl_circuit(size_t ix) = 0;
+	virtual void cut_and_choose2_chk_circuit(size_t ix) = 0;
 
-	Bytes flip_coins(size_t len);
+	virtual Bytes flip_coins(size_t len) = 0;
 
-	void proc_gen_out();
-	void proc_evl_out();
+	virtual void proc_gen_out() = 0;
+	virtual void proc_evl_out() = 0;
 
 
 	size_t                          m_ot_bit_cnt;
@@ -59,4 +59,4 @@ protected:
 };
 
 
-#endif /* BETTERYAO4_H_ */
+#endif /* BETTERYAO5_H_ */
