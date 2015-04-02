@@ -33,7 +33,6 @@ protected:
 	virtual void proc_gen_out() = 0;
 	virtual void proc_evl_out() = 0;
 
-
 	size_t                          m_ot_bit_cnt;
 	Bytes                           m_ot_recv_bits;
         std::vector<Bytes>                   m_ot_send_pairs;

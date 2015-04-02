@@ -1,6 +1,8 @@
 #ifndef _BETTERYAOEVL_CPP_
 #define _BETTERYAOEVL_CPP_
 
+#include "YaoBase.h"
+#include "BetterYao5.h"
 #include "BetterYaoEvl.h"
 // #include "garbled_circuit.h"
 #include <algorithm>
@@ -11,9 +13,9 @@
 static log4cxx::LoggerPtr logger(log4cxx::Logger::getLogger("BetterYaoEvl.cpp"));
 
 
-BetterYaoEvl::BetterYaoEvl(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
+BetterYaoEvl::BetterYaoEvl(EnvParams &params) : BetterYao5(params)
 {
-
+  /*
   std::cout << "node load: " << Env::node_load() << std::endl;
   // Init variables
   m_rnds.resize(Env::node_load());
@@ -30,6 +32,7 @@ BetterYaoEvl::BetterYaoEvl(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
   m_gen_inp_decom.resize(Env::node_load());
   
   get_and_size_inputs();
+  */
 }
 
 

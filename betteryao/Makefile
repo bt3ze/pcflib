@@ -9,6 +9,7 @@ OBJS       = Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o \
 MAINS      = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp BetterYaoEvl.cpp BetterYaoGen.cpp 
 EVALS 	   = main.cpp YaoBase.cpp Yao.cpp BetterYaoEvl.cpp BetterYaoGen.cpp
 GENS 	   = main.cpp YaoBase.cpp Yao.cpp BetterYaoGen.cpp BetterYaoEvl.cpp
+SPLITMAINS = main.cpp YaoBase.cpp Yao.cpp BetterYao4.h BetterYao4.cpp BetterYao5.h BetterYao5.cpp BetterYaoEvl.h BetterYaoEvl.cpp BetterYaoGen.h BetterYaoGen.cpp 
 
 all : sim pcflib
 
@@ -18,9 +19,9 @@ betteryao: $(MAINS) $(OBJS)
 
 newgarble: GarbledBase.o GarbledHBC.o GarbledMal.o
 
-splityao: $(MAINS) $(OBJS)
-	$(MPI_CXX) -o splitevl $(CXX_CFLAGS) $^ $(LIBS)
-	$(MPI_CXX) -o splitgen $(CXX_CFLAGS) $^ $(LIBS)
+splityao: $(SPLITMAINS) $(OBJS)
+	$(MPI_CXX) -o splitevl -DSPLITYAO $(CXX_CFLAGS) $^ $(LIBS)
+	$(MPI_CXX) -o splitgen -DSPLITYAO $(CXX_CFLAGS) $^ $(LIBS)
 
 pcflib: pcflib.o
 	gcc -shared -fPIC pcflib.o -o pcflib.so

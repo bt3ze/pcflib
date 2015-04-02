@@ -6,6 +6,9 @@
 //#include "BetterYao2.h"
 //#include "BetterYao3.h"
 #include "BetterYao4.h"
+//#include "BetterYao5.h"
+#include "BetterYaoEvl.h"
+#include "BetterYaoGen.h"
 
 int main(int argc, char **argv)
 {
@@ -55,8 +58,17 @@ int main(int argc, char **argv)
 		break;
 
 	case 1:
-		sys = new BetterYao4(params);
-		break;
+          
+#ifdef SPLITYAO
+#ifdef EVL_CODE
+	  sys = new BetterYaoEvl(params);
+#else
+          sys = new BetterYaoGen(params);
+#endif
+#else
+	  sys = new BetterYao4(params);
+#endif
+	  break;
 
 	default:
           std::cout << "Argument Failure" << std::endl;
