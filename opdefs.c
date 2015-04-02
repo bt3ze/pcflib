@@ -169,7 +169,7 @@ void call_op (struct PCFState * st, struct PCFOP * op)
 
       uint32_t i = 0, idx = 0;
 
-      fprintf(stderr,"alice pre ::\tPC: %x\tbase: %x\tinp_i: %x\tinp_idx: %x\n",st->PC,st->base,st->inp_i, st->inp_idx);     
+      //fprintf(stderr,"alice pre ::\tPC: %x\tbase: %x\tinp_i: %x\tinp_idx: %x\n",st->PC,st->base,st->inp_i, st->inp_idx);     
 
       // Get the argument to this function.
       // the inputs will be included in the 32 wires preceding the "call" op's newbase,
@@ -232,16 +232,16 @@ void call_op (struct PCFState * st, struct PCFOP * op)
       else
         { // what is the point of this? reset inp_i so that it can go back to the top?
           // doesn't this miss good inputs?
-          fprintf(stderr, "reset alice\n");
+          //fprintf(stderr, "reset alice\n");
           st->inp_i = 0;
         } 
       
-      fprintf(stderr,"alice post::\tPC: %x\tbase: %x\tinp_i: %x\tinp_idx: %x\n",st->PC,st->base,st->inp_i, st->inp_idx);     
+      //fprintf(stderr,"alice post::\tPC: %x\tbase: %x\tinp_i: %x\tinp_idx: %x\n",st->PC,st->base,st->inp_i, st->inp_idx);     
 
     }
   else if(strcmp(data->target->key, "bob") == 0)
     {
-      fprintf(stderr,"bob pre ::\tPC: %x\tbase: %x\tinp_i: %x\tinp_idx: %x\n",st->PC,st->base,st->inp_i, st->inp_idx);     
+      //fprintf(stderr,"bob pre ::\tPC: %x\tbase: %x\tinp_i: %x\tinp_idx: %x\n",st->PC,st->base,st->inp_i, st->inp_idx);     
 
       uint32_t i = 0, idx = 0;
 // Get the argument to this function
@@ -286,7 +286,7 @@ void call_op (struct PCFState * st, struct PCFOP * op)
         {
           st->inp_i = 0;
         }
-      fprintf(stderr,"bob post::\tPC: %x\tbase: %x\tinp_i: %x\tinp_idx: %x\n",st->PC,st->base,st->inp_i, st->inp_idx);     
+      //fprintf(stderr,"bob post::\tPC: %x\tbase: %x\tinp_i: %x\tinp_idx: %x\n",st->PC,st->base,st->inp_i, st->inp_idx);     
 
 
     }

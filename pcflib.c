@@ -859,10 +859,18 @@ PCFOP * read_instr(struct PCFState * st, const char * line, uint32_t iptr)
   assert(0);
 }
 
+
+/**
+   this function returns a PCFState object
+   it accepts a filename, two keys, and a function used to copy keys
+   when this funciton is called, the two keys 
+   (for some reason yet to be discerned) are offset by 1
+*/ 
+
 PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void *(*copy_key)(void*))
 {
   FILE * input;
-  PCFState * ret;
+  PCFState * ret; 
   char line[LINE_MAX];
   uint32_t icount = 0;
   uint32_t i = 0;
@@ -885,6 +893,8 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void *(*c
   ret->wires = (struct wire *)malloc(1000000 * sizeof(struct wire)); // !note here the limit on size of the wire table
   check_alloc(ret->wires);
 
+
+  // this loop is a little curious
   for(i = 0; i < 200000; i++)
     {
       ret->wires[i].flags = KNOWN_WIRE;
@@ -933,7 +943,7 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void *(*c
       fgets(line, LINE_MAX-1, input);
       op = read_instr(ret, line, icount);
       ret->ops[icount] = *op;
-      free(op);
+      free(op); // is this a good idea after setting the pointer to it?
       icount++;
     }
 

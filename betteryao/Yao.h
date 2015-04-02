@@ -13,7 +13,7 @@ public:
 
 	virtual void start();
 
-private:
+protected:
 	//void oblivious_transfer();
 	void circuit_evaluate();
 	void proc_gen_out();
