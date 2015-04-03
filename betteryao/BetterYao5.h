@@ -15,12 +15,14 @@ public:
 	virtual void start();
 
 	//void oblivious_transfer();
-	virtual void cut_and_choose() = 0;
-	virtual void cut_and_choose2() = 0;
 	virtual void consistency_check() = 0;
 	virtual void circuit_evaluate() = 0;
 
 protected:
+	void cut_and_choose();
+	void cut_and_choose2();
+
+        
 	virtual void ot_init() = 0;
 	virtual void ot_random() = 0; // sender has m pairs of l-bit strings, and receiver has m bits
 	virtual void cut_and_choose2_ot() = 0;
@@ -44,7 +46,7 @@ protected:
 
 	// variables for Yao protocol
         std::vector<Bytes>                   m_gen_inp_masks;
-        std::vector<Bytes>                   m_coms;
+        // std::vector<Bytes>                   m_coms;
         std::vector<Bytes>                   m_rnds;
         std::vector<garbled_circuit_m_t>     m_gcs; 
 

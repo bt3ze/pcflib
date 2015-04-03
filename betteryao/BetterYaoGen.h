@@ -16,8 +16,8 @@ public:
 	void start();
 
 	//void oblivious_transfer();
-	void cut_and_choose();
-	void cut_and_choose2();
+	//void cut_and_choose();
+	//void cut_and_choose2();
 	void consistency_check();
 	void circuit_evaluate();
 

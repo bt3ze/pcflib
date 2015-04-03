@@ -63,7 +63,7 @@ Bytes BetterYaoEvl::flip_coins(size_t len_in_bytes)
       m_timer_evl += MPI_Wtime() - start;
       
         
-      EVL_BEGIN
+      //      EVL_BEGIN
       start = MPI_Wtime();
       commitment = EVL_RECV();	    	// Step 1: receive bob's commitment
       EVL_SEND(coins);	     	// Step 2: send coins to bob
@@ -78,7 +78,7 @@ Bytes BetterYaoEvl::flip_coins(size_t len_in_bytes)
         }
       remote_coins = Bytes(commit_value.begin()+Env::k()/8, commit_value.end());
       m_timer_evl += MPI_Wtime() - start;
-      EVL_END
+      // EVL_END
         
         m_comm_sz = commitment.size() + remote_coins.size() + commit_value.size();
       
@@ -95,91 +95,6 @@ Bytes BetterYaoEvl::flip_coins(size_t len_in_bytes)
     }
   
   return bufr;
-}
-
-void BetterYaoEvl::cut_and_choose()
-{
-  reset_timers();
-  
-  double start;
-  
-  Bytes coins = flip_coins(Env::key_size_in_bytes()); // only roots get the result
-  
-  if (Env::is_root())
-    {
-      Prng prng;
-      start = MPI_Wtime();
-      prng.seed_rand(coins); // use the coins to generate more random bits
-      
-      // make 60-40 check-vs-evaluation circuit ratio
-      m_all_chks.assign(Env::s(), 1);
-      
-      // FisherÐYates shuffle
-      std::vector<uint16_t> indices(m_all_chks.size());
-      for (size_t ix = 0; ix < indices.size(); ix++) { indices[ix] = ix; }
-      
-      // starting from 1 since the 0-th circuit is always evaluation-circuit
-      for (size_t ix = 1; ix < indices.size(); ix++)
-        {
-          int rand_ix = prng.rand_range(indices.size()-ix);
-          std::swap(indices[ix], indices[ix+rand_ix]);
-        }
-      
-      int num_of_evls;
-      std::cout << "m_all_chks.size: " << m_all_chks.size() << std::endl;
-      switch(m_all_chks.size())
-        {
-        case 0: case 1:
-          LOG4CXX_FATAL(logger, "there isn't enough circuits for cut-and-choose");
-          MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-          break;
-          
-        case 2: case 3:
-          num_of_evls = 1;
-          break;
-          
-        case 4:
-          num_of_evls = 2;
-          break;
-          
-        default:
-          num_of_evls = m_all_chks.size()*2/5;
-          break;
-        }
-      
-      for (size_t ix = 0; ix < num_of_evls; ix++) {
-        m_all_chks[indices[ix]] = 0;
-      }
-      m_timer_evl += MPI_Wtime() - start;
-      m_timer_gen += MPI_Wtime() - start;
-    }
-  
-  start = MPI_Wtime();
-  m_chks.resize(Env::node_load());
-  m_timer_evl += MPI_Wtime() - start;
-  m_timer_gen += MPI_Wtime() - start;
-  
-  start = MPI_Wtime();
-  MPI_Scatter(&m_all_chks[0], m_chks.size(), MPI_BYTE, &m_chks[0], m_chks.size(), MPI_BYTE, 0, m_mpi_comm);
-  m_timer_mpi += MPI_Wtime() - start;
-  
-  step_report("cut-&-check");
-}
-
-void BetterYaoEvl::cut_and_choose2()
-{
-  reset_timers();
-  
-  cut_and_choose2_ot();
-  cut_and_choose2_precomputation();
-  
-  for (size_t ix = 0; ix < m_gcs.size(); ix++)
-    {
-      cut_and_choose2_evl_circuit(ix);
-      cut_and_choose2_chk_circuit(ix);
-    }
-  
-  step_report("cut-'n-chk2");
 }
 
 //
@@ -403,7 +318,7 @@ void BetterYaoEvl::consistency_check()
 	reset_timers();
 
 	Bytes bufr;
-	std::vector<Bytes> bufr_chunks;
+	// std::vector<Bytes> bufr_chunks;
 
 	double start;
 
@@ -413,7 +328,7 @@ void BetterYaoEvl::consistency_check()
 	start = MPI_Wtime();
 		bufr.resize(Env::k()*((m_gen_inp_cnt+7)/8));
         m_timer_evl += MPI_Wtime() - start;
-	m_timer_gen += MPI_Wtime() - start;
+        //	m_timer_gen += MPI_Wtime() - start;
 
 	start = MPI_Wtime();
                 MPI_Bcast(&bufr[0], bufr.size(), MPI_BYTE, 0, m_mpi_comm);
@@ -422,7 +337,7 @@ void BetterYaoEvl::consistency_check()
 	start = MPI_Wtime();
                 m_matrix = bufr.split(bufr.size()/Env::k());
 	m_timer_evl += MPI_Wtime() - start;
-	m_timer_gen += MPI_Wtime() - start;
+	//m_timer_gen += MPI_Wtime() - start;
 
         // std::cout << "agree on UHF" << std::endl;
 
