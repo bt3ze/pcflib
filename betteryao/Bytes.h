@@ -1,6 +1,9 @@
 #ifndef BYTES_H_
 #define BYTES_H_
 
+// #include <iostream>
+//#include <inttypes.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <cassert>
 #include <string>
@@ -136,21 +139,21 @@ public:
 			// first and result can be aligned with chunk boundaries
 			while ((uintptr_t)(void*)first % CHUNK_SIZE)
 			{
-				if (first == last) return *this; // reach the end and return
-				*result++ ^= *first++;
+                          if (first == last) return *this; // reach the end and return
+                          *result++ ^= *first++;
 			} // first and result are both aligned with chunk boundaries
-
+                        
 			const_chunk_iterator first_chunk =
-				reinterpret_cast<const_chunk_iterator>(first);
+                          reinterpret_cast<const_chunk_iterator>(first);
 			const_chunk_iterator last_chunk =
-				reinterpret_cast<const_chunk_iterator>
-					(last - (uintptr_t)(void*)last % CHUNK_SIZE);
+                          reinterpret_cast<const_chunk_iterator>
+                          (last - (uintptr_t)(void*)last % CHUNK_SIZE);
 			chunk_iterator result_chunk =
-				reinterpret_cast<chunk_iterator>(result);
-
+                          reinterpret_cast<chunk_iterator>(result);
+                        
 			// copy in chunks
 			while (first_chunk != last_chunk) { *result_chunk++ ^= *first_chunk++; }
-
+                        
 			first = reinterpret_cast<const_iterator>(first_chunk);
 			result = reinterpret_cast<iterator>(result_chunk);
 		}
@@ -163,8 +166,11 @@ public:
 
 	byte get_ith_bit(uint64_t ix) const
 	{
-		assert(ix < (this->size()*8LL));
-		return ((*this)[ix/8] >> (ix%8)) & 0x01;
+          
+          assert(ix < (this->size()*8LL));
+          printf("size : idx :: %016lX : %016lX \n",this->size(), ix); 
+         //assert(ix < (this->size()*8));
+          return ((*this)[ix/8] >> (ix%8)) & 0x01;
 	}
 
 	void set_ith_bit(uint64_t ix, byte bit)
@@ -176,6 +182,8 @@ public:
 
 		(*this)[ix/8] &= CLEAR_MASK[ix%8];
 		(*this)[ix/8] |= bit << (ix%8);
+
+                assert((*this).get_ith_bit(ix) == bit);
 	}
 
 	std::string to_hex() const;

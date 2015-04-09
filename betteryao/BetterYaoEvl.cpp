@@ -15,24 +15,6 @@ static log4cxx::LoggerPtr logger(log4cxx::Logger::getLogger("BetterYaoEvl.cpp"))
 
 BetterYaoEvl::BetterYaoEvl(EnvParams &params) : BetterYao5(params)
 {
-  /*
-  std::cout << "node load: " << Env::node_load() << std::endl;
-  // Init variables
-  m_rnds.resize(Env::node_load());
-  //m_ccts.resize(Env::node_load());
-  m_gcs.resize(Env::node_load());
-  
-  for (size_t ix = 0; ix < m_gcs.size(); ix++)
-    {
-      initialize_circuit_mal(m_gcs[ix]);
-    }
-  
-  m_gen_inp_hash.resize(Env::node_load());
-  m_gen_inp_masks.resize(Env::node_load());
-  m_gen_inp_decom.resize(Env::node_load());
-  
-  get_and_size_inputs();
-  */
 }
 
 
@@ -62,7 +44,7 @@ Bytes BetterYaoEvl::flip_coins(size_t len_in_bytes)
       m_timer_gen += MPI_Wtime() - start;
       m_timer_evl += MPI_Wtime() - start;
       
-        
+      
       //      EVL_BEGIN
       start = MPI_Wtime();
       commitment = EVL_RECV();	    	// Step 1: receive bob's commitment
@@ -80,9 +62,9 @@ Bytes BetterYaoEvl::flip_coins(size_t len_in_bytes)
       m_timer_evl += MPI_Wtime() - start;
       // EVL_END
         
-        m_comm_sz = commitment.size() + remote_coins.size() + commit_value.size();
-      
-      start = MPI_Wtime();
+      m_comm_sz = commitment.size() + remote_coins.size() + commit_value.size();
+        
+        start = MPI_Wtime();
       
       coins ^= remote_coins;
       // combine randomnesses from both players
@@ -106,7 +88,7 @@ void BetterYaoEvl::cut_and_choose2_ot()
   m_ot_bit_cnt = Env::node_load();
   
   EVL_BEGIN
-  start = MPI_Wtime();
+    start = MPI_Wtime();
   m_ot_recv_bits.resize((m_ot_bit_cnt+7)/8);
   for (size_t ix = 0; ix < m_chks.size(); ix++)
     {
@@ -120,14 +102,17 @@ void BetterYaoEvl::cut_and_choose2_ot()
   
   // Gen's m_ot_out has 2*Env::node_load() seeds and
   // Evl's m_ot_out has   Env::node_load() seeds according to m_chks.
-      
+  
   EVL_BEGIN
     start = MPI_Wtime();
+  seed_m_prngs(Env::node_load(), m_ot_out);
+  /*
   m_prngs.resize(Env::node_load());
   for (size_t ix = 0; ix < m_prngs.size(); ix++)
     {
       m_prngs[ix].seed_rand(m_ot_out[ix]);
     }
+  */
   m_timer_evl += MPI_Wtime() - start;
   EVL_END
     
@@ -420,14 +405,15 @@ void BetterYaoEvl::circuit_evaluate()
             set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
             set_key_copy_function(m_gcs[ix].m_st, copy_key);
             set_key_delete_function(m_gcs[ix].m_st, delete_key);
-            m_timer_gen += MPI_Wtime() - start;
+            //            m_timer_gen += MPI_Wtime() - start;
             m_timer_evl += MPI_Wtime() - start;
             
             EVL_BEGIN // receive and evaluate the circuit gate-by-gate
               
               std::cout << "eval receive and evaluate" << std::endl;
-            if (m_chks[ix]) // check circuit
-              {
+            
+            //if (m_chks[ix]) // check circuit
+            //  {
                 std::cout << "eval check circuit" << m_chks[ix] << std::endl;
                 start = MPI_Wtime();
                 set_callback(m_gcs[ix].m_st, gen_next_gate_m);
@@ -445,12 +431,18 @@ void BetterYaoEvl::circuit_evaluate()
                     
                     start = MPI_Wtime(); // start m_timer_evl
                     verify &= (bufr == recv);
+                    //FLAG: what's up with this check?
+                    // how will bufr = recv. what are we doing to bufr other than getting the out bufr from the circuit?
+                    // must check what happens in that method, and see how m_gcs has been altered
+                    // out buffer will be set by the gen_next_gate_m callback function
                   }
                 m_timer_gen += MPI_Wtime() - start;
                 
                 EVL_RECV(); // a redundant value to prevent the evlauator from hanging
-              }
-            else // evaluation circuit
+           
+                //}
+                /*
+                  else // evaluation circuit
               {
                 std::cout << "eval evaluate circuit" << std::endl;
                 start = MPI_Wtime();
@@ -474,13 +466,13 @@ void BetterYaoEvl::circuit_evaluate()
                   //std::cout << "received" << std::endl;
                   //fprintf(stderr, "received");
                   
-                  // std::cout << "got a gate" << std::endl;                  
+                  //std::cout << "got a gate" << std::endl;                  
                 } while (get_next_gate(m_gcs[ix].m_st));
                 
                 std::cout << "complete" << std::endl;
                 m_timer_evl += MPI_Wtime() - start;
               }
-            
+                */
             EVL_END
               }
         
@@ -630,7 +622,7 @@ void BetterYaoEvl::ot_init()
   Bytes bufr(Env::elm_size_in_bytes()*4);
 
   Z y, a;
-  m_timer_gen += MPI_Wtime() - start;
+  // m_timer_gen += MPI_Wtime() - start;
   m_timer_evl += MPI_Wtime() - start;
 
   // step 1: ZKPoK of the CRS: g[0], h[0], g[1], h[1]
@@ -699,7 +691,7 @@ void BetterYaoEvl::ot_random()
 
   m_ot_out.clear();
   m_ot_out.reserve(2*m_ot_bit_cnt); // the receiver only uses half of it
-  m_timer_gen += MPI_Wtime() - start;
+  // m_timer_gen += MPI_Wtime() - start;
   m_timer_evl += MPI_Wtime() - start;
 
   EVL_BEGIN // evaluator (OT receiver)

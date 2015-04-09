@@ -1,6 +1,7 @@
 #include "garbled_circuit.h"
 
 Bytes setBytes( __m128i & i)
+// this function really just used for debugging
 {
 
         Bytes q;

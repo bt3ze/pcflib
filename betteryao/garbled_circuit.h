@@ -17,6 +17,7 @@ extern "C" {
 
 void *copy_key(void *);
 void delete_key(void *);
+  Bytes setBytes(__m128i &i); // this is really a debug function
 
 void *gen_next_gate(struct PCFState *st, struct PCFGate *gate);
 void *evl_next_gate(struct PCFState *st, struct PCFGate *gate);

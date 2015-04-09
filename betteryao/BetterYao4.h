@@ -36,7 +36,6 @@ protected:
 
 	size_t                          m_ot_bit_cnt;
 	Bytes                           m_ot_recv_bits;
-        std::vector<Bytes>                   m_ot_send_pairs;
         std::vector<Bytes>                   m_ot_out;
 
 	// variables for cut-and-choose

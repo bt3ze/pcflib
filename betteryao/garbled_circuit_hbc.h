@@ -70,7 +70,7 @@ inline const Bytes get_and_clear_out_bufr(garbled_circuit_t &cct)
 
 
 void set_const_key(garbled_circuit_t &cct, byte c, const Bytes &key);
-const Bytes &get_const_key(garbled_circuit_t &cct, byte c, byte b);
+const Bytes get_const_key(garbled_circuit_t &cct, byte c, byte b);
 
 
 #endif

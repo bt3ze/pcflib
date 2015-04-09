@@ -10,7 +10,7 @@ typedef struct
 
   __m128i             m_R; // constant used for free-XOR
 
-  const std::vector<Bytes>  *m_ot_keys; // pointer to constant ot keys
+  const std::vector<Bytes>  *m_ot_keys; // pointer ot keys
   
   Prng                m_prng; // pseudorandom number generator
   
@@ -71,7 +71,8 @@ inline void clear_and_replace_in_bufr(garbled_circuit_m_t &cct, const Bytes &i_d
 
 
 inline const Bytes get_and_clear_out_bufr(garbled_circuit_m_t &cct){
-  static Bytes o_data;
+  //static
+  Bytes o_data;
   o_data.swap(cct.m_out_bufr);
   cct.m_out_bufr.clear();
   return o_data;
@@ -80,8 +81,6 @@ inline const Bytes get_and_clear_out_bufr(garbled_circuit_m_t &cct){
 
 void set_const_key(garbled_circuit_m_t &cct, byte c, const Bytes &key);
 const Bytes get_const_key(garbled_circuit_m_t &cct, byte c, byte b);
-// flag the above &
-
 
 // now, prototypes and functions specific to malicious
 

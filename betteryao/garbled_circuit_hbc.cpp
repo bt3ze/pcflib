@@ -1,11 +1,11 @@
 #include "garbled_circuit_hbc.h"
 
 
-const Bytes &get_const_key(garbled_circuit_t &cct, byte c, byte b)
+const Bytes get_const_key(garbled_circuit_t &cct, byte c, byte b)
 {
 	assert(c == 0 || c == 1); // wire for constant 0 or 1
 	assert(b == 0 || b == 1); // with bit value 0 or 1
-	static Bytes tmp(16);
+	Bytes tmp(16);
 
 	tmp.resize(16);
 	if (b)

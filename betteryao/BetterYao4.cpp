@@ -14,7 +14,6 @@ BetterYao4::BetterYao4(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
   std::cout << "node load: " << Env::node_load() << std::endl;
   // Init variables
   m_rnds.resize(Env::node_load());
-  //m_ccts.resize(Env::node_load());
   m_gcs.resize(Env::node_load());
   
   for (size_t ix = 0; ix < m_gcs.size(); ix++)

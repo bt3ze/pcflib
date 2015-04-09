@@ -14,6 +14,12 @@ GarbledBase::GarbledBase():
   assert(m_evl_inp_ix == 0);
   assert(m_gen_out_ix == 0);
   assert(m_evl_out_ix == 0);
+
+  m_gen_inp_hash.assign(Env::key_size_in_bytes(),0);
+
+  // clear in and out buffers
+  m_in_bufr.clear();
+  m_out_bufr.clear();
   
   // set clear mask to as many 1s as k
   Bytes tmp(16);
@@ -23,9 +29,6 @@ GarbledBase::GarbledBase():
   }
   m_clear_mask = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 
-  // clear in and out buffers
-  m_in_bufr.clear();
-  m_out_bufr.clear();
   
 }
 

@@ -35,18 +35,21 @@ protected:
 	virtual void proc_gen_out() = 0;
 	virtual void proc_evl_out() = 0;
 
+        // useful utility functions
+        void seed_m_prngs(size_t num_prngs, std::vector<Bytes> seeds);
+
 	size_t                          m_ot_bit_cnt;
 	Bytes                           m_ot_recv_bits;
-        std::vector<Bytes>                   m_ot_send_pairs;
         std::vector<Bytes>                   m_ot_out;
-
+        
 	// variables for cut-and-choose
-	Bytes                           m_chks;
-	Bytes                           m_all_chks;
+        Bytes                           m_chks;
+        Bytes                           m_all_chks;
+        // useful because these are vectors of 8-bit integers
+        // they fulfill the function of booleans
 
 	// variables for Yao protocol
         std::vector<Bytes>                   m_gen_inp_masks;
-        // std::vector<Bytes>                   m_coms;
         std::vector<Bytes>                   m_rnds;
         std::vector<garbled_circuit_m_t>     m_gcs; 
 

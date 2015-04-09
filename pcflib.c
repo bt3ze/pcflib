@@ -959,7 +959,7 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void *(*c
 void finalize(PCFState * st)
 {
 
-  fprintf(stderr, "finalize");
+  fprintf(stderr, "finalize\n");
 
   uint32_t i = 0;
   for(i = 0; i < 200000; i++)
@@ -969,6 +969,8 @@ void finalize(PCFState * st)
     }
   free(st->wires);
   //  free(st);
+
+  fprintf(stderr,"done finalize\n");
 }
 
 struct PCFGate * get_next_gate(struct PCFState * st)
@@ -989,8 +991,10 @@ struct PCFGate * get_next_gate(struct PCFState * st)
       // and verify that the PC has not eclipsed the instruction count
       assert((st->PC < st->icount));
     }
-  if((st->curgate == 0) || (st->done != 0))
-    {
+  //  if((st->curgate == 0) || (st->done != 0))
+  // this seems redundant, since st->curgate should only be 0 after the above loop if st->done is nonzero
+  if(st->done != 0)
+  {
       // no more gates and the PCFState thinks it's done
       fprintf(stderr,"finalize");
       finalize(st);

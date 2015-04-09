@@ -1,5 +1,6 @@
 // garbled_circuit_m.cpp
 
+#include <iostream>
 #include "garbled_circuit_m.h"
 
 const Bytes get_const_key(garbled_circuit_m_t &cct, byte c, byte b)
@@ -75,9 +76,9 @@ void gen_init_circuit(garbled_circuit_m_t &cct, const std::vector<Bytes> &ot_key
 	tmp = cct.m_prng.rand_bits(Env::k());
 	tmp.resize(16, 0);
 	cct.m_const_wire[1] = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&tmp[0]));
-
+        
 	initialize_circuit_mal(cct);
-
+        
 	cct.m_gen_inp_decom.clear();
 }
 
@@ -131,31 +132,35 @@ void *gen_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 
 		uint8_t bit = cct.m_gen_inp_mask.get_ith_bit(gen_inp_ix);
 
-		//std::cout <<"dconsize: "<<cct.m_gen_inp_decom.size()<<"  input ix: "<< gen_inp_ix<<"\n";
+		std::cout <<"dcomsize: "<<cct.m_gen_inp_decom.size()<<"  input ix: "<< gen_inp_ix<<"\n";
 		assert(cct.m_gen_inp_decom.size() == 2*cct.m_gen_inp_ix);
-
+                
 		_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), a[bit]);
-		cct.m_gen_inp_decom.push_back(
-			Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes())+cct.m_prng.rand_bits(Env::k()));
-
+		cct.m_gen_inp_decom
+                  .push_back(Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes())
+                             +cct.m_prng.rand_bits(Env::k()));
+                
 		_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), a[1-bit]);
-		cct.m_gen_inp_decom.push_back(
-			Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes())+cct.m_prng.rand_bits(Env::k()));
+		cct.m_gen_inp_decom
+                  .push_back(Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes())
+                             +cct.m_prng.rand_bits(Env::k()));
 
-		cct.m_out_bufr += cct.m_gen_inp_decom[2*cct.m_gen_inp_ix+0].hash(Env::k());
+                cct.m_out_bufr += cct.m_gen_inp_decom[2*cct.m_gen_inp_ix+0].hash(Env::k());
 		cct.m_out_bufr += cct.m_gen_inp_decom[2*cct.m_gen_inp_ix+1].hash(Env::k());
+                
+		//cct.m_out_bufr.insert(cct.m_out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
+                
 
 		cct.m_gen_inp_ix++; // after PCF compiler, this isn't really necessary
 
-
 	
-		__m128i onev = _mm_xor_si128(cct.m_R, current_zero_key);
+                __m128i onev = _mm_xor_si128(cct.m_R, current_zero_key);
 	
-		/*if(Env::is_root())
-		{
-			std::cout <<"GENbuffr: "<<cct.m_out_bufr.to_hex()<<"\n";		
-			std::cout <<"GEN: gate: "<<cct.m_gate_ix<<" : "<< setBytes(current_zero_key).to_hex()<<" "<< setBytes(onev).to_hex() <<"  "<<current_gate->tag<<"\n";	
-		}*/
+                //if(Env::is_root())
+                // {
+                   std::cout <<"GENbuffr: "<<cct.m_out_bufr.to_hex()<<"\n";		
+                   std::cout <<"GEN: gate: "<<cct.m_gate_ix<<" : "<< setBytes(current_zero_key).to_hex()<<" "<< setBytes(onev).to_hex() <<"  "<<current_gate->tag<<"\n";	
+                   //	}
 
 
 	}
@@ -166,9 +171,8 @@ void *gen_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 		Bytes tmp = cct.m_prng.rand_bits(Env::k());
 		tmp.resize(16, 0);
 		current_zero_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
-
 		uint32_t evl_inp_ix = current_gate->wire1;
-
+                
 		tmp = (*cct.m_ot_keys)[2*evl_inp_ix+0];
 		tmp.resize(16, 0);
 		a[0] = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
@@ -180,11 +184,11 @@ void *gen_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 		// a[0] ^= zero_key; a[1] ^= zero_key ^ R;
 		a[0] = _mm_xor_si128(a[0], current_zero_key);
 		a[1] = _mm_xor_si128(a[1], _mm_xor_si128(current_zero_key, cct.m_R));
-
+                
 		// cct.m_out_bufr += a[0];
 		_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), a[0]);
 		cct.m_out_bufr.insert(cct.m_out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
-
+                
 		// cct.m_out_bufr += a[1];
 		_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), a[1]);
 		cct.m_out_bufr.insert(cct.m_out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
@@ -406,9 +410,7 @@ void *evl_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 		{
 			__m128i aes_key[2], aes_plaintext, aes_ciphertext;
 
-                        // why is this the aes plaintext? we use the circuit number for it?
-                        // intitializes both 64-bit components of the __mi128 to the gate index
-                        // the circuit garbling is not messed up, so i am leaving this alone for the time being
+
 			aes_plaintext = _mm_set1_epi64x(cct.m_gate_ix);
 
 			aes_key[0] = *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire1));
@@ -524,7 +526,7 @@ void gen_next_gen_inp_com(garbled_circuit_m_t &cct, const Bytes &row, size_t kx)
 			msg ^= cct.m_gen_inp_decom[2*jx+bit];
 		}
 	}
-
+        
 	__m128i in_key[2], aes_plaintext, aes_ciphertext;
 
 	aes_plaintext = _mm_set1_epi64x((uint64_t)kx+10);
@@ -557,37 +559,39 @@ void gen_next_gen_inp_com(garbled_circuit_m_t &cct, const Bytes &row, size_t kx)
 void evl_next_gen_inp_com(garbled_circuit_m_t &cct, const Bytes &row, size_t kx)
 {
 	Bytes out(cct.m_gen_inp_decom[0].size());
-
+        
 	for (size_t jx = 0; jx < cct.m_gen_inp_decom.size(); jx++)
 	{
 		if (row.get_ith_bit(jx)) { out ^= cct.m_gen_inp_decom[jx]; }
 	}
 
 	byte bit = out.get_ith_bit(0);
-
-	static Bytes tmp;
+        assert((bit == 0 || bit == 1));
+        
+	//static Bytes tmp;
+        Bytes tmp;
 
 	Bytes::iterator it = cct.m_in_bufr_ix + bit*Env::key_size_in_bytes();
-
+        
 	__m128i aes_key, aes_plaintext, aes_ciphertext, out_key;
-
+        
 	tmp.assign(out.begin(), out.begin()+Env::key_size_in_bytes());
 	tmp.resize(16, 0);
 	aes_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
-
+        
 	aes_plaintext = _mm_set1_epi64x((uint64_t)kx+10);
-
+        
 	KDF128((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)&aes_key);
 	aes_ciphertext = _mm_and_si128(aes_ciphertext, cct.m_clear_mask);
-
+        
 	tmp.assign(it, it+Env::key_size_in_bytes());
 	tmp.resize(16, 0);
 	out_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 	out_key = _mm_xor_si128(out_key, aes_ciphertext);
-
+        
 	bit = _mm_extract_epi8(out_key, 0) & 0x01;
 	cct.m_gen_inp_hash.set_ith_bit(kx, bit);
-
+        
 	cct.m_in_bufr_ix += 2*Env::key_size_in_bytes();
         
 }

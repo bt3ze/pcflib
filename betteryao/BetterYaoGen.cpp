@@ -13,24 +13,6 @@ static log4cxx::LoggerPtr logger(log4cxx::Logger::getLogger("BetterYaoGen.cpp"))
 
 BetterYaoGen::BetterYaoGen(EnvParams &params) : BetterYao5(params)
 {
-  /*
-  std::cout << "node load: " << Env::node_load() << std::endl;
-  // Init variables
-  m_rnds.resize(Env::node_load());
-  //m_ccts.resize(Env::node_load());
-  m_gcs.resize(Env::node_load());
-  
-  for (size_t ix = 0; ix < m_gcs.size(); ix++)
-    {
-      initialize_circuit_mal(m_gcs[ix]);
-    }
-  
-  m_gen_inp_hash.resize(Env::node_load());
-  m_gen_inp_masks.resize(Env::node_load());
-  m_gen_inp_decom.resize(Env::node_load());
-  
-  get_and_size_inputs();
-  */
 }
 
 
@@ -107,19 +89,25 @@ void BetterYaoGen::cut_and_choose2_ot()
   
   // Gen's m_ot_out has 2*Env::node_load() seeds and
   // Evl's m_ot_out has   Env::node_load() seeds according to m_chks.
+
+  
   
   GEN_BEGIN
     start = MPI_Wtime();
+  seed_m_prngs(2*Env::node_load(), m_ot_out);
+  /*
   m_prngs.resize(2*Env::node_load());
   for (size_t ix = 0; ix < m_prngs.size(); ix++)
     {
       m_prngs[ix].seed_rand(m_ot_out[ix]);
     }
+  */
   m_timer_gen += MPI_Wtime() - start;
   GEN_END
     
     
     }
+
 
 //
 // Outputs: m_rnds[], m_gen_inp_masks[], m_gcs[].m_gen_inp_decom
@@ -392,7 +380,7 @@ void BetterYaoGen::circuit_evaluate()
           set_key_copy_function(m_gcs[ix].m_st, copy_key);
           set_key_delete_function(m_gcs[ix].m_st, delete_key);
           m_timer_gen += MPI_Wtime() - start;
-          m_timer_evl += MPI_Wtime() - start;
+          //          m_timer_evl += MPI_Wtime() - start;
           
           GEN_BEGIN // generate and send the circuit gate-by-gate
             
@@ -463,23 +451,23 @@ void BetterYaoGen::ot_init()
 	double start;
 
 	start = MPI_Wtime();
-		std::vector<Bytes> bufr_chunks;
-		Bytes bufr(Env::elm_size_in_bytes()*4);
-
-		Z y, a;
+        std::vector<Bytes> bufr_chunks;
+        Bytes bufr(Env::elm_size_in_bytes()*4);
+        
+        Z y, a;
 	m_timer_gen += MPI_Wtime() - start;
-	m_timer_evl += MPI_Wtime() - start;
+        //	m_timer_evl += MPI_Wtime() - start;
 
 	// step 1: ZKPoK of the CRS: g[0], h[0], g[1], h[1]
 	if (Env::is_root())
 	{
-
-		GEN_BEGIN // generator (OT sender)
-			start = MPI_Wtime();
-				bufr = GEN_RECV();
-			m_timer_com += MPI_Wtime() - start;
-		GEN_END
-
+          
+          GEN_BEGIN // generator (OT sender)
+            start = MPI_Wtime();
+          bufr = GEN_RECV();
+          m_timer_com += MPI_Wtime() - start;
+          GEN_END
+            
 	    m_comm_sz += bufr.size();
 	}
 
@@ -511,16 +499,16 @@ void BetterYaoGen::ot_random()
 	double start;
 
 	start = MPI_Wtime();
-		Bytes send, recv;
-		std::vector<Bytes> recv_chunks;
-
-		Z r, s[2], t[2];
-		G gr, hr, X[2], Y[2];
-
-		m_ot_out.clear();
-		m_ot_out.reserve(2*m_ot_bit_cnt); // the receiver only uses half of it
+        Bytes send, recv;
+        std::vector<Bytes> recv_chunks;
+        
+        Z r, s[2], t[2];
+        G gr, hr, X[2], Y[2];
+        
+        m_ot_out.clear();
+        m_ot_out.reserve(2*m_ot_bit_cnt); // the receiver only uses half of it
 	m_timer_gen += MPI_Wtime() - start;
-	m_timer_evl += MPI_Wtime() - start;
+	// m_timer_evl += MPI_Wtime() - start;
 
 	GEN_BEGIN // generator (OT sender)
 		for (size_t bix = 0; bix < m_ot_bit_cnt; bix++)
@@ -535,38 +523,38 @@ void BetterYaoGen::ot_random()
 
 			// Step 2: the evaluator computes X[0], Y[0], X[1], Y[1]
 			start = MPI_Wtime();
-				recv_chunks = recv.split(Env::elm_size_in_bytes());
+                        recv_chunks = recv.split(Env::elm_size_in_bytes());
 
-				gr.from_bytes(recv_chunks[0]);
-				hr.from_bytes(recv_chunks[1]);
-
-				Y[0].random(); Y[1].random(); // K[0], K[1] sampled at random
-                                
-				m_ot_out.push_back(Y[0].to_bytes().hash(Env::k()));
-				m_ot_out.push_back(Y[1].to_bytes().hash(Env::k()));
-
-				s[0].random(); s[1].random();
-				t[0].random(); t[1].random();
-
-				// X[b] = ( g[b]^s[b] ) * ( h[b]^t[b] ) for b = 0, 1
-				X[0] = m_ot_g[0]^s[0]; X[0] *= m_ot_h[0]^t[0];
-				X[1] = m_ot_g[1]^s[1]; X[1] *= m_ot_h[1]^t[1];
-
-				// Y[b] = ( gr^s[b] ) * ( hr^t[b] ) * K[b] for b = 0, 1
-				Y[0] *= gr^s[0]; Y[0] *= hr^t[0];
-				Y[1] *= gr^s[1]; Y[1] *= hr^t[1];
-
-				send.clear();
-				send += X[0].to_bytes();
-				send += X[1].to_bytes();
-				send += Y[0].to_bytes();
-				send += Y[1].to_bytes();
+                        gr.from_bytes(recv_chunks[0]);
+                        hr.from_bytes(recv_chunks[1]);
+                        
+                        Y[0].random(); Y[1].random(); // K[0], K[1] sampled at random
+                        
+                        m_ot_out.push_back(Y[0].to_bytes().hash(Env::k()));
+                        m_ot_out.push_back(Y[1].to_bytes().hash(Env::k()));
+                        
+                        s[0].random(); s[1].random();
+                        t[0].random(); t[1].random();
+                        
+                        // X[b] = ( g[b]^s[b] ) * ( h[b]^t[b] ) for b = 0, 1
+                        X[0] = m_ot_g[0]^s[0]; X[0] *= m_ot_h[0]^t[0];
+                        X[1] = m_ot_g[1]^s[1]; X[1] *= m_ot_h[1]^t[1];
+                        
+                        // Y[b] = ( gr^s[b] ) * ( hr^t[b] ) * K[b] for b = 0, 1
+                        Y[0] *= gr^s[0]; Y[0] *= hr^t[0];
+                        Y[1] *= gr^s[1]; Y[1] *= hr^t[1];
+                        
+                        send.clear();
+                        send += X[0].to_bytes();
+                        send += X[1].to_bytes();
+                        send += Y[0].to_bytes();
+                        send += Y[1].to_bytes();
 			m_timer_gen += MPI_Wtime() - start;
-
+                        
 			start = MPI_Wtime();
-				GEN_SEND(send);
+                        GEN_SEND(send);
 			m_timer_com += MPI_Wtime() - start;
-
+                        
 			m_comm_sz += send.size();
 		}
 
