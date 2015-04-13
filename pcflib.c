@@ -997,7 +997,7 @@ struct PCFGate * get_next_gate(struct PCFState * st)
   if(st->done != 0)
   {
       // no more gates and the PCFState thinks it's done
-      fprintf(stderr,"finalize");
+      fprintf(stderr,"enter finalize\n");
       finalize(st);
       return 0;
     }

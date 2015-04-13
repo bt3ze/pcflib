@@ -267,7 +267,8 @@ void BetterYao4::cut_and_choose2_precomputation()
       set_key_copy_function(m_gcs[ix].m_st, copy_key);
       set_key_delete_function(m_gcs[ix].m_st, delete_key);
       set_callback(m_gcs[ix].m_st, gen_next_gate_m);
-      
+
+           
       while ((m_gcs[ix].m_gen_inp_decom.size()/2 < m_gen_inp_cnt) && get_next_gate(m_gcs[ix].m_st))
         {
           get_and_clear_out_bufr(m_gcs[ix]); // discard the garbled gates for now

@@ -146,15 +146,30 @@ void BetterYaoGen::cut_and_choose2_precomputation()
       set_key_delete_function(m_gcs[ix].m_st, delete_key);
       set_callback(m_gcs[ix].m_st, gen_next_gate_m);
       
+      assert(m_gcs[ix].m_gen_inp_decom.size() <= 2*m_gen_inp_cnt);
+      assert(m_gcs[ix].m_gen_inp_decom.size() <= m_gen_inp_cnt);
+      //      assert(m_gcs[ix].m_gen_inp_decom.size() == m_gen_inp_cnt);
+      std::cout << "decom size: " << m_gcs[ix].m_gen_inp_decom.size() << " \t gen inp count: " << m_gen_inp_cnt << std::endl;
+      // the following one fails.
+      // so m_gen_inp_decom.size() is less than twice the input count
+      //assert(m_gcs[ix].m_gen_inp_decom.size() == 2*m_gen_inp_cnt);
+      
+        // i am not sure what the purpose of this is.
+        // it runs through the commitments
       while ((m_gcs[ix].m_gen_inp_decom.size()/2 < m_gen_inp_cnt) && get_next_gate(m_gcs[ix].m_st))
         {
           get_and_clear_out_bufr(m_gcs[ix]); // discard the garbled gates for now
         }
+      assert(m_gcs[ix].m_gen_inp_decom.size() <= 2*m_gen_inp_cnt);
+      assert(m_gcs[ix].m_gen_inp_decom.size() <= m_gen_inp_cnt);
+      //      assert(m_gcs[ix].m_gen_inp_decom.size() == m_gen_inp_cnt);
+      std::cout << "decom size: " << m_gcs[ix].m_gen_inp_decom.size() << " \t gen inp count: " << m_gen_inp_cnt << std::endl;
+      
+      
+//      std::cout << "prngs seeded " << std::endl;
 
-      std::cout << "prngs seeded " << std::endl;
-
+      std::cout << "gen circuits initialized" << std::endl;
       MPI_Barrier(m_mpi_comm);
-
 
       finalize(m_gcs[ix].m_st);
 

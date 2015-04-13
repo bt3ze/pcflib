@@ -28,6 +28,9 @@ inline std::string get_IP()
 
 YaoBase::YaoBase(EnvParams &params)
 {
+
+  LOG4CXX_INFO(logger, "Begin YaoBase");
+
 	init_cluster(params);
 #if defined EVL_CODE || defined GEN_CODE
 	init_network(params); // no need in simulation mode
