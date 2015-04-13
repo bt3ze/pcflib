@@ -132,7 +132,7 @@ void *gen_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 
 		uint8_t bit = cct.m_gen_inp_mask.get_ith_bit(gen_inp_ix);
 
-		std::cout <<"dcomsize: "<<cct.m_gen_inp_decom.size()<<"  input ix: "<< gen_inp_ix<<"\n";
+		// std::cout <<"dcomsize: "<<cct.m_gen_inp_decom.size()<<"  input ix: "<< gen_inp_ix<<"\n";
 		assert(cct.m_gen_inp_decom.size() == 2*cct.m_gen_inp_ix);
                 
 		_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), a[bit]);
@@ -158,8 +158,8 @@ void *gen_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 	
                 //if(Env::is_root())
                 // {
-                   std::cout <<"GENbuffr: "<<cct.m_out_bufr.to_hex()<<"\n";		
-                   std::cout <<"GEN: gate: "<<cct.m_gate_ix<<" : "<< setBytes(current_zero_key).to_hex()<<" "<< setBytes(onev).to_hex() <<"  "<<current_gate->tag<<"\n";	
+                //                   std::cout <<"GENbuffr: "<<cct.m_out_bufr.to_hex()<<"\n";		
+                //                   std::cout <<"GEN: gate: "<<cct.m_gate_ix<<" : "<< setBytes(current_zero_key).to_hex()<<" "<< setBytes(onev).to_hex() <<"  "<<current_gate->tag<<"\n";	
                    //	}
 
 

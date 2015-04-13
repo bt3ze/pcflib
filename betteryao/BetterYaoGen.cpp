@@ -19,10 +19,15 @@ BetterYaoGen::BetterYaoGen(EnvParams &params) : BetterYao5(params)
 void BetterYaoGen::start()
 {
   oblivious_transfer();
+  MPI_Barrier(m_mpi_comm);
   cut_and_choose();
+  MPI_Barrier(m_mpi_comm);
   cut_and_choose2();
+  MPI_Barrier(m_mpi_comm);
   consistency_check();
+  MPI_Barrier(m_mpi_comm);
   circuit_evaluate();
+  MPI_Barrier(m_mpi_comm);
   final_report();
 }
 
@@ -90,8 +95,6 @@ void BetterYaoGen::cut_and_choose2_ot()
   // Gen's m_ot_out has 2*Env::node_load() seeds and
   // Evl's m_ot_out has   Env::node_load() seeds according to m_chks.
 
-  
-  
   GEN_BEGIN
     start = MPI_Wtime();
   seed_m_prngs(2*Env::node_load(), m_ot_out);
@@ -105,6 +108,7 @@ void BetterYaoGen::cut_and_choose2_ot()
   m_timer_gen += MPI_Wtime() - start;
   GEN_END
     
+    std::cout << "end-cut-n-choose2-ot " << std::endl;
     
     }
 
@@ -146,8 +150,16 @@ void BetterYaoGen::cut_and_choose2_precomputation()
         {
           get_and_clear_out_bufr(m_gcs[ix]); // discard the garbled gates for now
         }
-      
+
+      std::cout << "prngs seeded " << std::endl;
+
+      MPI_Barrier(m_mpi_comm);
+
+
       finalize(m_gcs[ix].m_st);
+
+      std::cout << "end cut-n-choose2-precomp" << std::endl;
+
     }
   m_timer_gen += MPI_Wtime() - start;
   GEN_END
@@ -299,24 +311,25 @@ void BetterYaoGen::consistency_check()
 	reset_timers();
 
 	Bytes bufr;
-	// std::vector<Bytes> bufr_chunks;
 
 	double start;
 
 	// jointly pick a 2-UHF matrix
-	bufr = flip_coins(Env::k()*((m_gen_inp_cnt+7)/8)); // only roots get the result
+	bufr = flip_coins(Env::k()*fit_to_byte_containers(m_gen_inp_cnt));
+         // only roots get the result
 
 	start = MPI_Wtime();
-		bufr.resize(Env::k()*((m_gen_inp_cnt+7)/8));
+        bufr.resize(Env::k()*fit_to_byte_containers(m_gen_inp_cnt));
+        
                 //   m_timer_evl += MPI_Wtime() - start;
 	m_timer_gen += MPI_Wtime() - start;
 
 	start = MPI_Wtime();
-                MPI_Bcast(&bufr[0], bufr.size(), MPI_BYTE, 0, m_mpi_comm);
+        MPI_Bcast(&bufr[0], bufr.size(), MPI_BYTE, 0, m_mpi_comm);
 	m_timer_mpi += MPI_Wtime() - start;
-
+        
 	start = MPI_Wtime();
-                m_matrix = bufr.split(bufr.size()/Env::k());
+        m_matrix = bufr.split(bufr.size()/Env::k());
                 //m_timer_evl += MPI_Wtime() - start;
 	m_timer_gen += MPI_Wtime() - start;
 
@@ -324,23 +337,24 @@ void BetterYaoGen::consistency_check()
 
 	// now everyone agrees on the UHF given by m_matrix
 	for (size_t ix = 0; ix < m_gcs.size(); ix++)
-		for (size_t kx = 0; kx < m_matrix.size(); kx++)
-	{
+          {
+            for (size_t kx = 0; kx < m_matrix.size(); kx++)
+              {
 		GEN_BEGIN
-			start = MPI_Wtime();
-				gen_next_gen_inp_com(m_gcs[ix], m_matrix[kx], kx);
-				bufr = get_and_clear_out_bufr(m_gcs[ix]);
-			m_timer_gen += MPI_Wtime() - start;
-
-			start = MPI_Wtime();
-				GEN_SEND(bufr);
-			m_timer_com += MPI_Wtime() - start;
-
-		GEN_END
-
-		m_comm_sz += bufr.size();
-	}
-
+                  start = MPI_Wtime();
+                gen_next_gen_inp_com(m_gcs[ix], m_matrix[kx], kx);
+                bufr = get_and_clear_out_bufr(m_gcs[ix]);
+                m_timer_gen += MPI_Wtime() - start;
+                
+                start = MPI_Wtime();
+                GEN_SEND(bufr);
+                m_timer_com += MPI_Wtime() - start;
+                
+                GEN_END
+                  
+                  m_comm_sz += bufr.size();
+              }
+          }
         // std::cout << "EVL check hashes" << std::endl;
 
 	step_report("const-check");
@@ -357,6 +371,8 @@ void BetterYaoGen::circuit_evaluate()
 
         std::cout << "begin circuit evaluate" << std::endl;
 
+
+        MPI_Barrier(m_mpi_comm);
 	for (size_t ix = 0; ix < m_gcs.size(); ix++)
 	{
           GEN_BEGIN
@@ -406,7 +422,11 @@ void BetterYaoGen::circuit_evaluate()
           GEN_END
             
             }
-        
+
+        //fprintf(stderr,"end gen circuit eval\n");
+        std::cout << "end gen circuit eval" << std::endl;
+        MPI_Barrier(m_mpi_comm);
+                
 	step_report("circuit-evl");
         
 	if (m_gcs[0].m_evl_out_ix != 0)

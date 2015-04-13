@@ -960,16 +960,17 @@ void finalize(PCFState * st)
 {
 
   fprintf(stderr, "finalize\n");
-
+  
   uint32_t i = 0;
+  
   for(i = 0; i < 200000; i++)
     {
       if(st->wires[i].keydata != 0)
         st->delete_key(st->wires[i].keydata);
-    }
+    } 
   free(st->wires);
   //  free(st);
-
+  
   fprintf(stderr,"done finalize\n");
 }
 

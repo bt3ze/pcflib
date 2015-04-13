@@ -89,7 +89,8 @@ void BetterYaoEvl::cut_and_choose2_ot()
   
   EVL_BEGIN
     start = MPI_Wtime();
-  m_ot_recv_bits.resize((m_ot_bit_cnt+7)/8);
+  m_ot_recv_bits.resize(fit_to_byte_containers(m_ot_bit_cnt));
+  
   for (size_t ix = 0; ix < m_chks.size(); ix++)
     {
       m_ot_recv_bits.set_ith_bit(ix, m_chks[ix]);
@@ -303,15 +304,16 @@ void BetterYaoEvl::consistency_check()
 	reset_timers();
 
 	Bytes bufr;
-	// std::vector<Bytes> bufr_chunks;
 
 	double start;
 
 	// jointly pick a 2-UHF matrix
-	bufr = flip_coins(Env::k()*((m_gen_inp_cnt+7)/8)); // only roots get the result
+	bufr = flip_coins(Env::k()*fit_to_byte_containers(m_gen_inp_cnt));
+        // only roots get the result
 
 	start = MPI_Wtime();
-		bufr.resize(Env::k()*((m_gen_inp_cnt+7)/8));
+        bufr.resize(Env::k()*fit_to_byte_containers(m_gen_inp_cnt));
+        
         m_timer_evl += MPI_Wtime() - start;
         //	m_timer_gen += MPI_Wtime() - start;
 
@@ -328,37 +330,39 @@ void BetterYaoEvl::consistency_check()
 
 	// now everyone agrees on the UHF given by m_matrix
 	for (size_t ix = 0; ix < m_gcs.size(); ix++)
-          for (size_t kx = 0; kx < m_matrix.size(); kx++)
-            {
-              
-              EVL_BEGIN
-                start = MPI_Wtime();
-              bufr = EVL_RECV();
-              m_timer_com += MPI_Wtime() - start;
-              
-              if (!m_chks[ix]) // evaluation circuit
-                {
-                  start = MPI_Wtime();
-                  clear_and_replace_in_bufr(m_gcs[ix], bufr);
-                  evl_next_gen_inp_com(m_gcs[ix], m_matrix[kx], kx);
-                  m_timer_evl += MPI_Wtime() - start;
-                }
-              EVL_END
+          {
+            for (size_t kx = 0; kx < m_matrix.size(); kx++)
+              {
                 
-		m_comm_sz += bufr.size();
-            }
-        
+                EVL_BEGIN
+                  start = MPI_Wtime();
+                bufr = EVL_RECV();
+                m_timer_com += MPI_Wtime() - start;
+                
+                if (!m_chks[ix]) // evaluation circuit
+                  {
+                    start = MPI_Wtime();
+                    clear_and_replace_in_bufr(m_gcs[ix], bufr);
+                    evl_next_gen_inp_com(m_gcs[ix], m_matrix[kx], kx);
+                    m_timer_evl += MPI_Wtime() - start;
+                  }
+                EVL_END
+                  
+                  m_comm_sz += bufr.size();
+              }
+          }
+
         // std::cout << "EVL check hashes" << std::endl;
         
 	EVL_BEGIN
-		for (size_t ix = 0; ix < m_gcs.size(); ix++)
-			if (!m_chks[ix])
-		{
-			m_gen_inp_hash[ix] = m_gcs[ix].m_gen_inp_hash;
-		}
+          for (size_t ix = 0; ix < m_gcs.size(); ix++)
+            if (!m_chks[ix])
+              {
+                m_gen_inp_hash[ix] = m_gcs[ix].m_gen_inp_hash;
+              }
 	EVL_END
-
-	step_report("const-check");
+          
+          step_report("const-check");
 }
 
 void BetterYaoEvl::circuit_evaluate()
@@ -371,6 +375,8 @@ void BetterYaoEvl::circuit_evaluate()
 	Bytes bufr;
 
         std::cout << "begin circuit evaluate" << std::endl;
+
+        MPI_Barrier(m_mpi_comm);
 
 	for (size_t ix = 0; ix < m_gcs.size(); ix++)
 	{
@@ -412,8 +418,8 @@ void BetterYaoEvl::circuit_evaluate()
               
               std::cout << "eval receive and evaluate" << std::endl;
             
-            //if (m_chks[ix]) // check circuit
-            //  {
+            if (m_chks[ix]) // check circuit
+              {
                 std::cout << "eval check circuit" << m_chks[ix] << std::endl;
                 start = MPI_Wtime();
                 set_callback(m_gcs[ix].m_st, gen_next_gate_m);
@@ -440,8 +446,8 @@ void BetterYaoEvl::circuit_evaluate()
                 
                 EVL_RECV(); // a redundant value to prevent the evlauator from hanging
            
-                //}
-                /*
+                }
+                
                   else // evaluation circuit
               {
                 std::cout << "eval evaluate circuit" << std::endl;
@@ -472,66 +478,69 @@ void BetterYaoEvl::circuit_evaluate()
                 std::cout << "complete" << std::endl;
                 m_timer_evl += MPI_Wtime() - start;
               }
-                */
-            EVL_END
-              }
+        EVL_END
+          
+          }
+        
         
 	EVL_BEGIN // check the hash of all the garbled circuits
-		int all_verify = 0;
+          int all_verify = 0;
 
         std::cout << "evl check hash of garbled circuits" << std::endl;
-		start = MPI_Wtime();
-			MPI_Reduce(&verify, &all_verify, 1, MPI_INT, MPI_LAND, 0, m_mpi_comm);
-		m_timer_mpi += MPI_Wtime() - start;
-
-		start = MPI_Wtime();
-			if (Env::is_root() && !all_verify)
-			{
-				LOG4CXX_FATAL(logger, "Verification failed");
-				//MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-			}
-
-			Bytes gen_inp_hash;
-
-			for (size_t ix = 0; ix < m_gcs.size(); ix++)
-			{
-				// check the commitments associated with the generator's input wires
-				if (m_chks[ix]) // check circuit
-				{
-					for (size_t jx = 0; jx < m_gen_inp_cnt*2; jx++)
-					{
-						if (!(m_gen_inp_decom[ix][jx] == m_gcs[ix].m_gen_inp_decom[jx]))
-						{
-							LOG4CXX_FATAL(logger, "Commitment Verification Failure (check circuit)");
-							//MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-						}
-					}
-				}
-				else // evaluation circuit
-				{
-					if (!pass_check(m_gcs[ix]))
-					{
-						LOG4CXX_FATAL(logger, "Commitment Verification Failure (evaluation circuit)");
-						//MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-					}
-
-					if (gen_inp_hash.size() == 0)
-					{
-						gen_inp_hash = m_gen_inp_hash[ix];
-					}
-					else if (!(gen_inp_hash == m_gen_inp_hash[ix]))
-					{
-						LOG4CXX_FATAL(logger, "Generator Input Hash Inconsistent Failure (evaluation circuit)");
-						//MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-					}
-				}
-
-				trim_output(m_gcs[ix]);
-			}
-		m_timer_evl += MPI_Wtime() - start;
+        start = MPI_Wtime();
+        MPI_Reduce(&verify, &all_verify, 1, MPI_INT, MPI_LAND, 0, m_mpi_comm);
+        m_timer_mpi += MPI_Wtime() - start;
+        
+        start = MPI_Wtime();
+        if (Env::is_root() && !all_verify)
+          {
+            LOG4CXX_FATAL(logger, "Verification failed");
+            //MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+          }
+        
+        Bytes gen_inp_hash;
+        
+        for (size_t ix = 0; ix < m_gcs.size(); ix++)
+          {
+            // check the commitments associated with the generator's input wires
+            if (m_chks[ix]) // check circuit
+              {
+                for (size_t jx = 0; jx < m_gen_inp_cnt*2; jx++)
+                  {
+                    if (!(m_gen_inp_decom[ix][jx] == m_gcs[ix].m_gen_inp_decom[jx]))
+                      {
+                        LOG4CXX_FATAL(logger, "Commitment Verification Failure (check circuit)");
+                        //MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+                      }
+                  }
+              }
+            else // evaluation circuit
+              {
+                if (!pass_check(m_gcs[ix]))
+                  {
+                    LOG4CXX_FATAL(logger, "Commitment Verification Failure (evaluation circuit)");
+                    //MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+                  }
+                
+                if (gen_inp_hash.size() == 0)
+                  {
+                    gen_inp_hash = m_gen_inp_hash[ix];
+                  }
+                else if (!(gen_inp_hash == m_gen_inp_hash[ix]))
+                  {
+                    LOG4CXX_FATAL(logger, "Generator Input Hash Inconsistent Failure (evaluation circuit)");
+                    //MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+                  }
+              }
+            
+            trim_output(m_gcs[ix]);
+          }
+        m_timer_evl += MPI_Wtime() - start;
 	EVL_END
-
-	step_report("circuit-evl");
+          
+          MPI_Barrier(m_mpi_comm);
+          
+          step_report("circuit-evl");
 
 	if (m_gcs[0].m_evl_out_ix != 0)
           proc_evl_out();
@@ -695,7 +704,8 @@ void BetterYaoEvl::ot_random()
   m_timer_evl += MPI_Wtime() - start;
 
   EVL_BEGIN // evaluator (OT receiver)
-    assert(m_ot_recv_bits.size() >= ((m_ot_bit_cnt+7)/8));
+    assert(m_ot_recv_bits.size() >= fit_to_byte_containers(m_ot_bit_cnt));
+  
         
   for (size_t bix = 0; bix < m_ot_bit_cnt; bix++)
     {

@@ -52,7 +52,7 @@ public:
 
 	const Bytes &operator +=(const Bytes &rhs)
 	{
-		insert(this->end(), rhs.begin(), rhs.end());
+ 		insert(this->end(), rhs.begin(), rhs.end());
 		return *this;
 	}
 
@@ -77,6 +77,7 @@ public:
 		this->resize(last - first);
 		fast_copy(first, last, this->begin());
 	}
+
 
 	iterator begin() { return &(*this)[0]; }
 	const_iterator begin() const { return &(*this)[0]; }
@@ -168,7 +169,7 @@ public:
 	{
           
           assert(ix < (this->size()*8LL));
-          printf("size : idx :: %016lX : %016lX \n",this->size(), ix); 
+          //          printf("size : idx :: %016lX : %016lX \n",this->size(), ix); 
          //assert(ix < (this->size()*8));
           return ((*this)[ix/8] >> (ix%8)) & 0x01;
 	}
@@ -232,6 +233,10 @@ private:
 		while (first != last) { *result++ = *first++; }
 	}
 };
+
+inline size_t fit_to_byte_containers(size_t size){
+  return (size + 7)/8;
+}
 
 inline Bytes operator^ (const Bytes &lhs, const Bytes &rhs)
 {

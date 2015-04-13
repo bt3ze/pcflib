@@ -6,6 +6,7 @@
 
 #include <vector>
 
+
 class BetterYao5 : public YaoBase
 {
 public:
@@ -36,6 +37,7 @@ protected:
 	virtual void proc_evl_out() = 0;
 
         // useful utility functions
+        // seed the m_prngs with a vector of seeds (usuallu provided by m_ot_out, but that should be independent of the function
         void seed_m_prngs(size_t num_prngs, std::vector<Bytes> seeds);
 
 	size_t                          m_ot_bit_cnt;
