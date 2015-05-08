@@ -147,7 +147,7 @@ void *gen_next_gate(struct PCFState *st, struct PCFGate *current_gate)
 		cct.m_out_bufr.insert(cct.m_out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
 
 		cct.m_gen_inp_ix++; // after PCF compiler, this isn't really necessary
-
+                
                 // the following line is dead
                 // __m128i onev = _mm_xor_si128(cct.m_R, current_zero_key);
 	

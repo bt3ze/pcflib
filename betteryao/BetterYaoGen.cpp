@@ -38,8 +38,8 @@ Bytes BetterYaoGen::flip_coins(size_t len_in_bytes)
   
   Bytes bufr;
   
-  if (Env::is_root())
-    {
+  //if (Env::is_root())
+  //  {
       Bytes remote_coins, commitment, commit_value;
       
       start = MPI_Wtime();
@@ -74,9 +74,9 @@ Bytes BetterYaoGen::flip_coins(size_t len_in_bytes)
       bufr.swap(coins);
       //bufr = coins;
       
-      m_timer_evl += MPI_Wtime() - start;
+      // m_timer_evl += MPI_Wtime() - start;
       m_timer_gen += MPI_Wtime() - start;
-    }
+      //    }
   
   return bufr;
 }
@@ -110,7 +110,7 @@ void BetterYaoGen::cut_and_choose2_ot()
     
     std::cout << "end-cut-n-choose2-ot " << std::endl;
     
-    }
+}
 
 
 //
@@ -323,56 +323,59 @@ void BetterYaoGen::consistency_check()
 {
   // std::cout << "const check start" << std::endl;
 
-	reset_timers();
-
-	Bytes bufr;
-
-	double start;
-
-	// jointly pick a 2-UHF matrix
-	bufr = flip_coins(Env::k()*fit_to_byte_containers(m_gen_inp_cnt));
-         // only roots get the result
-
-	start = MPI_Wtime();
-        bufr.resize(Env::k()*fit_to_byte_containers(m_gen_inp_cnt));
-        
-                //   m_timer_evl += MPI_Wtime() - start;
-	m_timer_gen += MPI_Wtime() - start;
-
-	start = MPI_Wtime();
-        MPI_Bcast(&bufr[0], bufr.size(), MPI_BYTE, 0, m_mpi_comm);
-	m_timer_mpi += MPI_Wtime() - start;
-        
-	start = MPI_Wtime();
-        m_matrix = bufr.split(bufr.size()/Env::k());
-                //m_timer_evl += MPI_Wtime() - start;
-	m_timer_gen += MPI_Wtime() - start;
-
-        // std::cout << "agree on UHF" << std::endl;
-
-	// now everyone agrees on the UHF given by m_matrix
-	for (size_t ix = 0; ix < m_gcs.size(); ix++)
-          {
-            for (size_t kx = 0; kx < m_matrix.size(); kx++)
-              {
-		GEN_BEGIN
-                  start = MPI_Wtime();
-                gen_next_gen_inp_com(m_gcs[ix], m_matrix[kx], kx);
-                bufr = get_and_clear_out_bufr(m_gcs[ix]);
-                m_timer_gen += MPI_Wtime() - start;
-                
-                start = MPI_Wtime();
-                GEN_SEND(bufr);
-                m_timer_com += MPI_Wtime() - start;
-                
-                GEN_END
-                  
-                  m_comm_sz += bufr.size();
-              }
-          }
-        // std::cout << "EVL check hashes" << std::endl;
-
-	step_report("const-check");
+  reset_timers();
+  
+  Bytes bufr;
+  
+  double start;
+  
+  // jointly pick a 2-UHF matrix
+  
+  if(Env::is_root()){
+    bufr = flip_coins(Env::k()*fit_to_byte_containers(m_gen_inp_cnt));
+  // only roots get the result
+  }
+ 
+  start = MPI_Wtime();
+  bufr.resize(Env::k()*fit_to_byte_containers(m_gen_inp_cnt));
+  
+  //   m_timer_evl += MPI_Wtime() - start;
+  m_timer_gen += MPI_Wtime() - start;
+  
+  start = MPI_Wtime();
+  MPI_Bcast(&bufr[0], bufr.size(), MPI_BYTE, 0, m_mpi_comm);
+  m_timer_mpi += MPI_Wtime() - start;
+  
+  start = MPI_Wtime();
+  m_matrix = bufr.split(bufr.size()/Env::k());
+  //m_timer_evl += MPI_Wtime() - start;
+  m_timer_gen += MPI_Wtime() - start;
+  
+  // std::cout << "agree on UHF" << std::endl;
+  
+  // now everyone agrees on the UHF given by m_matrix
+  for (size_t ix = 0; ix < m_gcs.size(); ix++)
+    {
+      for (size_t kx = 0; kx < m_matrix.size(); kx++)
+        {
+          GEN_BEGIN
+            start = MPI_Wtime();
+          gen_next_gen_inp_com(m_gcs[ix], m_matrix[kx], kx);
+          bufr = get_and_clear_out_bufr(m_gcs[ix]);
+          m_timer_gen += MPI_Wtime() - start;
+          
+          start = MPI_Wtime();
+          GEN_SEND(bufr);
+          m_timer_com += MPI_Wtime() - start;
+          
+          GEN_END
+            
+            m_comm_sz += bufr.size();
+        }
+    }
+  // std::cout << "EVL check hashes" << std::endl;
+  
+  step_report("const-check");
 }
 
 void BetterYaoGen::circuit_evaluate()

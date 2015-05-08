@@ -132,7 +132,7 @@ void BetterYao5::cut_and_choose2()
 }
 
 void BetterYao5::seed_m_prngs(size_t num_prngs, std::vector<Bytes> seeds){
-  assert(seeds.size() == num_prngs); // this actually not really necessary if assertion is programmatically true. could just use the size of the seeds.
+  assert(seeds.size() == num_prngs); // this actually not really necessary if assertion is programmatically true. We could just use the size of the seeds, but it is a useful assertion
   
   m_prngs.resize(num_prngs);
   for(size_t ix = 0; ix < num_prngs; ix++){
