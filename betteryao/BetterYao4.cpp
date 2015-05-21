@@ -39,7 +39,13 @@ void BetterYao4::start()
   final_report();
 }
 
-
+// interactive coin flipping protocol by ?
+// Gen commits to some random coins
+// Eval sends her random coins
+// Gen decommits to his coins
+// Eval checks the decommitment
+// if checks pass, both accept the XOR
+// of the two versions
 Bytes BetterYao4::flip_coins(size_t len_in_bytes)
 {
   double start;
@@ -104,6 +110,12 @@ Bytes BetterYao4::flip_coins(size_t len_in_bytes)
   return bufr;
 }
 
+
+// this function uses an interactive coin flipping protocol between
+// Gen and Eval to agree on which circuits will be check circuits
+// and which will be evaluation circuits
+// it is from the SS11 protocol, but not included in SS13, as Eval
+// performs the random selection on her own
 void BetterYao4::cut_and_choose()
 {
   reset_timers();
@@ -173,6 +185,7 @@ void BetterYao4::cut_and_choose()
   step_report("cut-&-check");
 }
 
+
 void BetterYao4::cut_and_choose2()
 {
   reset_timers();
@@ -190,10 +203,14 @@ void BetterYao4::cut_and_choose2()
 }
 
 //
+// this function computes OTs between Gen and Eval on random inputs
+// the randomness they exchange will be used to seed the prngs which
+// Gen and Eval use to generate the circuits and key generators
 // Outputs: m_prngs[]
 //
 void BetterYao4::cut_and_choose2_ot()
 {
+
   double start;
   m_ot_bit_cnt = Env::node_load();
   
@@ -206,13 +223,34 @@ void BetterYao4::cut_and_choose2_ot()
     }
   m_timer_evl += MPI_Wtime() - start;
   EVL_END
-    
-  ot_init();
+   
+    // initialize OT by carrying out first couple of rounds
+    // Eval selects random elements from a cyclic group
+    // and sends them to Gen, who then preprocesses
+    ot_init();
+  
+  // Eval selects random inputs for each OT that will happen
+  // and sends them to Gen, who masks his own inputs and
+  // returns the masks to Eval
   ot_random();
   
   // Gen's m_ot_out has 2*Env::node_load() seeds and
   // Evl's m_ot_out has   Env::node_load() seeds according to m_chks.
+  // however, m_chks does not follow SS13, and I want to
+  // update the coin flipping/random selection of check circuits
   
+  // now that Gen and Eval share some randomness, they will
+  // seed the prngs with the random outputs from the OTs
+  // these prngs will generate the following in the protocol:
+  // at the very least, the prngs are used to mask (and decrypt) 
+  // all of the information sent by Gen to Eval about the check/evaluation
+  // circuits. Eval will only be able to decrypt information that Gen
+  // sends if she has the correct seed for the prng, and this enforces
+  // that although Gen sends all of the information check and evaluation
+  // information for every circuit, Eval can only decrypt either the check
+  // or evaluation information, meaning each circuit to her is one or the other
+  // 
+
   GEN_BEGIN
     start = MPI_Wtime();
   m_prngs.resize(2*Env::node_load());
@@ -235,7 +273,14 @@ void BetterYao4::cut_and_choose2_ot()
     
     }
 
-//
+
+// cut-and-choose2-precomputation
+// in this function, Gen (Eval does not execute anything)
+// initializes all of the circuits that he will need for the protocol
+// and sets a bunch of pointers and constants
+// the last part runs through Gen's inputs (and input decommitments)
+// and is a source of crashing
+// it seems that this (badly) needs to be rewritten
 // Outputs: m_rnds[], m_gen_inp_masks[], m_gcs[].m_gen_inp_decom
 //
 
@@ -251,10 +296,13 @@ void BetterYao4::cut_and_choose2_precomputation()
     start = MPI_Wtime();
   for (size_t ix = 0; ix < m_gcs.size(); ix++)
     {
-      m_rnds[ix] = m_prng.rand_bits(Env::k());
       
+      // straight from static circuit implementation
+      m_rnds[ix] = m_prng.rand_bits(Env::k());
+
+      // input masks the length of the input
       m_gen_inp_masks[ix] = m_prng.rand_bits(m_gen_inp_cnt);
-      //m_gen_inp_masks[ix]=m_prgn.rand(Env::k());
+      
       
       gen_init_circuit(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);
       
@@ -280,6 +328,12 @@ void BetterYao4::cut_and_choose2_precomputation()
   GEN_END
 }
 
+
+// gen does this for every one of the circuits, with index taken as a parameter
+// Gen sends Eval his masked input, encrypted with the output of a prng
+// he also sends Eval the keys that will be used for constants 1 and 0
+// (they should not need to be transmitted every time with the gates)
+// finally, he sends the decommitments to his own input keys
 void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
 {
   double start;
@@ -289,13 +343,18 @@ void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
   // send masked gen inp
   GEN_BEGIN
     start = MPI_Wtime();
+
+  assert(m_gen_inp_masks[ix].size() == m_gen_inp.size());
+  // mask gen's input
   bufr = m_gen_inp_masks[ix] ^ m_gen_inp;
+  // and then encrypt it again (??)
   bufr ^= m_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
   m_timer_gen += MPI_Wtime() - start;
   
   start = MPI_Wtime();
   GEN_SEND(bufr);
   m_timer_com += MPI_Wtime() - start;
+  
   GEN_END
     
     EVL_BEGIN
@@ -304,6 +363,8 @@ void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
   m_timer_com += MPI_Wtime() - start;
   
   start = MPI_Wtime();
+  // eval can only decrypt if this is an evaluation circuit,
+  // and she gets Gen's masked input
   if (!m_chks[ix]) // evaluation circuit
     {
       bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
@@ -313,6 +374,9 @@ void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
   EVL_END
     
     m_comm_sz += bufr.size();
+  
+  // if this is an evaluation circuit, Gen and Eval
+  // must agree on some constant keys
   
   // send constant keys m_gcs[ix].m_const_wire
   GEN_BEGIN
@@ -330,7 +394,7 @@ void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
     start = MPI_Wtime();
   bufr = EVL_RECV();
   m_timer_com += MPI_Wtime() - start;
-  
+    
   start = MPI_Wtime();
   if (!m_chks[ix]) // evaluation circuit
     {
@@ -342,8 +406,11 @@ void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
   m_timer_evl += MPI_Wtime() - start;
   EVL_END
     
-    m_comm_sz += bufr.size();
-  
+  m_comm_sz += bufr.size();
+    
+
+  // next, Gen decommits to his input keys
+
   // send m_gcs[ix].m_gen_inp_decom
   GEN_BEGIN
     assert(m_gcs[ix].m_gen_inp_decom.size() == 2*m_gen_inp_cnt);
@@ -357,6 +424,7 @@ void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
       {
         GEN_BEGIN
           start = MPI_Wtime();
+        // this bit selects which decommitment to select and send
         byte bit = m_gen_inp.get_ith_bit(jx) ^ m_gen_inp_masks[ix].get_ith_bit(jx);
         bufr = m_gcs[ix].m_gen_inp_decom[2*jx+bit];
         bufr ^= m_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
@@ -375,6 +443,8 @@ void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
         start = MPI_Wtime();
         if (!m_chks[ix]) // evaluation circuit
           {
+            // eval receives decommitment and decrypts it
+            // she now has the decommitments to Gen's input keys
             bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
             m_gcs[ix].m_gen_inp_decom[jx] = bufr;
           }
@@ -386,147 +456,173 @@ void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
 }
 
 
+// Gen must send Evl info for check circuits
+// he sends the masks for his own input,
+// random seeds used to generate <something>,
+// all of his OT keys for Eval's inputs
+// and all of his own input decommitments
+// Gen always sends these, but Eval can only decrypt if 
+// her prng was properly seeded by the OT result
+// Each of Gen's 2x+1 (odd) circuits correspond to the checks 
 void BetterYao4::cut_and_choose2_chk_circuit(size_t ix)
 {
-	double start;
+  double start;
+  
+  Bytes bufr;
+  std::vector<Bytes> bufr_chunks;
+  
+  // send m_gen_inp_masks[ix]
+  GEN_BEGIN
+    start = MPI_Wtime();
+ 
+  // input mask was generated randomly in precomp
+  // and is the length of Gen's inputs (m_gen_inp_cnt)
+  bufr = m_gen_inp_masks[ix];
+  assert(bufr.size() == m_gen_inp_cnt);
+  
+  // encrypt the input mask with some randomness
+  // use the 2*ix+1 prng for check circuits (checks get odd values)
+  bufr ^= m_prngs[2*ix+1].rand_bits(bufr.size()*8);
+  m_timer_gen += MPI_Wtime() - start;
+  
+  // and send encrypted input mask to Evl
+  start = MPI_Wtime();
+  GEN_SEND(bufr);
+  m_timer_com += MPI_Wtime() - start;
+  GEN_END
+    
 
-	Bytes bufr;
-        std::vector<Bytes> bufr_chunks;
+    // Eval gets the input mask,
+    // and if this is a check circuit,
+    // then she decrypts with a properly seeded generator
+    EVL_BEGIN
+    start = MPI_Wtime();
+  bufr = EVL_RECV();
+  m_timer_com += MPI_Wtime() - start;
+  
+  start = MPI_Wtime();
+  if (m_chks[ix]) // check circuit
+    {
+      bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
+      m_gen_inp_masks[ix] = bufr;
+    }
+  m_timer_evl += MPI_Wtime() - start;
+  EVL_END
+    
+    m_comm_sz += bufr.size();
+  
 
-	// send m_gen_inp_masks[ix]
-	GEN_BEGIN
-		start = MPI_Wtime();
-			bufr = m_gen_inp_masks[ix];
-			bufr ^= m_prngs[2*ix+1].rand_bits(bufr.size()*8); // encrypt message
-		m_timer_gen += MPI_Wtime() - start;
+  // next, Gen sends random seeds to Eval
+  
+  // send m_rnds[ix]
+  GEN_BEGIN
+    start = MPI_Wtime();
+  bufr = m_rnds[ix];
+  bufr ^= m_prngs[2*ix+1].rand_bits(bufr.size()*8); // encrypt message
+  m_timer_gen += MPI_Wtime() - start;
+  
+  start = MPI_Wtime();
+  GEN_SEND(bufr);
+  m_timer_com += MPI_Wtime() - start;
+  GEN_END
+    
+    EVL_BEGIN
+    start = MPI_Wtime();
+  bufr = EVL_RECV();
+  m_timer_com += MPI_Wtime() - start;
+  
+  start = MPI_Wtime();
+  if (m_chks[ix]) // check circuit
+    {
+      bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
+      m_rnds[ix] = bufr;
+    }
+  m_timer_evl += MPI_Wtime() - start;
+  EVL_END
 
-		start = MPI_Wtime();
-			GEN_SEND(bufr);
-		m_timer_com += MPI_Wtime() - start;
-	GEN_END
-
-	EVL_BEGIN
-		start = MPI_Wtime();
-			bufr = EVL_RECV();
-		m_timer_com += MPI_Wtime() - start;
-
-		start = MPI_Wtime();
-			if (m_chks[ix]) // check circuit
-			{
-				bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
-				m_gen_inp_masks[ix] = bufr;
-			}
-		m_timer_evl += MPI_Wtime() - start;
-	EVL_END
-
-	m_comm_sz += bufr.size();
-
-	// send m_rnds[ix]
-	GEN_BEGIN
-		start = MPI_Wtime();
-			bufr = m_rnds[ix];
-			bufr ^= m_prngs[2*ix+1].rand_bits(bufr.size()*8); // encrypt message
-		m_timer_gen += MPI_Wtime() - start;
-
-		start = MPI_Wtime();
-			GEN_SEND(bufr);
-		m_timer_com += MPI_Wtime() - start;
-	GEN_END
-
-	EVL_BEGIN
-		start = MPI_Wtime();
-			bufr = EVL_RECV();
-		m_timer_com += MPI_Wtime() - start;
-
-		start = MPI_Wtime();
-			if (m_chks[ix]) // check circuit
-			{
-				bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
-				m_rnds[ix] = bufr;
-			}
-		m_timer_evl += MPI_Wtime() - start;
-	EVL_END
-
-	m_comm_sz += bufr.size();
+    m_comm_sz += bufr.size();
 
 
-	// send m_ot_kesy[ix]
-	GEN_BEGIN
-		assert(m_ot_keys[ix].size() == 2*m_evl_inp_cnt);
-	GEN_END
+  // send m_ot_keys[ix]
+  // these are the ot keys used for eval's inputs
+  GEN_BEGIN
+    assert(m_ot_keys[ix].size() == 2*m_evl_inp_cnt);
+  GEN_END
 
-	EVL_BEGIN
-		if (m_chks[ix]) { m_ot_keys[ix].resize(2*m_evl_inp_cnt); }
-	EVL_END
+    EVL_BEGIN
+    if (m_chks[ix]) { m_ot_keys[ix].resize(2*m_evl_inp_cnt); }
+  EVL_END
 
-	for (size_t jx = 0; jx < 2*m_evl_inp_cnt; jx++)
-	{
-		GEN_BEGIN
-			start = MPI_Wtime();
-				bufr = m_ot_keys[ix][jx];
-				bufr ^= m_prngs[2*ix+1].rand_bits(bufr.size()*8); // encrypt message
-			m_timer_gen += MPI_Wtime() - start;
+    for (size_t jx = 0; jx < 2*m_evl_inp_cnt; jx++)
+      {
+        GEN_BEGIN
+          start = MPI_Wtime();
+        bufr = m_ot_keys[ix][jx];
+        bufr ^= m_prngs[2*ix+1].rand_bits(bufr.size()*8); // encrypt message
+        m_timer_gen += MPI_Wtime() - start;
 
-			start = MPI_Wtime();
-				GEN_SEND(bufr);
-			m_timer_com += MPI_Wtime() - start;
-		GEN_END
+        start = MPI_Wtime();
+        GEN_SEND(bufr);
+        m_timer_com += MPI_Wtime() - start;
+        GEN_END
 
-		EVL_BEGIN
-			start = MPI_Wtime();
-				bufr = EVL_RECV();
-			m_timer_com += MPI_Wtime() - start;
+          EVL_BEGIN
+          start = MPI_Wtime();
+        bufr = EVL_RECV();
+        m_timer_com += MPI_Wtime() - start;
 
-			start = MPI_Wtime();
-				if (m_chks[ix]) // check circuit
-				{
-					bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
-					m_ot_keys[ix][jx] = bufr;
-				}
-			m_timer_evl += MPI_Wtime() - start;
-		EVL_END
+        start = MPI_Wtime();
+        if (m_chks[ix]) // check circuit
+          {
+            bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
+            m_ot_keys[ix][jx] = bufr;
+          }
+        m_timer_evl += MPI_Wtime() - start;
+        EVL_END
 
-		m_comm_sz += bufr.size();
-	}
+          m_comm_sz += bufr.size();
+      }
 
-	// send m_gcs[ix].m_gen_inp_decom
-	GEN_BEGIN
-		assert(m_gcs[ix].m_gen_inp_decom.size() == 2*m_gen_inp_cnt);
-	GEN_END
+  // send m_gcs[ix].m_gen_inp_decom
+  // this is all of the keys to gen's inputs
+  GEN_BEGIN
+    assert(m_gcs[ix].m_gen_inp_decom.size() == 2*m_gen_inp_cnt);
+  GEN_END
 
-	EVL_BEGIN
-		if (m_chks[ix]) { m_gen_inp_decom[ix].resize(2*m_gen_inp_cnt); }
-	EVL_END
+    EVL_BEGIN
+    if (m_chks[ix]) { m_gen_inp_decom[ix].resize(2*m_gen_inp_cnt); }
+  EVL_END
 
-	for (size_t jx = 0; jx < 2*m_gen_inp_cnt; jx++)
-	{
-		GEN_BEGIN
-			start = MPI_Wtime();
-				bufr = m_gcs[ix].m_gen_inp_decom[jx];
-				bufr ^= m_prngs[2*ix+1].rand_bits(bufr.size()*8); // encrypt message
-			m_timer_gen += MPI_Wtime() - start;
+    for (size_t jx = 0; jx < 2*m_gen_inp_cnt; jx++)
+      {
+        GEN_BEGIN
+          start = MPI_Wtime();
+        bufr = m_gcs[ix].m_gen_inp_decom[jx];
+        // why use 2*ix+1?
+        bufr ^= m_prngs[2*ix+1].rand_bits(bufr.size()*8); // encrypt message
+        m_timer_gen += MPI_Wtime() - start;
 
-			start = MPI_Wtime();
-				GEN_SEND(bufr);
-			m_timer_com += MPI_Wtime() - start;
-		GEN_END
+        start = MPI_Wtime();
+        GEN_SEND(bufr);
+        m_timer_com += MPI_Wtime() - start;
+        GEN_END
 
-		EVL_BEGIN
-			start = MPI_Wtime();
-				bufr = EVL_RECV();
-			m_timer_com += MPI_Wtime() - start;
+          EVL_BEGIN
+          start = MPI_Wtime();
+        bufr = EVL_RECV();
+        m_timer_com += MPI_Wtime() - start;
 
-			start = MPI_Wtime();
-				if (m_chks[ix]) // check circuit
-				{
-					bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
-					m_gen_inp_decom[ix][jx] = bufr;
-				}
-			m_timer_evl += MPI_Wtime() - start;
-		EVL_END
-
-		m_comm_sz += bufr.size();
-	}
+        start = MPI_Wtime();
+        if (m_chks[ix]) // check circuit
+          {
+            bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
+            m_gen_inp_decom[ix][jx] = bufr;
+          }
+        m_timer_evl += MPI_Wtime() - start;
+        EVL_END
+          
+          m_comm_sz += bufr.size();
+      }
 }
 
 

@@ -81,7 +81,8 @@ Bytes KDF128(const Bytes &msg, const Bytes &key)
 	assert(key.size() == 16);
 
 	static Bytes out(32);
-	KDF128(&msg[0], &out[0], &key[0]);
+        //        Bytes out(32); -- because why should this be static?
+        KDF128(&msg[0], &out[0], &key[0]);
 	return out;
 }
 
@@ -91,6 +92,7 @@ Bytes KDF256(const Bytes &msg, const Bytes &key)
 	assert(key.size() == 32);
 
 	static Bytes out(32);
-	KDF256(&msg[0], &out[0], &key[0]);
+        //Bytes out(32); -- because why should this be static?
+        KDF256(&msg[0], &out[0], &key[0]);
 	return out;
 }
