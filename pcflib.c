@@ -1064,9 +1064,6 @@ uint32_t read_alice_length(const char * fname)
   FILE * cnf;
   cnf = fopen(fname, "r");
   // Assume that the inputs are all on one line -- probably a bad assumption, but whatever
-  // NOTE: FGETS IS A BUG. THIS READS THE WHOLE FILE.
-  // FGETS NEEDS TO BE REPLACED WITH SOMETHING TO READ
-  // LINE BY LINE
   fgets(line, LINE_MAX-1, cnf);
   fclose(cnf);
   alice_in = (strlen(line) - 1);// * 4;
@@ -1091,9 +1088,6 @@ uint32_t read_bob_length(const char * fname)
   //
   // 0x0000000000000000
   // 0xBOBINPUTSINHEX00
-  // NOTE: FGETS IS A BUG. THIS READS THE WHOLE FILE.
-  // FGETS NEEDS TO BE REPLACED WITH SOMETHING TO READ
-  // LINE BY LINE
   fgets(line, LINE_MAX-1, cnf);
   fgets(line, LINE_MAX-1, cnf);
   fclose(cnf);

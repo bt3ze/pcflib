@@ -324,8 +324,6 @@ void BetterYao4::cut_and_choose2_precomputation()
       std::cout << "gen input count: " << m_gen_inp_cnt << std::endl; // this is the one we care about right now.
       std::cout << "evl input count: " << m_evl_inp_cnt << std::endl;
    
-
-      
       // this loop is running all the way through the inputs without terminating,
       // meaning either the decommitments are not being added properly
       // or the input count is just too damn high
@@ -511,7 +509,7 @@ void BetterYao4::cut_and_choose2_chk_circuit(size_t ix)
   // input mask was generated randomly in precomp
   // and is the length of Gen's inputs (m_gen_inp_cnt)
   bufr = m_gen_inp_masks[ix];
-  assert(bufr.size() == m_gen_inp_cnt);
+  assert(bufr.size() == m_gen_inp_cnt/8);
   
   // encrypt the input mask with some randomness
   // use the 2*ix+1 prng for check circuits (checks get odd values)
