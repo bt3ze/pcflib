@@ -1066,7 +1066,7 @@ uint32_t read_alice_length(const char * fname)
   // Assume that the inputs are all on one line -- probably a bad assumption, but whatever
   fgets(line, LINE_MAX-1, cnf);
   fclose(cnf);
-  alice_in = (strlen(line) - 1);// * 4;
+  alice_in = (strlen(line) - 1) * 4;
   fprintf(stderr,"alice length: %u\n",alice_in);
   return alice_in;
 }
@@ -1091,7 +1091,7 @@ uint32_t read_bob_length(const char * fname)
   fgets(line, LINE_MAX-1, cnf);
   fgets(line, LINE_MAX-1, cnf);
   fclose(cnf);
-  bob_in = (strlen(line) - 1);// * 4;
+  bob_in = (strlen(line) - 1) * 4;
   fprintf(stderr,"bob length: %u\n",bob_in);
   return bob_in;
 }

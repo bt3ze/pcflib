@@ -8,4 +8,4 @@ for i in xrange(0,int(len)/4):
 print ""
 for i in xrange(0,int(len)/4):
     sys.stdout.write('0')
-
+print ""

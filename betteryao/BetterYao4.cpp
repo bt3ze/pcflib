@@ -343,7 +343,7 @@ void BetterYao4::cut_and_choose2_precomputation()
       // std::cout << "finalize:..." << std::endl;
 
       // why do we need this finalize? 
-      // finalize(m_gcs[ix].m_st);
+      finalize(m_gcs[ix].m_st);
     }
   m_timer_gen += MPI_Wtime() - start;
   
