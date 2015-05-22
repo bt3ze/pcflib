@@ -293,6 +293,8 @@ void BetterYao4::cut_and_choose2_precomputation()
   double start;
   
   GEN_BEGIN
+
+    std::cout << "cut-and-choose2-precomp" << std::endl;
     start = MPI_Wtime();
   for (size_t ix = 0; ix < m_gcs.size(); ix++)
     {
@@ -300,12 +302,12 @@ void BetterYao4::cut_and_choose2_precomputation()
       // straight from static circuit implementation
       m_rnds[ix] = m_prng.rand_bits(Env::k());
 
-      // input masks the length of the input
+      // input masks are the length of the input
       m_gen_inp_masks[ix] = m_prng.rand_bits(m_gen_inp_cnt);
-      
       
       gen_init_circuit(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);
       
+
       m_gcs[ix].m_st = 
         load_pcf_file(Env::pcf_file(), m_gcs[ix].m_const_wire, m_gcs[ix].m_const_wire+1, copy_key);
       m_gcs[ix].m_st->alice_in_size = m_gen_inp_cnt;
@@ -316,15 +318,38 @@ void BetterYao4::cut_and_choose2_precomputation()
       set_key_delete_function(m_gcs[ix].m_st, delete_key);
       set_callback(m_gcs[ix].m_st, gen_next_gate_m);
 
-           
+      fprintf(stderr, "generate decommitments: index %lu \trank %x\n",ix, Env::group_rank());
+      
+      //      std::cout << "generate decommitments? " << ix << std::endl;
+      std::cout << "gen input count: " << m_gen_inp_cnt << std::endl; // this is the one we care about right now.
+      std::cout << "evl input count: " << m_evl_inp_cnt << std::endl;
+   
+
+      
+      // this loop is running all the way through the inputs without terminating,
+      // meaning either the decommitments are not being added properly
+      // or the input count is just too damn high
       while ((m_gcs[ix].m_gen_inp_decom.size()/2 < m_gen_inp_cnt) && get_next_gate(m_gcs[ix].m_st))
         {
           get_and_clear_out_bufr(m_gcs[ix]); // discard the garbled gates for now
+
+          if(m_gcs[ix].m_gen_inp_decom.size() % 16 == 0){
+            //  last_decom_size = m_gcs[ix].m_gen_inp_decom.size();
+            std::cout << "decommitments: " << m_gcs[ix].m_gen_inp_decom.size() << std::endl;
+          }
         }
+
+      std::cout << "done decommitting" << std::endl;
       
-      finalize(m_gcs[ix].m_st);
+      // this runs through Gen's inputs. but why?
+      // std::cout << "finalize:..." << std::endl;
+
+      // why do we need this finalize? 
+      // finalize(m_gcs[ix].m_st);
     }
   m_timer_gen += MPI_Wtime() - start;
+  
+  std::cout << "end cut-and-choose2-precomp" << std::endl;
   GEN_END
 }
 
@@ -333,7 +358,11 @@ void BetterYao4::cut_and_choose2_precomputation()
 // Gen sends Eval his masked input, encrypted with the output of a prng
 // he also sends Eval the keys that will be used for constants 1 and 0
 // (they should not need to be transmitted every time with the gates)
-// finally, he sends the decommitments to his own input keys
+// finally, he sends the decommitments to his own input keys (why now?)
+// note: Gen's even-indexed m_prngs are for evaluation circuits,
+//       and   odd-indexed  m_prngs are for check circuits
+// question: why does Gen need to send Evl his masked input?
+//           shouldn't he just send his input keys?
 void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
 {
   double start;
@@ -347,7 +376,7 @@ void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
   assert(m_gen_inp_masks[ix].size() == m_gen_inp.size());
   // mask gen's input
   bufr = m_gen_inp_masks[ix] ^ m_gen_inp;
-  // and then encrypt it again (??)
+  // and then encrypt it again
   bufr ^= m_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
   m_timer_gen += MPI_Wtime() - start;
   
@@ -428,6 +457,8 @@ void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
         byte bit = m_gen_inp.get_ith_bit(jx) ^ m_gen_inp_masks[ix].get_ith_bit(jx);
         bufr = m_gcs[ix].m_gen_inp_decom[2*jx+bit];
         bufr ^= m_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
+        // remember, even m_prngs are for evaluation circuits
+        // and odd m_prngs are for check circuits
         m_timer_gen += MPI_Wtime() - start;
         
         start = MPI_Wtime();
@@ -458,12 +489,14 @@ void BetterYao4::cut_and_choose2_evl_circuit(size_t ix)
 
 // Gen must send Evl info for check circuits
 // he sends the masks for his own input,
-// random seeds used to generate <something>,
+// random seeds used to generate:
+//     <something, probably the rest of the circuit)>,
 // all of his OT keys for Eval's inputs
 // and all of his own input decommitments
 // Gen always sends these, but Eval can only decrypt if 
 // her prng was properly seeded by the OT result
-// Each of Gen's 2x+1 (odd) circuits correspond to the checks 
+// note: Gen's even-indexed m_prngs are for evaluation circuits,
+//       and   odd-indexed  m_prngs are for check circuits
 void BetterYao4::cut_and_choose2_chk_circuit(size_t ix)
 {
   double start;
@@ -626,6 +659,14 @@ void BetterYao4::cut_and_choose2_chk_circuit(size_t ix)
 }
 
 
+// in this consistency check, 
+// first, Gen and Evl agree on a 2-UHF
+// note: in order to ensure Gen's input consistency
+//       agreement on the 2-UHF function must happen
+//       after Gen commits to his inputs
+// then, gen creates his input commitments
+// and sends them to Evl, who evaluates them
+// finally, Evl saves the input hashes from all of the circuits
 void BetterYao4::consistency_check()
 {
   // std::cout << "const check start" << std::endl;
@@ -693,7 +734,7 @@ void BetterYao4::consistency_check()
 
 	EVL_BEGIN
 		for (size_t ix = 0; ix < m_gcs.size(); ix++)
-			if (!m_chks[ix])
+                  if (!m_chks[ix]) // if evaluation circuit, save this hash
 		{
 			m_gen_inp_hash[ix] = m_gcs[ix].m_gen_inp_hash;
 		}
@@ -717,14 +758,13 @@ void BetterYao4::circuit_evaluate()
 	{
           GEN_BEGIN
             start = MPI_Wtime();
-            gen_init_circuit(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);
-          
+            gen_init_circuit(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);   
             std::cout << ix << " gen const 0: " << get_const_key(m_gcs[ix], 0, 0).to_hex() << std::endl;
             std::cout << ix << " gen const 1: " << get_const_key(m_gcs[ix], 1, 1).to_hex() << std::endl;
             m_timer_gen += MPI_Wtime() - start;
-          GEN_END
+            GEN_END
               
-           EVL_BEGIN
+              EVL_BEGIN
               std::cout << "eval start evaluating" << std::endl;
             
             start = MPI_Wtime();

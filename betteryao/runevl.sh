@@ -1,3 +1,3 @@
 #!/bin/sh
 
-mpirun -n 2 ./splitevl 24 2 $1 $2 127.0.0.1 5000 1
+mpirun -n 4 ./evl 24 4 $1 $2 127.0.0.1 5000 1
