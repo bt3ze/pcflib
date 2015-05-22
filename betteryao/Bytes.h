@@ -168,9 +168,10 @@ public:
 	byte get_ith_bit(uint64_t ix) const
 	{
           
+          //assert(ix < (this->size()*8LL));
+          if(!(ix < (this->size()*8LL))){
+            fprintf(stderr,"idx ?< 8*size :: %016lX : %016lX \t  (size*8=%016lX) \n", ix, this->size(), this->size()*8L); }
           assert(ix < (this->size()*8LL));
-          //          printf("size : idx :: %016lX : %016lX \n",this->size(), ix); 
-         //assert(ix < (this->size()*8));
           return ((*this)[ix/8] >> (ix%8)) & 0x01;
 	}
 
