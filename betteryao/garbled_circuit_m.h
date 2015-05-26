@@ -103,6 +103,43 @@ inline bool pass_check(const garbled_circuit_m_t &cct)
 
 
 /**
+   INITIALIZATION FUNCTIONS
+ */
+
+inline void set_gate_idx(garbled_circuit_m_t &cct, uint32_t val){
+  cct.m_gate_ix = val;
+}
+
+
+inline void set_gen_inp_idx(garbled_circuit_m_t &cct, uint32_t val){
+  cct.m_gen_inp_ix = val;
+}
+
+inline void set_evl_inp_idx(garbled_circuit_m_t &cct, uint32_t val){
+  cct.m_evl_inp_ix = val;
+}
+
+inline void set_gen_out_idx(garbled_circuit_m_t &cct, uint32_t val){
+  cct.m_gen_out_ix = val;
+}
+
+inline void set_evl_out_idx(garbled_circuit_m_t &cct, uint32_t val){
+  cct.m_evl_out_ix = val;
+}
+
+inline void clear_out_bufr(garbled_circuit_m_t &cct){
+  cct.m_out_bufr.clear();
+}
+
+inline void reset_indices(garbled_circuit_m_t &cct){
+  set_gate_idx(cct,0);
+  set_gen_inp_idx(cct,0);
+  set_evl_inp_idx(cct,0);
+  set_gen_out_idx(cct,0);
+  set_evl_out_idx(cct,0);
+}
+
+/**
    set all gate and input indices to 0
    clear the out buffer
    fill the inp hash with as many 0s as the security param
@@ -110,24 +147,20 @@ inline bool pass_check(const garbled_circuit_m_t &cct)
    
    -- moved to constructor for GarbledBase
  */
-inline void initialize_circuit_mal(garbled_circuit_m_t &cct)
+inline void initialize_malicious_circuit(garbled_circuit_m_t &cct)
 {
-	cct.m_gate_ix = 0;
-
-	cct.m_gen_inp_ix = 0;
-	cct.m_evl_inp_ix = 0;
-	cct.m_gen_out_ix = 0;
-	cct.m_evl_out_ix = 0;
-
-	cct.m_out_bufr.clear();
-
-	cct.m_gen_inp_hash.assign(Env::key_size_in_bytes(), 0);
-
-	Bytes tmp(16);
-	for (size_t ix = 0; ix < Env::k(); ix++)
-          { tmp.set_ith_bit(ix, 1); }
-	cct.m_clear_mask = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
+  reset_indices(cct);
+    
+  cct.m_out_bufr.clear();
+  
+  cct.m_gen_inp_hash.assign(Env::key_size_in_bytes(), 0);
+  
+  Bytes tmp(16);
+  for (size_t ix = 0; ix < Env::k(); ix++)
+    { tmp.set_ith_bit(ix, 1); }
+  cct.m_clear_mask = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 }
+
 
 
 #endif

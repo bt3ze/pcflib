@@ -18,7 +18,7 @@ BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
   
   for (size_t ix = 0; ix < m_gcs.size(); ix++)
     {
-      initialize_circuit_mal(m_gcs[ix]);
+      initialize_malicious_circuit(m_gcs[ix]);
     }
   
   m_gen_inp_hash.resize(Env::node_load());
@@ -697,6 +697,11 @@ void BetterYao5::consistency_check()
 	double start;
 
 	// jointly pick a 2-UHF matrix
+        // m_gen_inp_cnt is almost the right number to use here, since
+        // the number of random bits should equal k * gen's input size,
+        // but in the current protocol Gen does not supplement his inputs
+        // by selecting random ciphertext "c" (used for masking his output)
+        // and he doesn't add the extra 2k+lg(k) bits
 	bufr = flip_coins(Env::k()*((m_gen_inp_cnt+7)/8)); // only roots get the result
 
 	start = MPI_Wtime();
@@ -709,8 +714,11 @@ void BetterYao5::consistency_check()
 	m_timer_mpi += MPI_Wtime() - start;
 
 	start = MPI_Wtime();
-                m_matrix = bufr.split(bufr.size()/Env::k());
-	m_timer_evl += MPI_Wtime() - start;
+        
+        // create m rows of length k
+        m_matrix = bufr.split(bufr.size()/Env::k());
+        
+        m_timer_evl += MPI_Wtime() - start;
 	m_timer_gen += MPI_Wtime() - start;
 
         // std::cout << "agree on UHF" << std::endl;
@@ -808,7 +816,8 @@ void BetterYao5::circuit_evaluate()
             m_gcs[ix].m_st->alice_in_size = m_gen_inp_cnt;
             m_gcs[ix].m_st->bob_in_size = m_evl_inp_cnt;
 
-            
+            // the next three should have been done by Gen during precomputation
+            // important for Eval (and all the other mpi cores)
             set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
             set_key_copy_function(m_gcs[ix].m_st, copy_key);
             set_key_delete_function(m_gcs[ix].m_st, delete_key);

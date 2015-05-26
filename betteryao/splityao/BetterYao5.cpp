@@ -20,7 +20,7 @@ BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
   
   for (size_t ix = 0; ix < m_gcs.size(); ix++)
     {
-      initialize_circuit_mal(m_gcs[ix]);
+      initialize_malicious_circuit(m_gcs[ix]);
     }
   
   m_gen_inp_hash.resize(Env::node_load());
