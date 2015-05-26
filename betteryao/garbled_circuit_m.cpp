@@ -64,7 +64,8 @@ void gen_init_circuit(garbled_circuit_m_t &cct, const std::vector<Bytes> &ot_key
 
 	// R is a random k-bit string whose 0-th bit has to be 1
 	Bytes tmp;
-
+        
+        // Eval does not do this part for evaluation circuits
 	tmp = cct.m_prng.rand_bits(Env::k());
 	tmp.set_ith_bit(0, 1);
 	tmp.resize(16, 0);
@@ -355,10 +356,11 @@ void *evl_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
           
           if(!(cct.m_gen_inp_ix < 8LL*cct.m_gen_inp_mask.size())){
              fprintf(stderr, "gen input index not < 8 * gen input mask size. %u !< %lu \n",cct.m_gen_inp_ix, 8*cct.m_gen_inp_mask.size());
-             fprintf(stderr,"gen input size is: %lu\n",cct.m_gen_inp.size());
+             // fprintf(stderr,"gen input size is: %lu\n",cct.m_gen_inp.size());
           }
           // assert(cct.m_gen_inp_ix < cct.m_gen_inp_mask.size());
           // HERE! THE BUG IS HERE!
+          fprintf(stderr,"gen input index: %u \n",cct.m_gen_inp_ix);
           uint8_t bit = cct.m_gen_inp_mask.get_ith_bit(cct.m_gen_inp_ix);
           Bytes::const_iterator it = cct.m_in_bufr_ix + bit*Env::key_size_in_bytes();
           

@@ -26,7 +26,7 @@ typedef struct
 
   // gen and eval inputs
   Bytes               m_gen_inp_mask;
-  Bytes               m_gen_inp;
+  //  Bytes               m_gen_inp;
   Bytes               m_evl_inp;
   Bytes               m_gen_out;
   Bytes               m_evl_out;

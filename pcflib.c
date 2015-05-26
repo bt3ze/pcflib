@@ -981,6 +981,7 @@ struct PCFGate * get_next_gate(struct PCFState * st)
   //  std::cout << "get next gate" << std::endl;
 
   st->curgate = 0;
+  fprintf(stderr,"program counter: %u\n",st->PC);
   while((st->curgate == 0) && (st->done == 0))
     {
       // if curgate is 0, why are we executing things?

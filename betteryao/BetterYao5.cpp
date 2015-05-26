@@ -821,6 +821,7 @@ void BetterYao5::circuit_evaluate()
             set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
             set_key_copy_function(m_gcs[ix].m_st, copy_key);
             set_key_delete_function(m_gcs[ix].m_st, delete_key);
+
             m_timer_gen += MPI_Wtime() - start;
             m_timer_evl += MPI_Wtime() - start;
             
