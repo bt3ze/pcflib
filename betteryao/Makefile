@@ -7,13 +7,18 @@ HEADERS    = Algebra.h Aes.h Bytes.h Env.h garbled_circuit.h garbled_circuit_hbc
 OBJS       = Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o \
 	garbled_circuit.o garbled_circuit_hbc.o garbled_circuit_m.o # Circuit.o GarbledCct3.o
 MAINS      = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp
-SPLITMAINS = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp BetterYao5.cpp BetterYaoEvl.cpp BetterYaoGen.cpp 
+SPLITMAINS = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp splityao/BetterYao5.cpp splityao/BetterYaoEvl.cpp splityao/BetterYaoGen.cpp 
+MAINS5   = main.cpp YaoBase.cpp Yao.cpp BetterYao5.cpp
 
 all : sim pcflib
 
 betteryao: $(MAINS) $(OBJS)
 	$(MPI_CXX) -o evl -DEVL_CODE $(CXX_CFLAGS) $^ $(LIBS)
 	$(MPI_CXX) -o gen -DGEN_CODE $(CXX_CFLAGS) $^ $(LIBS)
+
+betteryao5: $(MAINS5) $(OBJS)
+	$(MPI_CXX) -o evl5 -DEVL_CODE -DYAO5 $(CXX_CFLAGS) $^ $(LIBS)
+	$(MPI_CXX) -o gen5 -DGEN_CODE -DYAO5 $(CXX_CFLAGS) $^ $(LIBS)
 
 newgarble: GarbledBase.o GarbledHBC.o GarbledMal.o
 

@@ -117,7 +117,7 @@ void *gen_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 
 	static __m128i current_zero_key;
 
-	if (current_gate->tag == TAG_INPUT_A)
+	if (current_gate->tag == TAG_INPUT_A) // this is a Gen input
 	{
 		__m128i a[2];
 
@@ -164,7 +164,7 @@ void *gen_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 
 
 	}
-	else if (current_gate->tag == TAG_INPUT_B)
+	else if (current_gate->tag == TAG_INPUT_B) // this is an Eval input
 	{
 		__m128i a[2];
 
@@ -301,12 +301,12 @@ std::cerr << " " << current_gate->wire2 << " (" << Bytes(tmp.begin(), tmp.begin(
 	_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), _mm_xor_si128(XX, cct.m_R));
 std::cerr << ", " << Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes()).to_hex() << ")\t";
 */
-		if (current_gate->tag == TAG_OUTPUT_A)
+		if (current_gate->tag == TAG_OUTPUT_A) // Gen output
 		{
 			cct.m_out_bufr.push_back(_mm_extract_epi8(current_zero_key, 0) & 0x01); // permutation bit
 			cct.m_gen_out_ix++;
 		}
-		else if (current_gate->tag == TAG_OUTPUT_B)
+		else if (current_gate->tag == TAG_OUTPUT_B) // Eval output
 		{
 			cct.m_out_bufr.push_back(_mm_extract_epi8(current_zero_key, 0) & 0x01); // permutation bit
 			cct.m_evl_out_ix++;
@@ -346,7 +346,7 @@ void *evl_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 	__m128i a;
 	static Bytes tmp;
 
-	if (current_gate->tag == TAG_INPUT_A)
+	if (current_gate->tag == TAG_INPUT_A) // Gen Input
 	{
 		//std::cout <<cct.m_gen_inp_mask.size()*8<<" " <<cct.m_gen_inp_ix <<" \n";
 
@@ -374,7 +374,7 @@ void *evl_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 
 		cct.m_gen_inp_ix++;
 	}
-	else if (current_gate->tag == TAG_INPUT_B)
+	else if (current_gate->tag == TAG_INPUT_B) // Eval input
 	{
 		uint32_t evl_inp_ix = current_gate->wire1;
 
@@ -452,7 +452,7 @@ void *evl_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 //	_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire2)));
 //std::cout << " " << current_gate->wire2 << " " << Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes()).to_hex() << "\t";
 
-		if (current_gate->tag == TAG_OUTPUT_A)
+		if (current_gate->tag == TAG_OUTPUT_A) // Gen output
 		{
 			if (cct.m_gen_out.size()*8 <= cct.m_gen_out_ix)
 			{
@@ -466,7 +466,7 @@ void *evl_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 			cct.m_in_bufr_ix++;
 			cct.m_gen_out_ix++;
 		}
-		else if (current_gate->tag == TAG_OUTPUT_B)
+		else if (current_gate->tag == TAG_OUTPUT_B) // Eval output
 		{
                   if (cct.m_evl_out.size()*8 <= cct.m_evl_out_ix)
                     {
@@ -504,6 +504,12 @@ std::cout << cct.m_gate_ix << ": " << Bytes(tmp.begin(), tmp.begin()+Env::key_si
 	return &current_key;
 }
 
+
+/**
+   @cct is the garbled circuit we're working on
+   @row is a row of the 2-UHF
+   @kx is the row number
+ */
 void gen_next_gen_inp_com(garbled_circuit_m_t &cct, const Bytes &row, size_t kx)
 {
 	Bytes tmp;
@@ -515,21 +521,30 @@ void gen_next_gen_inp_com(garbled_circuit_m_t &cct, const Bytes &row, size_t kx)
 	out_key[0] = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 	out_key[1] = _mm_xor_si128(out_key[0], cct.m_R);
 
+        // this should always be true, since Gen commits to two wires for each input
 	assert(cct.m_gen_inp_decom.size() % 2 == 0);
 
-	Bytes msg(cct.m_gen_inp_decom[0].size());
+        // cct.m_gen_inp_decom.size() is twice Gen's input size for Gen,
+        // exactly Gen's input size for Eval
+        // this looks like it might be a bug
+        // and m_gen_inp_decom[0].size() is the size of a single decommitment
+	// it should be 2*key size
+        // (and that should be made more explicit in the code)
+        Bytes msg(cct.m_gen_inp_decom[0].size());
 	for (size_t jx = 0; jx < cct.m_gen_inp_decom.size()/2; jx++)
-	{
-		if (row.get_ith_bit(jx))
-		{
-			byte bit = cct.m_gen_inp_mask.get_ith_bit(jx);
-			msg ^= cct.m_gen_inp_decom[2*jx+bit];
-		}
-	}
+          {
+            if (row.get_ith_bit(jx))
+              {
+                byte bit = cct.m_gen_inp_mask.get_ith_bit(jx);
+                msg ^= cct.m_gen_inp_decom[2*jx+bit];
+                // xor all of the decommitments for which gen's input mask is a 1
+                // i do not understand this yet
+              }
+          }
         
 	__m128i in_key[2], aes_plaintext, aes_ciphertext;
 
-	aes_plaintext = _mm_set1_epi64x((uint64_t)kx+10);
+	aes_plaintext = _mm_set1_epi64x((uint64_t)kx+10); // why +10?
 
 	tmp.assign(msg.begin(), msg.begin()+Env::key_size_in_bytes());
 	tmp.resize(16, 0);
@@ -561,9 +576,9 @@ void evl_next_gen_inp_com(garbled_circuit_m_t &cct, const Bytes &row, size_t kx)
 	Bytes out(cct.m_gen_inp_decom[0].size());
         
 	for (size_t jx = 0; jx < cct.m_gen_inp_decom.size(); jx++)
-	{
-		if (row.get_ith_bit(jx)) { out ^= cct.m_gen_inp_decom[jx]; }
-	}
+          { // evalute 2-UHF
+            if (row.get_ith_bit(jx)) { out ^= cct.m_gen_inp_decom[jx]; }
+          }
 
 	byte bit = out.get_ith_bit(0);
         assert((bit == 0 || bit == 1));

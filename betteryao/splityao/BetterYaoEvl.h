@@ -1,9 +1,9 @@
 #ifndef BETTERYAOEVL_H_
 #define BETTERYAOEVL_H_
 
-#include "YaoBase.h"
+#include "../YaoBase.h"
 #include "BetterYao5.h"
-#include "garbled_circuit_m.h"
+#include "../garbled_circuit_m.h"
 
 #include <vector>
 

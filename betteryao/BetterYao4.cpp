@@ -324,11 +324,17 @@ void BetterYao4::cut_and_choose2_precomputation()
       std::cout << "gen input count: " << m_gen_inp_cnt << std::endl; // this is the one we care about right now.
       std::cout << "evl input count: " << m_evl_inp_cnt << std::endl;
    
-      // this loop is running all the way through the inputs without terminating,
-      // meaning either the decommitments are not being added properly
-      // or the input count is just too damn high
-      while ((m_gcs[ix].m_gen_inp_decom.size()/2 < m_gen_inp_cnt) && get_next_gate(m_gcs[ix].m_st))
+      // this loop either runs through all of Gen's inputs 
+      // or terminates when the circuit is out of gates
+      // this second check is obviously an error
+      // since that should never happen before Gen's inputs are exhausted
+      // 
+      while ((m_gcs[ix].m_gen_inp_decom.size()/2 < m_gen_inp_cnt))
         {
+          if(!get_next_gate(m_gcs[ix].m_st)){
+            fprintf(stderr,"error: circuit completed before finding all of Gen's inputs");
+            break;
+          }
           get_and_clear_out_bufr(m_gcs[ix]); // discard the garbled gates for now
 
           if(m_gcs[ix].m_gen_inp_decom.size() % 16 == 0){
@@ -823,7 +829,7 @@ void BetterYao4::circuit_evaluate()
               std::cout << "eval receive and evaluate" << std::endl;
             if (m_chks[ix]) // check circuit
               {
-                std::cout << "eval check circuit" << m_chks[ix] << std::endl;
+                fprintf(stderr,"eval check circuit: index %lu, rank %i\n",ix, Env::group_rank());
                 start = MPI_Wtime();
                 set_callback(m_gcs[ix].m_st, gen_next_gate_m);
                 while (get_next_gate(m_gcs[ix].m_st))
@@ -847,7 +853,7 @@ void BetterYao4::circuit_evaluate()
               }
             else // evaluation circuit
               {
-                std::cout << "eval evaluate circuit" << std::endl;
+                fprintf(stderr,"eval evaluation circuit: index %lu, rank %i\n",ix, Env::group_rank());
                 start = MPI_Wtime();
                 set_callback(m_gcs[ix].m_st, evl_next_gate_m);
                 std::cout<< "enter do loop" << std::endl;
@@ -979,7 +985,7 @@ void BetterYao4::proc_evl_out()
 				// find majority by locating the median of output from evaluation-circuits
 
                                 // this line is OBVIOUSLY wrong. evl_out_cnt was never anything but 0
-				// std::vector<Bytes> vec = recv.split((Env::circuit().evl_out_cnt()+7)/8);
+				// std::vector<Bytes> vec = recv.split((Env::circuit().evl_out_cnt()+7)/8); 
                                 std::vector<Bytes> vec = recv.split(0);
                                 
 				size_t median_ix = (chks_total+vec.size())/2;

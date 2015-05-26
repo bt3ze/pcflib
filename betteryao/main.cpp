@@ -6,9 +6,9 @@
 //#include "BetterYao2.h"
 //#include "BetterYao3.h"
 #include "BetterYao4.h"
-//#include "BetterYao5.h"
-#include "BetterYaoEvl.h"
-#include "BetterYaoGen.h"
+#include "BetterYao5.h"
+#include "splityao/BetterYaoEvl.h"
+#include "splityao/BetterYaoGen.h"
 
 int main(int argc, char **argv)
 {
@@ -58,7 +58,12 @@ int main(int argc, char **argv)
 		break;
 
 	case 1:
-          
+          // there are a lot of versions of betteryao that follow.
+          // the old working code is BetterYao4 and is made my "make betteryao"
+          // splityao is a version that separates Gen and Eval's code into different files
+          // but it is not functional. it's made by "make splityao"
+          // the latest is BetterYao5, make by "make betteryao5",
+          // which attempts to fix the problems in BetterYao4 and actually implement SS13
 #ifdef SPLITYAO
 #ifdef EVL_CODE
 	  sys = new BetterYaoEvl(params);
@@ -66,7 +71,11 @@ int main(int argc, char **argv)
           sys = new BetterYaoGen(params);
 #endif
 #else
+#ifdef YAO5
+          sys = new BetterYao5(params);
+#else
 	  sys = new BetterYao4(params);
+#endif
 #endif
 	  break;
 
