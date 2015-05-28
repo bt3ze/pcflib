@@ -189,6 +189,7 @@ public:
 	}
 
 	std::string to_hex() const;
+        void from_char_hex(const char * s,uint32_t length);
 	void from_hex(const std::string &s);
 
 	Bytes hash(size_t bits) const;

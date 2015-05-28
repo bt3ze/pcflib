@@ -22,6 +22,8 @@ typedef struct
   uint32_t            m_gen_out_ix;
   uint32_t            m_evl_out_ix;
 
+  //uint32_t            tag_a_cnt;
+
   __m128i             m_clear_mask; // what is the purpose of this mask?
 
   // gen and eval inputs
@@ -34,6 +36,7 @@ typedef struct
   Bytes               m_out_bufr; // out buffer
   Bytes               m_in_bufr; // in buffer
   Bytes::iterator     m_in_bufr_ix;
+
 
   struct PCFState    *m_st; // pointer to the PCF state
   __m128i             m_const_wire[2]; // keys for constant 0 and 1

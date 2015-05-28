@@ -104,6 +104,8 @@ void evl_init_circuit(garbled_circuit_m_t &cct, const std::vector<Bytes> &ot_key
   cct.m_gen_out.reserve(MAX_OUTPUT_SIZE);
   cct.m_gen_out.clear(); // will grow dynamically
   
+  //cct.tag_a_cnt = 0;
+
   //	cct.m_bufr.reserve(CIRCUIT_HASH_BUFFER_SIZE);
   //cct.m_bufr.clear();
   //cct.m_hash.init();
@@ -134,6 +136,9 @@ void *gen_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 		a[0] = current_zero_key;
 		a[1] = _mm_xor_si128(current_zero_key, cct.m_R);
 
+                if(!(gen_inp_ix < cct.m_gen_inp_mask.size()*8)){
+                  fprintf(stderr,"error: gen inp index not less than m_gen_inp_mask size * 8: %u !< %lu*8 (%lu)\n",gen_inp_ix, cct.m_gen_inp_mask.size(), cct.m_gen_inp_mask.size()*8);
+                }
 		uint8_t bit = cct.m_gen_inp_mask.get_ith_bit(gen_inp_ix);
 
 		// std::cout <<"dcomsize: "<<cct.m_gen_inp_decom.size()<<"  input ix: "<< gen_inp_ix<<"\n";
@@ -354,13 +359,16 @@ void *evl_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 	{
           //std::cout <<cct.m_gen_inp_mask.size()*8<<" " <<cct.m_gen_inp_ix <<" \n";
           
+          //cct.tag_a_cnt++;
+          //fprintf(stderr, "INPUT ALICE: %u\n",cct.tag_a_cnt);
+          
           if(!(cct.m_gen_inp_ix < 8LL*cct.m_gen_inp_mask.size())){
              fprintf(stderr, "gen input index not < 8 * gen input mask size. %u !< %lu \n",cct.m_gen_inp_ix, 8*cct.m_gen_inp_mask.size());
              // fprintf(stderr,"gen input size is: %lu\n",cct.m_gen_inp.size());
           }
           // assert(cct.m_gen_inp_ix < cct.m_gen_inp_mask.size());
           // HERE! THE BUG IS HERE!
-          fprintf(stderr,"gen input index: %u \n",cct.m_gen_inp_ix);
+          //fprintf(stderr,"gen input index: %u \t rank: %u\n",cct.m_gen_inp_ix, Env::group_rank());
           uint8_t bit = cct.m_gen_inp_mask.get_ith_bit(cct.m_gen_inp_ix);
           Bytes::const_iterator it = cct.m_in_bufr_ix + bit*Env::key_size_in_bytes();
           

@@ -981,7 +981,7 @@ struct PCFGate * get_next_gate(struct PCFState * st)
   //  std::cout << "get next gate" << std::endl;
 
   st->curgate = 0;
-  fprintf(stderr,"program counter: %u\n",st->PC);
+  //fprintf(stderr,"program counter: %u\n",st->PC);
   while((st->curgate == 0) && (st->done == 0))
     {
       // if curgate is 0, why are we executing things?
@@ -1094,5 +1094,29 @@ uint32_t read_bob_length(const char * fname)
   fclose(cnf);
   bob_in = (strlen(line) - 1) * 4;
   fprintf(stderr,"bob length: %u\n",bob_in);
+  return bob_in;
+}
+
+char* get_alice_input(uint32_t length, const char* fname){
+  FILE * cnf;
+  char * alice_in = malloc(sizeof(char)*length);
+  cnf = fopen(fname,"r");
+  // alice's input is on the first line.
+  // read length characters into alice_in
+  fgets(alice_in, length, cnf);
+  fclose(cnf);
+  return alice_in;
+}
+
+char* get_bob_input(uint32_t length, const char* fname){
+  FILE * cnf;
+  char * bob_in = malloc(sizeof(char)*length);
+  char discard[LINE_MAX];
+  cnf = fopen(fname,"r");
+  // bob's input is on the second line
+  // read length characters into bob_in
+  fgets(discard, LINE_MAX-1,cnf);
+  fgets(bob_in, length, cnf);
+  fclose(cnf);
   return bob_in;
 }

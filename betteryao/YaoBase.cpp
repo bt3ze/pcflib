@@ -362,6 +362,37 @@ void YaoBase::final_report()
 
 
 void YaoBase::get_and_size_inputs(){
+  size_inputs();
+  get_inputs();
+}
+
+void YaoBase::get_inputs(){
+  char * raw_input_bufr;
+  std::string input_string;
+  
+  GEN_BEGIN
+    
+    raw_input_bufr = (char*)malloc(sizeof(char)*m_gen_inp_cnt);
+    raw_input_bufr = get_bob_input(m_gen_inp_cnt,Env::private_file());
+    fprintf(stderr, "Bob's (1) input is: %s",raw_input_bufr);
+    
+    m_private_input.from_char_hex(raw_input_bufr, m_gen_inp_cnt);
+    std::cout << "Bob's (2) input is: " << m_private_input.to_hex() << std::endl;
+
+    GEN_END
+      
+    EVL_BEGIN
+      raw_input_bufr = (char*)malloc(sizeof(char)*m_evl_inp_cnt);
+    raw_input_bufr = get_alice_input(m_evl_inp_cnt,Env::private_file());
+    fprintf(stderr,"Alice's (1) input is: %s",raw_input_bufr);
+    
+    m_private_input.from_char_hex(raw_input_bufr,m_evl_inp_cnt);
+    std::cout << "Alice's (2) input is: " << m_private_input.to_hex() << std::endl;
+    EVL_END
+
+}
+
+void YaoBase::size_inputs(){
   	static byte MASK[8] = { 0xFF, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F};
 
 	m_gen_inp_cnt = read_alice_length(Env::private_file());
@@ -372,6 +403,8 @@ void YaoBase::get_and_size_inputs(){
 
 	m_gen_inp.resize((m_gen_inp_cnt+7)/8);
 	m_gen_inp.back() &= MASK[m_gen_inp_cnt%8];
+
+        
 }
 
 void YaoBase::oblivious_transfer()

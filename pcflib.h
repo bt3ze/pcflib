@@ -166,6 +166,9 @@ typedef struct PCFState {
   uint32_t read_alice_length(const char *);
   uint32_t read_bob_length(const char *); 
 
+  char * get_alice_input(uint32_t,const char *);
+  char * get_bob_input(uint32_t,const char *);
+
   /*
     obsolete:
     void reinitialize(PCFState *);

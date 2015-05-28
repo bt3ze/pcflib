@@ -56,6 +56,24 @@ const int REVERSE_HEX_TABLE[256] =
 const int HEX_EXP[2] = { 16, 1 };
 }
 
+void Bytes::from_char_hex(const char * s,uint32_t length){
+  this->clear();
+  // NOTE: INPUTS MUST BE OF LENGTH DIVISIBLE BY 8
+  this->resize(length/8); // divide length by byte length, then add 1 for safety
+  uint32_t strlen = length/4;
+
+  for(size_t ix = 0 ; ix < strlen ; ix++){
+    if(REVERSE_HEX_TABLE[s[ix]] == -1){
+      fprintf(stderr, "char number %lu, invalid character %c\n", ix, s[ix]);
+      fprintf(stderr,"invalid hex format: %s\n",s);
+      }
+      else{
+        (*this)[ix/2] += REVERSE_HEX_TABLE[s[ix]]*HEX_EXP[ix%2];
+      }
+  }
+  
+}
+
 void Bytes::from_hex(const std::string &s)
 {
 	this->clear();

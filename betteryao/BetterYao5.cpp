@@ -350,11 +350,11 @@ void BetterYao5::cut_and_choose2_precomputation()
             break;
           }
           get_and_clear_out_bufr(m_gcs[ix]); // discard the garbled gates for now
-
-          if(m_gcs[ix].m_gen_inp_decom.size() % 16 == 0){
+          
+          //if(m_gcs[ix].m_gen_inp_decom.size() % 16 == 0){
             //  last_decom_size = m_gcs[ix].m_gen_inp_decom.size();
-            std::cout << "decommitments: " << m_gcs[ix].m_gen_inp_decom.size() << std::endl;
-          }
+          //  std::cout << "decommitments: " << m_gcs[ix].m_gen_inp_decom.size() << std::endl;
+          // }
         }
 
       std::cout << "done decommitting" << std::endl;

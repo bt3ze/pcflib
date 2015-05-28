@@ -185,7 +185,7 @@ void call_op (struct PCFState * st, struct PCFOP * op)
               // shift over to make room for next bit
               idx = idx << 1;
 
-              // each wire holding the address must have  a wire value (0,1)
+              // each wire holding the address must have a wire value (0,1)
               assert(st->wires[st->base + data->newbase - i].value < 2);
                // index of an input MUST be a known wire.
               assert(st->wires[st->base + data->newbase - i].flags == KNOWN_WIRE);
@@ -198,7 +198,7 @@ void call_op (struct PCFState * st, struct PCFOP * op)
           st->inp_idx = idx;
         }
   //      // idx (similarly, st->idx) now has the argument that was passed to alice()
-
+    
 
       if(st->inp_i < 32)
         { // why this if/else branch when i is between 0 and 32?
@@ -232,7 +232,7 @@ void call_op (struct PCFState * st, struct PCFOP * op)
       else
         { // what is the point of this? reset inp_i so that it can go back to the top?
           // doesn't this miss good inputs?
-          //fprintf(stderr, "reset alice\n");
+          fprintf(stderr, "st->inp_i over 32\n");
           st->inp_i = 0;
         } 
       

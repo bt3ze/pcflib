@@ -80,7 +80,8 @@ protected:
         // subroutines for the protocol
         void oblivious_transfer();
         void get_and_size_inputs();
-
+        void size_inputs();
+        void get_inputs(); 
 
 protected:
 	// variables for MPI
@@ -105,7 +106,11 @@ protected:
 	Bytes               m_evl_inp;
 	Bytes               m_gen_inp;
 	Bytes               m_gen_out;
-	Bytes               m_evl_out;
+        Bytes               m_evl_out;
+
+        // added 5/28 
+        Bytes               m_private_input;
+        
 
 	Prng                m_prng;
 
