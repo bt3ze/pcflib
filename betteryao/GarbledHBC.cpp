@@ -11,13 +11,6 @@ GarbledHBC::GarbledHBC(): GarbledBase() {
 
 // virtual functions of GarbledBase to implement:
 
-void * GarbledHBC::gen_next_gate(PCFState *st, PCFGate *current_gate){
-  return 0;
-}
-
-void * GarbledHBC::evl_next_gate(PCFState *st, PCFGate *current_gate){
-  return 0;
-}
 
 void GarbledHBC::initialize_circuit(){
 

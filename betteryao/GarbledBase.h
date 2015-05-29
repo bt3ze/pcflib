@@ -38,26 +38,43 @@ public:
      GarbledBase();
      virtual ~GarbledBase() {};
 
-     virtual void * gen_next_gate(struct PCFState *st, struct PCFGate *current_gate) = 0; 
-     virtual void * evl_next_gate(struct PCFState *st, struct PCFGate *current_gate) = 0;
-     
+     // virtual functions to be implemented by HBC and Malicious circuit objects
      virtual void gen_init_circuit(const std::vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed) = 0;
      virtual void evl_init_circuit(const std::vector<Bytes> &ot_keys, const Bytes &masked_gen_inp, const Bytes &evl_inp) = 0;
 
      virtual void initialize_circuit() = 0;
 
      __m128i             m_const_wire[2]; // keys for constant 0 and 1     
-
      
-public:
      struct PCFState    *m_st; // pointer to the PCF state
  
-     // methods
 
-     inline void trim_output();
-     inline void clear_and_replace_in_bufr(const Bytes &);
+     // public methods
+     inline void trim_output(){
+         assert(m_gen_out.size() > 0);
+         m_gen_out.resize((m_gen_out_ix+7)/8);
+         m_evl_out.resize((m_evl_out_ix+7)/8);
+     }
 
-     inline const Bytes get_and_clear_out_bufr();
+     inline void clear_and_replace_in_bufr(const Bytes &i_data){
+       {
+         m_in_bufr.clear();
+         m_in_bufr += i_data;
+         //assert(cct.m_i_bufr.size() > 0);
+         m_in_bufr_ix = m_in_bufr.begin();
+       }
+
+     }
+
+     inline const Bytes get_and_clear_out_bufr()
+     {
+       //static
+       Bytes o_data;
+       o_data.swap(m_out_bufr);
+       m_out_bufr.clear();
+       return o_data;
+     }
+
      
      void set_const_key(byte c, const Bytes &key);
      const Bytes get_const_key(byte c, byte b);
@@ -76,6 +93,7 @@ public:
      }
 
 protected:
+     // these member functions are internal to the circuit object
 
      __m128i             m_R; // constant for free-XOR
      
@@ -105,7 +123,6 @@ protected:
      Bytes               m_in_bufr; // in buffer
      Bytes::iterator     m_in_bufr_ix;
   
-
      
 
 // gen next gate

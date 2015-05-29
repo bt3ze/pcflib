@@ -333,7 +333,7 @@ void BetterYao5::cut_and_choose2_precomputation()
       set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
       set_key_copy_function(m_gcs[ix].m_st, copy_key);
       set_key_delete_function(m_gcs[ix].m_st, delete_key);
-      set_callback(m_gcs[ix].m_st, gen_next_gate_m);
+      set_callback(m_gcs[ix].m_st, gen_next_gate);
 
       fprintf(stderr, "generate decommitments: index %lu \trank %x\n",ix, Env::group_rank());
       
@@ -437,7 +437,7 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
     start = MPI_Wtime();
   
 //bufr = get_const_key(m_gcs[ix], 0, 0) + get_const_key(m_gcs[ix], 1, 1);
-  bufr = m_gcs[ix].get_const_key(0, 0) + m_gcs[ix].get_const_key(, 1, 1);
+  bufr = m_gcs[ix].get_const_key(0, 0) + m_gcs[ix].get_const_key(1, 1);
   
   bufr ^= m_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
   m_timer_gen += MPI_Wtime() - start;
@@ -511,7 +511,7 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
             // she now has the decommitments to Gen's input keys
             bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
             //m_gcs[ix].m_gen_inp_decom[jx] = bufr;
-            m_gcs[ix].get_gen_decommitmeents()[jx] = bufr;
+            m_gcs[ix].get_gen_decommitments()[jx] = bufr;
           }
         m_timer_evl += MPI_Wtime() - start;
         EVL_END
@@ -745,16 +745,17 @@ void BetterYao5::consistency_check()
 		for (size_t kx = 0; kx < m_matrix.size(); kx++)
 	{
 		GEN_BEGIN
-			start = MPI_Wtime();
-				gen_next_gen_inp_com(m_gcs[ix], m_matrix[kx], kx);
-				bufr = m_gcs[ix].get_and_clear_out_bufr();
-                                //bufr = get_and_clear_out_bufr(m_gcs[ix]);
-			m_timer_gen += MPI_Wtime() - start;
-
-			start = MPI_Wtime();
-				GEN_SEND(bufr);
-			m_timer_com += MPI_Wtime() - start;
-
+                  start = MPI_Wtime();
+                //gen_next_gen_inp_com(m_gcs[ix], m_matrix[kx], kx);
+                m_gcs[ix].gen_next_gen_inp_com(m_matrix[kx], kx);
+                bufr = m_gcs[ix].get_and_clear_out_bufr();
+                //bufr = get_and_clear_out_bufr(m_gcs[ix]);
+                m_timer_gen += MPI_Wtime() - start;
+                
+                start = MPI_Wtime();
+                GEN_SEND(bufr);
+                m_timer_com += MPI_Wtime() - start;
+                
 		GEN_END
 
 		EVL_BEGIN
@@ -857,7 +858,7 @@ void BetterYao5::circuit_evaluate()
               std::cout << "gen generate and send" << std::endl;
             start = MPI_Wtime();
             //set_callback(m_gcs[ix].m_st, gen_next_gate_m);
-            set_callback(m_gcs[ix].m_st, m_gcs[ix].gen_next_gate);
+            set_callback(m_gcs[ix].m_st, gen_next_gate);
             
             while (get_next_gate(m_gcs[ix].m_st))
               {
@@ -885,7 +886,7 @@ void BetterYao5::circuit_evaluate()
               {
                 fprintf(stderr,"eval check circuit: index %lu, rank %i\n",ix, Env::group_rank());
                 start = MPI_Wtime();
-                set_callback(m_gcs[ix].m_st, m_gcs[ix].gen_next_gate);
+                set_callback(m_gcs[ix].m_st, gen_next_gate);
                 //set_callback(m_gcs[ix].m_st, gen_next_gate_m);
                 while (get_next_gate(m_gcs[ix].m_st))
                   {
@@ -911,7 +912,7 @@ void BetterYao5::circuit_evaluate()
               {
                 fprintf(stderr,"eval evaluation circuit: index %lu, rank %i\n",ix, Env::group_rank());
                 start = MPI_Wtime();
-                set_callback(m_gcs[ix].m_st, evl_next_gate_m);
+                set_callback(m_gcs[ix].m_st, evl_next_gate);
                 std::cout<< "enter do loop" << std::endl;
                 do {
                   // std::cout << "timing stuff" << std::endl;

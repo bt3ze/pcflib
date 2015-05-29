@@ -32,29 +32,6 @@ GarbledBase::GarbledBase():
 }
 
 
-inline void GarbledBase::trim_output()
-{
-  assert(m_gen_out.size() > 0);
-  m_gen_out.resize((m_gen_out_ix+7)/8);
-  m_evl_out.resize((m_evl_out_ix+7)/8);
-}
-
-inline void GarbledBase::clear_and_replace_in_bufr(const Bytes &i_data)
-{
-  m_in_bufr.clear();
-  m_in_bufr += i_data;
-  //assert(cct.m_i_bufr.size() > 0);
-  m_in_bufr_ix = m_in_bufr.begin();
-}
-
-inline const Bytes GarbledBase::get_and_clear_out_bufr()
-{
-  static Bytes o_data;
-  o_data.swap(m_out_bufr);
-  m_out_bufr.clear();
-  return o_data;
-}
-
 
 void GarbledBase::set_const_key(byte c, const Bytes &key)
 {

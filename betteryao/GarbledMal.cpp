@@ -110,18 +110,6 @@ void GarbledMal::gen_next_gen_inp_com(const Bytes &row, size_t kx){
 }
 
 
-inline bool GarbledMal::pass_check(){
-  	assert(m_gen_inp_decom.size() == m_gen_inp_com.size());
-
-	bool pass_chk = true;
-	for (size_t ix = 0; ix < m_gen_inp_decom.size(); ix++)
-	{
-		pass_chk &= (m_gen_inp_decom[ix].hash(Env::k()) == m_gen_inp_com[ix]);
-	}
-	return pass_chk;
-}
-
-
 // virtual functions of GarbledBase to implement:
 
 
@@ -147,11 +135,11 @@ void GarbledMal::initialize_circuit(){
 
 }
 
-void * GarbledMal::gen_next_gate(PCFState *st, PCFGate *current_gate){
+void * gen_next_gate(PCFState *st, PCFGate *current_gate){
   return 0;
 }
 
-void * GarbledMal::evl_next_gate(PCFState *st, PCFGate *current_gate){
+void * evl_next_gate(PCFState *st, PCFGate *current_gate){
   return 0;
 }
 
