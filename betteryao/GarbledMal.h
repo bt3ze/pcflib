@@ -7,9 +7,10 @@
 class GarbledMal: public GarbledBase
 {
  public:
+  
   GarbledMal();
   virtual ~GarbledMal() {}
-
+  
   std::vector<Bytes> get_gen_decommitments (){
     return this->m_gen_inp_decom;
   }
@@ -54,8 +55,8 @@ class GarbledMal: public GarbledBase
 };
 
 
-void * gen_next_gate(struct PCFState *st, struct PCFGate *current_gate); 
-void * evl_next_gate(struct PCFState *st, struct PCFGate *current_gate);
+void * gen_next_malicious_gate(struct PCFState *st, struct PCFGate *current_gate); 
+void * evl_next_malicious_gate(struct PCFState *st, struct PCFGate *current_gate);
 
 
 #endif

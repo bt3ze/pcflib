@@ -19,7 +19,7 @@ BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
   for (size_t ix = 0; ix < m_gcs.size(); ix++)
     {
       //initialize_malicious_circuit(m_gcs[ix]);
-      m_gcs[ix] = new GarbledMal();
+      //m_gcs[ix] = new GarbledMal();
       m_gcs[ix].initialize_circuit();
   }
   
@@ -333,7 +333,7 @@ void BetterYao5::cut_and_choose2_precomputation()
       set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
       set_key_copy_function(m_gcs[ix].m_st, copy_key);
       set_key_delete_function(m_gcs[ix].m_st, delete_key);
-      set_callback(m_gcs[ix].m_st, gen_next_gate);
+      set_callback(m_gcs[ix].m_st, gen_next_malicious_gate);
 
       fprintf(stderr, "generate decommitments: index %lu \trank %x\n",ix, Env::group_rank());
       
@@ -858,7 +858,7 @@ void BetterYao5::circuit_evaluate()
               std::cout << "gen generate and send" << std::endl;
             start = MPI_Wtime();
             //set_callback(m_gcs[ix].m_st, gen_next_gate_m);
-            set_callback(m_gcs[ix].m_st, gen_next_gate);
+            set_callback(m_gcs[ix].m_st, gen_next_malicious_gate);
             
             while (get_next_gate(m_gcs[ix].m_st))
               {
@@ -886,7 +886,7 @@ void BetterYao5::circuit_evaluate()
               {
                 fprintf(stderr,"eval check circuit: index %lu, rank %i\n",ix, Env::group_rank());
                 start = MPI_Wtime();
-                set_callback(m_gcs[ix].m_st, gen_next_gate);
+                set_callback(m_gcs[ix].m_st, gen_next_malicious_gate);
                 //set_callback(m_gcs[ix].m_st, gen_next_gate_m);
                 while (get_next_gate(m_gcs[ix].m_st))
                   {
@@ -912,7 +912,7 @@ void BetterYao5::circuit_evaluate()
               {
                 fprintf(stderr,"eval evaluation circuit: index %lu, rank %i\n",ix, Env::group_rank());
                 start = MPI_Wtime();
-                set_callback(m_gcs[ix].m_st, evl_next_gate);
+                set_callback(m_gcs[ix].m_st, evl_next_malicious_gate);
                 std::cout<< "enter do loop" << std::endl;
                 do {
                   // std::cout << "timing stuff" << std::endl;

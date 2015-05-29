@@ -135,11 +135,11 @@ void GarbledMal::initialize_circuit(){
 
 }
 
-void * gen_next_gate(PCFState *st, PCFGate *current_gate){
+void * gen_next_malicious_gate(PCFState *st, PCFGate *current_gate){
   return 0;
 }
 
-void * evl_next_gate(PCFState *st, PCFGate *current_gate){
+void * evl_next_malicious_gate(PCFState *st, PCFGate *current_gate){
   return 0;
 }
 

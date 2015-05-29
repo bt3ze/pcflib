@@ -19,8 +19,8 @@ class GarbledHBC: public GarbledBase
 
 };
 
-void * gen_next_gate(struct PCFState *st, struct PCFGate *current_gate); 
-void * evl_next_gate(struct PCFState *st, struct PCFGate *current_gate);
+//void * gen_next_gate(struct PCFState *st, struct PCFGate *current_gate); 
+//void * evl_next_gate(struct PCFState *st, struct PCFGate *current_gate);
 
 
 #endif

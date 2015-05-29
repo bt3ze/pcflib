@@ -56,7 +56,7 @@ protected:
         std::vector<Bytes>                   m_gen_inp_hash;
         std::vector<std::vector<Bytes> >      m_gen_inp_decom;
         std::vector<Bytes>                   m_matrix;
-
+        
         std::vector<Prng>		     m_prngs;
 
 };
