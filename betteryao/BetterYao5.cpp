@@ -16,12 +16,14 @@ BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
   m_rnds.resize(Env::node_load());
   m_gcs.resize(Env::node_load());
   
+  /*
   for (size_t ix = 0; ix < m_gcs.size(); ix++)
     {
       //initialize_malicious_circuit(m_gcs[ix]);
       //m_gcs[ix] = new GarbledMal();
-      m_gcs[ix].initialize_circuit();
+      //m_gcs[ix].initialize_circuit();
   }
+  */
   
   m_gen_inp_hash.resize(Env::node_load());
   m_gen_inp_masks.resize(Env::node_load());

@@ -19,7 +19,6 @@ class GarbledMal: public GarbledBase
     return m_gen_inp_hash;
   }
 
-  virtual void initialize_circuit();
   virtual void gen_init_circuit(const std::vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed);
   virtual void evl_init_circuit(const std::vector<Bytes> &ot_keys, const Bytes &masked_gen_inp, const Bytes &evl_inp);
 
@@ -34,21 +33,18 @@ class GarbledMal: public GarbledBase
     return pass_chk;
   }
 
-
   void initialize_gen_circuit(const std::vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed);
   void initialize_eval_circuit(const std::vector<Bytes> &ot_keys, const Bytes &masked_gen_inp, const Bytes &evl_inp);
 
   void evl_next_gen_inp_com(const Bytes &row, size_t kx);
   void gen_next_gen_inp_com(const Bytes &row, size_t kx);
 
-
- protected:
+  // protected:
 
   // specific to malicious circuit
   std::vector<Bytes>  m_gen_inp_com; // commitments?
   std::vector<Bytes>  m_gen_inp_decom; // decommitments?
   Bytes               m_gen_inp_hash;
-
  
 
 };

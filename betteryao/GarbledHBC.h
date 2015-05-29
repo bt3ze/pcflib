@@ -11,7 +11,6 @@ class GarbledHBC: public GarbledBase
   GarbledHBC();
   virtual ~GarbledHBC() {}
 
-    virtual void initialize_circuit();
 
   virtual void gen_init_circuit(const std::vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed);
   virtual void evl_init_circuit(const std::vector<Bytes> &ot_keys, const Bytes &masked_gen_inp, const Bytes &evl_inp);

@@ -38,13 +38,11 @@ class GarbledBase {
 
 public:
      GarbledBase();
-     virtual ~GarbledBase() {};
+     virtual ~GarbledBase() {}
 
      // virtual functions to be implemented by HBC and Malicious circuit objects
      virtual void gen_init_circuit(const std::vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed) = 0;
      virtual void evl_init_circuit(const std::vector<Bytes> &ot_keys, const Bytes &masked_gen_inp, const Bytes &evl_inp) = 0;
-
-     virtual void initialize_circuit() = 0;
 
      __m128i             m_const_wire[2]; // keys for constant 0 and 1     
      
@@ -94,7 +92,8 @@ public:
        return m_evl_out_ix;
      }
 
-protected:
+     //protected:
+     //public
      // these member functions are internal to the circuit object
 
      __m128i             m_R; // constant for free-XOR

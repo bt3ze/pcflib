@@ -10,7 +10,6 @@ GarbledMal::GarbledMal() : GarbledBase() {
   // input and output buffers cleared
   // clear mask set to length of security parameter
   
-  
   // set the input hash to zeros
   // (do we actually use the input hash?)
   m_gen_inp_hash.assign(Env::key_size_in_bytes(), 0);
@@ -48,11 +47,11 @@ void GarbledMal::initialize_gen_circuit(const std::vector<Bytes> &ot_keys, const
   m_R = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&tmp[0]));
 
   // must also pick zero-keys for the constant wires
-  tmp = cct.m_prng.rand_bits(Env::k());
+  tmp = m_prng.rand_bits(Env::k());
   tmp.resize(16, 0);
   m_const_wire[0] = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&tmp[0]));
 
-  tmp = cct.m_prng.rand_bits(Env::k());
+  tmp = m_prng.rand_bits(Env::k());
   tmp.resize(16, 0);
   m_const_wire[1] = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&tmp[0]));
 
@@ -228,7 +227,7 @@ void * gen_next_malicious_gate(PCFState *st, PCFGate *current_gate){
 		cct.m_gen_inp_ix++; // after PCF compiler, this isn't really necessary
 
 	
-                __m128i onev = _mm_xor_si128(cct.m_R, current_zero_key);
+                // __m128i onev = _mm_xor_si128(cct.m_R, current_zero_key);
 	
                 //if(Env::is_root())
                 // {
@@ -360,21 +359,7 @@ void * gen_next_malicious_gate(PCFState *st, PCFGate *current_gate){
 			cct.m_out_bufr.insert(cct.m_out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
 
 		}
-/*
-		Bytes tmp(16);
-		__m128i XX;
-		XX = *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire1));
-	_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), XX);
-std::cerr << " " << current_gate->wire1 << " (" << Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes()).to_hex();
-	_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), _mm_xor_si128(XX, cct.m_R));
-std::cerr << ", " << Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes()).to_hex() << ")";
 
-		XX = *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire2));
-	_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), XX);
-std::cerr << " " << current_gate->wire2 << " (" << Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes()).to_hex();
-	_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), _mm_xor_si128(XX, cct.m_R));
-std::cerr << ", " << Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes()).to_hex() << ")\t";
-*/
 		if (current_gate->tag == TAG_OUTPUT_A) // Gen output
 		{
 			cct.m_out_bufr.push_back(_mm_extract_epi8(current_zero_key, 0) & 0x01); // permutation bit
@@ -386,28 +371,7 @@ std::cerr << ", " << Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes()).to
 			cct.m_evl_out_ix++;
 		}
 	}
-/*
-{
-switch(current_gate->tag)
-{
-case TAG_INPUT_A:
-std::cerr << "INP_A "; break;
-case TAG_INPUT_B:
-std::cerr << "INP_B "; break;
-case TAG_OUTPUT_A:
-std::cerr << "OUT_A "; break;
-case TAG_OUTPUT_B:
-std::cerr << "OUT_B "; break;
-default:
-std::cerr << "  ETC "; break;
-}
-Bytes tmp(16);
-	_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), current_zero_key);
-std::cerr << cct.m_gate_ix << ": (" << Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes()).to_hex();
-	_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), _mm_xor_si128(current_zero_key, cct.m_R));
-std::cerr << ", " << Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes()).to_hex() << ")" << std::endl;
-}
-*/
+
 	cct.m_gate_ix++;
 	return &current_zero_key;
 }

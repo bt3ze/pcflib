@@ -12,10 +12,6 @@ GarbledHBC::GarbledHBC(): GarbledBase() {
 // virtual functions of GarbledBase to implement:
 
 
-void GarbledHBC::initialize_circuit(){
-
-};
-
 void GarbledHBC::gen_init_circuit(const std::vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed){
   m_ot_keys = &ot_keys;
   m_gen_inp_mask = gen_inp_mask;
