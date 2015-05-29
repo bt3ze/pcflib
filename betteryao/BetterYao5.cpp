@@ -16,14 +16,13 @@ BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
   m_rnds.resize(Env::node_load());
   m_gcs.resize(Env::node_load());
   
-  /*
+  
   for (size_t ix = 0; ix < m_gcs.size(); ix++)
     {
       //initialize_malicious_circuit(m_gcs[ix]);
-      //m_gcs[ix] = new GarbledMal();
+      m_gcs[ix] = GarbledMal();
       //m_gcs[ix].initialize_circuit();
   }
-  */
   
   m_gen_inp_hash.resize(Env::node_load());
   m_gen_inp_masks.resize(Env::node_load());
@@ -204,8 +203,11 @@ void BetterYao5::cut_and_choose2()
     {
       cut_and_choose2_evl_circuit(ix);
       cut_and_choose2_chk_circuit(ix);
+    
+      fprintf(stderr," cut-and-choose2-evl-check: %lu\trank: %i\n",ix,Env::group_rank());
     }
   
+  fprintf(stderr,"done cut and choose 2\t rank: %i \n",Env::group_rank());
   step_report("cut-'n-chk2");
 }
 
@@ -400,6 +402,7 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
 
   //assert(m_gen_inp_masks[ix].size() == m_gen_inp.size());
   assert(m_gen_inp_masks[ix].size() == m_private_input.size());
+
   // mask gen's input
   //  bufr = m_gen_inp_masks[ix] ^ m_gen_inp;
   bufr = m_gen_inp_masks[ix] ^ m_private_input;
@@ -414,7 +417,11 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
   GEN_END
     
     EVL_BEGIN
-    start = MPI_Wtime();
+    fprintf(stderr,"cut-choose-2-evl: %lu \t rank: %i\n",ix,Env::group_rank());
+  // there is something going on in the evaluation circuits causing seg fault  
+  fprintf(stderr,"cut-and-choose-2-evl: m_chks[ix] %i\trank: %i\n",m_chks[ix],Env::group_rank());
+  
+  start = MPI_Wtime();
   bufr = EVL_RECV();
   m_timer_com += MPI_Wtime() - start;
   
@@ -520,6 +527,8 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
           
           m_comm_sz += bufr.size();
       }
+  fprintf(stderr,"end cut-and-choose2 evl %lu\trank: %i\n",ix,Env::group_rank());
+     
 }
 
 
@@ -565,6 +574,7 @@ void BetterYao5::cut_and_choose2_chk_circuit(size_t ix)
     // and if this is a check circuit,
     // then she decrypts with a properly seeded generator
     EVL_BEGIN
+    fprintf(stderr,"cut-and-chooose2-check: %lu\trank: %i\n",ix,Env::group_rank());
     start = MPI_Wtime();
   bufr = EVL_RECV();
   m_timer_com += MPI_Wtime() - start;
@@ -693,6 +703,7 @@ void BetterYao5::cut_and_choose2_chk_circuit(size_t ix)
           
           m_comm_sz += bufr.size();
       }
+  fprintf(stderr,"end cut-and-choose2-check %lu\trank: %i\n",ix,Env::group_rank());
 }
 
 
