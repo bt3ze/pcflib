@@ -35,7 +35,6 @@ class GarbledMal: public GarbledBase
   }
 
 
-
   void initialize_gen_circuit(const std::vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed);
   void initialize_eval_circuit(const std::vector<Bytes> &ot_keys, const Bytes &masked_gen_inp, const Bytes &evl_inp);
 
