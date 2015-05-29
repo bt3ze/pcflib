@@ -125,11 +125,21 @@ inline bool GarbledMal::pass_check(){
 // virtual functions of GarbledBase to implement:
 
 
+// to be replaced with the function it calls
 void GarbledMal::gen_init_circuit(const std::vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed) {
-
+  this->initialize_gen_circuit(ot_keys, gen_inp_mask, seed);
 }    
 
+void GarbledMal::initialize_gen_circuit(const std::vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed){
+
+}
+
+// to be replaced with the function it calls
 void GarbledMal::evl_init_circuit(const std::vector<Bytes> &ot_keys, const Bytes &masked_gen_inp, const Bytes &evl_inp) {
+  this->initialize_eval_circuit(ot_keys, masked_gen_inp, evl_inp);
+}
+
+void GarbledMal::initialize_eval_circuit(const std::vector<Bytes> &ot_keys, const Bytes &masked_gen_inp, const Bytes &evl_inp){
 
 }
 

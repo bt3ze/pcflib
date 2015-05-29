@@ -15,7 +15,7 @@ GarbledBase::GarbledBase():
   assert(m_gen_out_ix == 0);
   assert(m_evl_out_ix == 0);
 
-  m_gen_inp_hash.assign(Env::key_size_in_bytes(),0);
+  // m_gen_inp_hash.assign(Env::key_size_in_bytes(),0);
 
   // clear in and out buffers
   m_in_bufr.clear();
@@ -29,7 +29,6 @@ GarbledBase::GarbledBase():
   }
   m_clear_mask = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 
-  
 }
 
 
@@ -85,8 +84,6 @@ const Bytes GarbledBase::get_const_key(byte c, byte b)
 	tmp.resize(Env::key_size_in_bytes());
 	return tmp;
 }
-
-
 
 
 

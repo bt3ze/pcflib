@@ -59,8 +59,8 @@ void GarbledHBC::evl_init_circuit(const std::vector<Bytes> &ot_keys, const Bytes
   m_gen_out.reserve(MAX_OUTPUT_SIZE);
   m_gen_out.clear(); // will grow dynamically
 
-  m_bufr.reserve(CIRCUIT_HASH_BUFFER_SIZE);
-  m_bufr.clear();
+  //m_bufr.reserve(CIRCUIT_HASH_BUFFER_SIZE);
+  //m_bufr.clear();
   
 }
 

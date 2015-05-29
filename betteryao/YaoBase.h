@@ -103,8 +103,8 @@ protected:
         std::vector<uint64_t>    m_comm_sz_vec;
 
 	// variables for Yao protocol
-	Bytes               m_evl_inp;
-	Bytes               m_gen_inp;
+//	Bytes               m_evl_inp;
+//      Bytes               m_gen_inp;
 	Bytes               m_gen_out;
         Bytes               m_evl_out;
 

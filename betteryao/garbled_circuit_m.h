@@ -73,7 +73,7 @@ inline void clear_and_replace_in_bufr(garbled_circuit_m_t &cct, const Bytes &i_d
 }
 
 
-inline const Bytes get_and_clear_out_bufr(garbled_circuit_m_t &cct){
+inline Bytes get_and_clear_out_bufr(garbled_circuit_m_t &cct){
   //static
   Bytes o_data;
   o_data.swap(cct.m_out_bufr);

@@ -18,8 +18,10 @@ BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
   
   for (size_t ix = 0; ix < m_gcs.size(); ix++)
     {
-      initialize_malicious_circuit(m_gcs[ix]);
-    }
+      //initialize_malicious_circuit(m_gcs[ix]);
+      m_gcs[ix] = new GarbledMal();
+      m_gcs[ix].initialize_circuit();
+  }
   
   m_gen_inp_hash.resize(Env::node_load());
   m_gen_inp_masks.resize(Env::node_load());
@@ -319,8 +321,9 @@ void BetterYao5::cut_and_choose2_precomputation()
       // input masks are the length of the input
       m_gen_inp_masks[ix] = m_prng.rand_bits(m_gen_inp_cnt);
       
-      gen_init_circuit(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);
-      
+      // gen_init_circuit(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);
+      m_gcs[ix].initialize_gen_circuit(m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);
+
 
       m_gcs[ix].m_st = 
         load_pcf_file(Env::pcf_file(), m_gcs[ix].m_const_wire, m_gcs[ix].m_const_wire+1, copy_key);
@@ -343,13 +346,15 @@ void BetterYao5::cut_and_choose2_precomputation()
       // this second check is obviously an error
       // since that should never happen before Gen's inputs are exhausted
       // 
-      while ((m_gcs[ix].m_gen_inp_decom.size()/2 < m_gen_inp_cnt))
+      //while ((m_gcs[ix].m_gen_inp_decom.size()/2 < m_gen_inp_cnt))
+      while ((m_gcs[ix].get_gen_decommitments().size()/2 < m_gen_inp_cnt))
         {
           if(!get_next_gate(m_gcs[ix].m_st)){
             fprintf(stderr,"error: circuit completed before finding all of Gen's inputs");
             break;
           }
-          get_and_clear_out_bufr(m_gcs[ix]); // discard the garbled gates for now
+          m_gcs[ix].get_and_clear_out_bufr();
+          //get_and_clear_out_bufr(m_gcs[ix]); // discard the garbled gates for now
           
           //if(m_gcs[ix].m_gen_inp_decom.size() % 16 == 0){
             //  last_decom_size = m_gcs[ix].m_gen_inp_decom.size();
@@ -391,9 +396,11 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
   GEN_BEGIN
     start = MPI_Wtime();
 
-  assert(m_gen_inp_masks[ix].size() == m_gen_inp.size());
+  //assert(m_gen_inp_masks[ix].size() == m_gen_inp.size());
+  assert(m_gen_inp_masks[ix].size() == m_private_input.size());
   // mask gen's input
-  bufr = m_gen_inp_masks[ix] ^ m_gen_inp;
+  //  bufr = m_gen_inp_masks[ix] ^ m_gen_inp;
+  bufr = m_gen_inp_masks[ix] ^ m_private_input;
   // and then encrypt it again
   bufr ^= m_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
   m_timer_gen += MPI_Wtime() - start;
@@ -428,7 +435,10 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
   // send constant keys m_gcs[ix].m_const_wire
   GEN_BEGIN
     start = MPI_Wtime();
-  bufr = get_const_key(m_gcs[ix], 0, 0) + get_const_key(m_gcs[ix], 1, 1);
+  
+//bufr = get_const_key(m_gcs[ix], 0, 0) + get_const_key(m_gcs[ix], 1, 1);
+  bufr = m_gcs[ix].get_const_key(0, 0) + m_gcs[ix].get_const_key(, 1, 1);
+  
   bufr ^= m_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
   m_timer_gen += MPI_Wtime() - start;
   
@@ -447,8 +457,10 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
     {
       bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
       std::vector<Bytes> bufr_chunks = bufr.split(Env::key_size_in_bytes());
-      set_const_key(m_gcs[ix], 0, bufr_chunks[0]);
-      set_const_key(m_gcs[ix], 1, bufr_chunks[1]);
+      m_gcs[ix].set_const_key(0, bufr_chunks[0]);
+      m_gcs[ix].set_const_key(1, bufr_chunks[0]);
+      //set_const_key(m_gcs[ix], 0, bufr_chunks[0]);
+      //set_const_key(m_gcs[ix], 1, bufr_chunks[1]);
     }
   m_timer_evl += MPI_Wtime() - start;
   EVL_END
@@ -460,11 +472,12 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
 
   // send m_gcs[ix].m_gen_inp_decom
   GEN_BEGIN
-    assert(m_gcs[ix].m_gen_inp_decom.size() == 2*m_gen_inp_cnt);
+    //assert(m_gcs[ix].m_gen_inp_decom.size() == 2*m_gen_inp_cnt);
+    assert(m_gcs[ix].get_gen_decommitments().size() == 2*m_gen_inp_cnt);
   GEN_END
     
     EVL_BEGIN
-    if (!m_chks[ix]) { m_gcs[ix].m_gen_inp_decom.resize(m_gen_inp_cnt); }
+    if (!m_chks[ix]) { m_gcs[ix].get_gen_decommitments().resize(m_gen_inp_cnt); }
   EVL_END
     
     for (size_t jx = 0; jx < m_gen_inp_cnt; jx++)
@@ -472,8 +485,10 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
         GEN_BEGIN
           start = MPI_Wtime();
         // this bit selects which decommitment to select and send
-        byte bit = m_gen_inp.get_ith_bit(jx) ^ m_gen_inp_masks[ix].get_ith_bit(jx);
-        bufr = m_gcs[ix].m_gen_inp_decom[2*jx+bit];
+        //byte bit = m_gen_inp.get_ith_bit(jx) ^ m_gen_inp_masks[ix].get_ith_bit(jx);
+        byte bit = m_private_input.get_ith_bit(jx) ^ m_gen_inp_masks[ix].get_ith_bit(jx);
+        //bufr = m_gcs[ix].m_gen_inp_decom[2*jx+bit];
+        bufr = m_gcs[ix].get_gen_decommitments()[2*jx+bit];
         bufr ^= m_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
         // remember, even m_prngs are for evaluation circuits
         // and odd m_prngs are for check circuits
@@ -495,7 +510,8 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
             // eval receives decommitment and decrypts it
             // she now has the decommitments to Gen's input keys
             bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
-            m_gcs[ix].m_gen_inp_decom[jx] = bufr;
+            //m_gcs[ix].m_gen_inp_decom[jx] = bufr;
+            m_gcs[ix].get_gen_decommitmeents()[jx] = bufr;
           }
         m_timer_evl += MPI_Wtime() - start;
         EVL_END
@@ -637,7 +653,8 @@ void BetterYao5::cut_and_choose2_chk_circuit(size_t ix)
   // send m_gcs[ix].m_gen_inp_decom
   // this is all of the keys to gen's inputs
   GEN_BEGIN
-    assert(m_gcs[ix].m_gen_inp_decom.size() == 2*m_gen_inp_cnt);
+    // assert(m_gcs[ix].m_gen_inp_decom.size() == 2*m_gen_inp_cnt);
+    assert(m_gcs[ix].get_gen_decommitments().size() == 2*m_gen_inp_cnt);
   GEN_END
 
     EVL_BEGIN
@@ -648,7 +665,7 @@ void BetterYao5::cut_and_choose2_chk_circuit(size_t ix)
       {
         GEN_BEGIN
           start = MPI_Wtime();
-        bufr = m_gcs[ix].m_gen_inp_decom[jx];
+        bufr = m_gcs[ix].get_gen_decommitments()[jx]; //m_gen_inp_decom[jx];
         // why use 2*ix+1?
         bufr ^= m_prngs[2*ix+1].rand_bits(bufr.size()*8); // encrypt message
         m_timer_gen += MPI_Wtime() - start;
@@ -730,7 +747,8 @@ void BetterYao5::consistency_check()
 		GEN_BEGIN
 			start = MPI_Wtime();
 				gen_next_gen_inp_com(m_gcs[ix], m_matrix[kx], kx);
-				bufr = get_and_clear_out_bufr(m_gcs[ix]);
+				bufr = m_gcs[ix].get_and_clear_out_bufr();
+                                //bufr = get_and_clear_out_bufr(m_gcs[ix]);
 			m_timer_gen += MPI_Wtime() - start;
 
 			start = MPI_Wtime();
@@ -747,8 +765,10 @@ void BetterYao5::consistency_check()
 			if (!m_chks[ix]) // evaluation circuit
 			{
 				start = MPI_Wtime();
-					clear_and_replace_in_bufr(m_gcs[ix], bufr);
-					evl_next_gen_inp_com(m_gcs[ix], m_matrix[kx], kx);
+                                m_gcs[ix].clear_and_replace_in_bufr(bufr);
+                                //clear_and_replace_in_bufr(m_gcs[ix], bufr);
+                                m_gcs[ix].evl_next_gen_inp_com(m_matrix[kx], kx);
+                                //evl_next_gen_inp_com(m_gcs[ix], m_matrix[kx], kx);
 				m_timer_evl += MPI_Wtime() - start;
 			}
 		EVL_END
@@ -762,7 +782,7 @@ void BetterYao5::consistency_check()
 		for (size_t ix = 0; ix < m_gcs.size(); ix++)
                   if (!m_chks[ix]) // if evaluation circuit, save this hash
 		{
-			m_gen_inp_hash[ix] = m_gcs[ix].m_gen_inp_hash;
+                  m_gen_inp_hash[ix] = m_gcs[ix].get_gen_inp_hash();//m_gen_inp_hash;
 		}
 	EVL_END
 
@@ -784,9 +804,14 @@ void BetterYao5::circuit_evaluate()
 	{
           GEN_BEGIN
             start = MPI_Wtime();
-            gen_init_circuit(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);   
+          //gen_init_circuit(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);   
+          m_gcs[ix].gen_init_circuit(m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);   
+            /*
             std::cout << ix << " gen const 0: " << get_const_key(m_gcs[ix], 0, 0).to_hex() << std::endl;
             std::cout << ix << " gen const 1: " << get_const_key(m_gcs[ix], 1, 1).to_hex() << std::endl;
+            */
+            std::cout << ix << " gen const 0: " << m_gcs[ix].get_const_key( 0, 0).to_hex() << std::endl;
+            std::cout << ix << " gen const 1: " << m_gcs[ix].get_const_key( 1, 1).to_hex() << std::endl;
             m_timer_gen += MPI_Wtime() - start;
             GEN_END
               
@@ -796,12 +821,14 @@ void BetterYao5::circuit_evaluate()
             start = MPI_Wtime();
             if (m_chks[ix]) // check-circuits
               {
-                gen_init_circuit(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);
+                m_gcs[ix].gen_init_circuit(m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);
+                //gen_init_circuit(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_rnds[ix]);
                 //std::cout << "check ";
               }
             else // evaluation-circuits
               {
-                evl_init_circuit(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_evl_inp);
+                // evl_init_circuit(m_gcs[ix], m_ot_keys[ix], m_gen_inp_masks[ix], m_evl_inp);
+                m_gcs[ix].evl_init_circuit(m_ot_keys[ix], m_gen_inp_masks[ix], m_private_input);
                 //std::cout << "evl ";
               }
             m_timer_evl += MPI_Wtime() - start;
@@ -829,10 +856,13 @@ void BetterYao5::circuit_evaluate()
               
               std::cout << "gen generate and send" << std::endl;
             start = MPI_Wtime();
-            set_callback(m_gcs[ix].m_st, gen_next_gate_m);
+            //set_callback(m_gcs[ix].m_st, gen_next_gate_m);
+            set_callback(m_gcs[ix].m_st, m_gcs[ix].gen_next_gate);
+            
             while (get_next_gate(m_gcs[ix].m_st))
               {
-                bufr = get_and_clear_out_bufr(m_gcs[ix]);
+                //bufr = get_and_clear_out_bufr(m_gcs[ix]);
+                bufr = m_gcs[ix].get_and_clear_out_bufr();
                 m_timer_gen += MPI_Wtime() - start;
                 
                 start = MPI_Wtime();
@@ -855,11 +885,13 @@ void BetterYao5::circuit_evaluate()
               {
                 fprintf(stderr,"eval check circuit: index %lu, rank %i\n",ix, Env::group_rank());
                 start = MPI_Wtime();
-                set_callback(m_gcs[ix].m_st, gen_next_gate_m);
+                set_callback(m_gcs[ix].m_st, m_gcs[ix].gen_next_gate);
+                //set_callback(m_gcs[ix].m_st, gen_next_gate_m);
                 while (get_next_gate(m_gcs[ix].m_st))
                   {
                     
-                    bufr = get_and_clear_out_bufr(m_gcs[ix]);
+                    bufr = m_gcs[ix].get_and_clear_out_bufr();
+                    //bufr = get_and_clear_out_bufr(m_gcs[ix]);
                     m_timer_evl += MPI_Wtime() - start;
                     
                     start = MPI_Wtime();
@@ -894,7 +926,8 @@ void BetterYao5::circuit_evaluate()
                   m_comm_sz += bufr.size();
                   
                   start = MPI_Wtime();
-                  clear_and_replace_in_bufr(m_gcs[ix], bufr);
+                  m_gcs[ix].clear_and_replace_in_bufr(bufr);
+                  //clear_and_replace_in_bufr(m_gcs[ix], bufr);
                   
                   //std::cout << "received" << std::endl;
                   //fprintf(stderr, "received");
@@ -933,7 +966,7 @@ void BetterYao5::circuit_evaluate()
 				{
 					for (size_t jx = 0; jx < m_gen_inp_cnt*2; jx++)
 					{
-						if (!(m_gen_inp_decom[ix][jx] == m_gcs[ix].m_gen_inp_decom[jx]))
+                                          if (!(m_gen_inp_decom[ix][jx] == m_gcs[ix].get_gen_decommitments()[jx]))//.m_gen_inp_decom[jx]))
 						{
 							LOG4CXX_FATAL(logger, "Commitment Verification Failure (check circuit)");
 							//MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -942,7 +975,8 @@ void BetterYao5::circuit_evaluate()
 				}
 				else // evaluation circuit
 				{
-					if (!pass_check(m_gcs[ix]))
+                                  if(!m_gcs[ix].pass_check())
+                                  //if (!pass_check(m_gcs[ix]))
 					{
 						LOG4CXX_FATAL(logger, "Commitment Verification Failure (evaluation circuit)");
 						//MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -959,17 +993,18 @@ void BetterYao5::circuit_evaluate()
 					}
 				}
 
-				trim_output(m_gcs[ix]);
+				m_gcs[ix].trim_output();
+                                //trim_output(m_gcs[ix]);
 			}
 		m_timer_evl += MPI_Wtime() - start;
 	EVL_END
 
 	step_report("circuit-evl");
 
-	if (m_gcs[0].m_evl_out_ix != 0)
+	if (m_gcs[0].get_evl_out_ix() != 0) //m_evl_out_ix != 0)
           proc_evl_out();
         
-        if (m_gcs[0].m_gen_out_ix != 0)
+        if (m_gcs[0].get_gen_out_ix() != 0) //m_gen_out_ix != 0)
           proc_gen_out();
 }
 
@@ -986,7 +1021,7 @@ void BetterYao5::proc_evl_out()
 		start = MPI_Wtime();
 			for (size_t ix = 0; ix < m_gcs.size(); ix++) // fill zeros for uniformity (convenient for MPIs)
 			{
-				send += m_gcs[ix].m_evl_out;
+                          send += m_gcs[ix].get_evl_out(); // m_evl_out;
 			}
 
 			if (Env::is_root() == 0)
@@ -1028,10 +1063,10 @@ void BetterYao5::proc_gen_out()
 	reset_timers();
 
 	// TODO: implement Ki08
-	m_gen_out = m_gcs[0].m_gen_out;
+	m_gen_out = m_gcs[0].get_gen_out();//.m_gen_out;
 
 	EVL_BEGIN
-        m_gen_out = m_gcs[0].m_gen_out;
+          m_gen_out = m_gcs[0].get_gen_out();//m_gen_out;
         EVL_SEND(m_gen_out);
 	EVL_END
 

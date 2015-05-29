@@ -204,15 +204,17 @@ void YaoBase::init_private(EnvParams &params)
 
 	EVL_BEGIN // evaluator
 		private_file >> input;          // 1st line is the evaluator's input
-		m_evl_inp.from_hex(input);
-		//m_evl_inp.resize((Env::circuit().evl_inp_cnt()+7)/8);
+        //m_evl_inp.from_hex(input);
+        m_private_input.from_hex(input);
+	//m_evl_inp.resize((Env::circuit().evl_inp_cnt()+7)/8);
 		//m_evl_inp.back() &= MASK[Env::circuit().evl_inp_cnt()%8];
 	EVL_END
 
 	GEN_BEGIN // generator
 		private_file >> input >> input; // 2nd line is the generator's input
-		m_gen_inp.from_hex(input);
-		//m_gen_inp.resize((Env::circuit().gen_inp_cnt()+7)/8);
+        //m_gen_inp.from_hex(input);
+        m_private_input.from_hex(input);
+	//m_gen_inp.resize((Env::circuit().gen_inp_cnt()+7)/8);
 		//m_gen_inp.back() &= MASK[Env::circuit().gen_inp_cnt()%8];
 	GEN_END
 
@@ -335,15 +337,18 @@ void YaoBase::final_report()
 	std::string name;
 
 	EVL_BEGIN
-		name = "EVL";
-		LOG4CXX_INFO(logger, "EVL  input: " << m_evl_inp.to_hex() << "");
-		LOG4CXX_INFO(logger, "EVL output: " << m_evl_out.to_hex() << "");
+          name = "EVL";
+        // LOG4CXX_INFO(logger, "EVL  input: " << m_evl_inp.to_hex() << "");
+        
+        LOG4CXX_INFO(logger, "EVL  input: " << m_private_input.to_hex() << "");
+        LOG4CXX_INFO(logger, "EVL output: " << m_evl_out.to_hex() << "");
 	EVL_END
 
 	GEN_BEGIN
-		name = "GEN";
-		LOG4CXX_INFO(logger, "GEN  input: " << m_gen_inp.to_hex() << "");
-		LOG4CXX_INFO(logger, "GEN output: " << m_gen_out.to_hex() << "");
+          name = "GEN";
+        // LOG4CXX_INFO(logger, "GEN  input: " << m_gen_inp.to_hex() << "");
+        LOG4CXX_INFO(logger, "GEN  input: " << m_private_input.to_hex() << "");
+        LOG4CXX_INFO(logger, "GEN output: " << m_gen_out.to_hex() << "");
 	GEN_END
 
 	for (size_t i = 0; i < m_comm_sz_vec.size(); i++)
@@ -378,6 +383,7 @@ void YaoBase::get_inputs(){
     
     m_private_input.from_char_hex(raw_input_bufr, m_gen_inp_cnt);
     std::cout << "Bob's (2) input is: " << m_private_input.to_hex() << std::endl;
+    // std::cout << "Bob's (3) input is: " << m_gen_inp.to_hex() << std::endl;
 
     GEN_END
       
@@ -388,6 +394,7 @@ void YaoBase::get_inputs(){
     
     m_private_input.from_char_hex(raw_input_bufr,m_evl_inp_cnt);
     std::cout << "Alice's (2) input is: " << m_private_input.to_hex() << std::endl;
+    // std::cout << "Alice's (3) input is: " << m_evl_inp.to_hex() << std::endl;
     EVL_END
 
 }
@@ -398,12 +405,17 @@ void YaoBase::size_inputs(){
 	m_gen_inp_cnt = read_alice_length(Env::private_file());
 	m_evl_inp_cnt = read_bob_length(Env::private_file());
 
-	m_evl_inp.resize((m_evl_inp_cnt+7)/8);
-	m_evl_inp.back() &= MASK[m_evl_inp_cnt%8];
+        EVL_BEGIN
+          //m_evl_inp.resize((m_evl_inp_cnt+7)/8);
+          //m_evl_inp.back() &= MASK[m_evl_inp_cnt%8];
+          m_private_input.resize((m_evl_inp_cnt+7)/8);
+          m_private_input.back() &= MASK[m_evl_inp_cnt%8];
+        EVL_END
 
-	m_gen_inp.resize((m_gen_inp_cnt+7)/8);
-	m_gen_inp.back() &= MASK[m_gen_inp_cnt%8];
-
+          GEN_BEGIN
+	m_private_input.resize((m_gen_inp_cnt+7)/8);
+	m_private_input.back() &= MASK[m_gen_inp_cnt%8];
+        GEN_END
         
 }
 
@@ -506,8 +518,10 @@ void YaoBase::oblivious_transfer()
 					r.random();
 					bufr += r.to_bytes();  // to be shared with slave evaluators
 
-					byte bit_value = m_evl_inp.get_ith_bit(bix);
-					send += (m_ot_g[bit_value]^r).to_bytes(); // gr
+					//byte bit_value = m_evl_inp.get_ith_bit(bix);
+					byte bit_value = m_private_input.get_ith_bit(bix);
+					
+                                        send += (m_ot_g[bit_value]^r).to_bytes(); // gr
 					send += (m_ot_h[bit_value]^r).to_bytes(); // hr
 				}
 			m_timer_evl += MPI_Wtime() - start;
@@ -619,11 +633,12 @@ void YaoBase::oblivious_transfer()
           
           // std::cout << "OT 5 part 1" << std::endl;
           for (size_t bix = 0; bix < m_evl_inp_cnt; bix++)
-		{
-			start = MPI_Wtime();
-				int bit_value = m_evl_inp.get_ith_bit(bix);
-				r.from_bytes(bufr_chunks[bix]);
-			m_timer_evl += MPI_Wtime() - start;
+            {
+              start = MPI_Wtime();
+              //int bit_value = m_evl_inp.get_ith_bit(bix);
+              int bit_value = m_private_input.get_ith_bit(bix);
+              r.from_bytes(bufr_chunks[bix]);
+              m_timer_evl += MPI_Wtime() - start;
 
 			for (size_t cix = 0; cix < m_ot_keys.size(); cix++)
 			{

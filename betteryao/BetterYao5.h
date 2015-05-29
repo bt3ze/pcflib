@@ -2,7 +2,9 @@
 #define BETTERYAO5_H_
 
 #include "YaoBase.h"
-#include "garbled_circuit_m.h"
+//#include "garbled_circuit_m.h"
+#include "GarbledBase.h"
+#include "GarbledMal.h"
 
 #include <vector>
 
@@ -37,7 +39,7 @@ protected:
 
 	size_t                          m_ot_bit_cnt;
 	Bytes                           m_ot_recv_bits;
-        std::vector<Bytes>                   m_ot_out;
+        std::vector<Bytes>              m_ot_out;
 
 	// variables for cut-and-choose
 	Bytes                           m_chks;
@@ -47,7 +49,8 @@ protected:
         std::vector<Bytes>                   m_gen_inp_masks;
         std::vector<Bytes>                   m_coms;
         std::vector<Bytes>                   m_rnds;
-        std::vector<garbled_circuit_m_t>     m_gcs; 
+        //std::vector<garbled_circuit_m_t>     m_gcs; 
+        std::vector<GarbledMal>             m_gcs;
 
         // variables for Gen's input check
         std::vector<Bytes>                   m_gen_inp_hash;

@@ -355,6 +355,7 @@ void *evl_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 	__m128i a;
 	static Bytes tmp;
 
+        // this function has no way of knowing or telling which of Gen's inputs we are pointing to, and is obviously a source of issues when we do not traverse them strictly in order
 	if (current_gate->tag == TAG_INPUT_A) // Gen Input
 	{
           //std::cout <<cct.m_gen_inp_mask.size()*8<<" " <<cct.m_gen_inp_ix <<" \n";

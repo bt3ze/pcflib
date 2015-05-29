@@ -56,12 +56,15 @@ void Yao::circuit_evaluate()
 		m_timer_gen += MPI_Wtime() - start;
 
 		start = MPI_Wtime();
-			GEN_SEND(m_gen_inp_masks[0] ^ m_gen_inp); // send the masked gen_inp
-		m_timer_com += MPI_Wtime() - start;
+                //GEN_SEND(m_gen_inp_masks[0] ^ m_gen_inp); // send the masked gen_inp
+                GEN_SEND(m_gen_inp_masks[0] ^ m_private_input); // send the masked gen_inp
+		
+                m_timer_com += MPI_Wtime() - start;
 
 		start = MPI_Wtime();
 			gen_init_circuit(m_gcs[0], m_ot_keys[0], m_gen_inp_masks[0], m_rnds[0]);
-			m_gcs[0].m_gen_inp = m_gen_inp;
+			m_gcs[0].m_gen_inp = m_private_input;
+                        //m_gcs[0].m_gen_inp = m_gen_inp;
 		m_timer_gen += MPI_Wtime() - start;
 	GEN_END
 
@@ -71,7 +74,8 @@ void Yao::circuit_evaluate()
 		m_timer_com += MPI_Wtime() - start;
 
 		start = MPI_Wtime();
-			evl_init_circuit(m_gcs[0], m_ot_keys[0], m_gen_inp_masks[0], m_evl_inp);
+                // evl_init_circuit(m_gcs[0], m_ot_keys[0], m_gen_inp_masks[0], m_evl_inp);
+                evl_init_circuit(m_gcs[0], m_ot_keys[0], m_gen_inp_masks[0], m_private_input);
 		m_timer_evl += MPI_Wtime() - start;
 	EVL_END
 

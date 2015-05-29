@@ -36,10 +36,44 @@ class GarbledBase {
 
 public:
      GarbledBase();
-     virtual ~GarbledBase();
+     virtual ~GarbledBase() {};
 
      virtual void * gen_next_gate(struct PCFState *st, struct PCFGate *current_gate) = 0; 
      virtual void * evl_next_gate(struct PCFState *st, struct PCFGate *current_gate) = 0;
+     
+     virtual void gen_init_circuit(const std::vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed) = 0;
+     virtual void evl_init_circuit(const std::vector<Bytes> &ot_keys, const Bytes &masked_gen_inp, const Bytes &evl_inp) = 0;
+
+     virtual void initialize_circuit() = 0;
+
+     __m128i             m_const_wire[2]; // keys for constant 0 and 1     
+
+     
+public:
+     struct PCFState    *m_st; // pointer to the PCF state
+ 
+     // methods
+
+     inline void trim_output();
+     inline void clear_and_replace_in_bufr(const Bytes &);
+
+     inline const Bytes get_and_clear_out_bufr();
+     
+     void set_const_key(byte c, const Bytes &key);
+     const Bytes get_const_key(byte c, byte b);
+
+     Bytes get_gen_out(){
+       return m_gen_out;
+     }
+     Bytes get_evl_out(){
+       return m_evl_out;
+     }
+     uint32_t get_gen_out_ix(){
+       return m_gen_out_ix;
+     }
+     uint32_t get_evl_out_ix(){
+       return m_evl_out_ix;
+     }
 
 protected:
 
@@ -62,7 +96,7 @@ protected:
 
      // inputs
      Bytes               m_gen_inp_mask;
-     Bytes               m_gen_inp;
+     // Bytes               m_gen_inp;
      Bytes               m_evl_inp;
      Bytes               m_gen_out;
      Bytes               m_evl_out;
@@ -71,23 +105,8 @@ protected:
      Bytes               m_in_bufr; // in buffer
      Bytes::iterator     m_in_bufr_ix;
   
-     struct PCFState    *m_st; // pointer to the PCF state
-     __m128i             m_const_wire[2]; // keys for constant 0 and 1     
 
      
-     // methods
-
-     inline void trim_output();
-     inline void clear_and_replace_in_bufr(const Bytes &);
-     inline const Bytes get_and_clear_out_bufr();
-     
-     void set_const_key(byte c, const Bytes &key);
-     const Bytes get_const_key(byte c, byte b);
-
-     virtual void gen_init_circuit(const std::vector<Bytes> &ot_keys, const Bytes &gen_inp_mask, const Bytes &seed);
-     virtual void evl_init_circuit(const std::vector<Bytes> &ot_keys, const Bytes &masked_gen_inp, const Bytes &evl_inp);
-
-     virtual void initialize_circuit();
 
 // gen next gate
 // evl next gate
