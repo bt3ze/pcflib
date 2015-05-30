@@ -14,13 +14,18 @@ GarbledBase::GarbledBase():
   assert(m_evl_inp_ix == 0);
   assert(m_gen_out_ix == 0);
   assert(m_evl_out_ix == 0);
-
+  
   // m_gen_inp_hash.assign(Env::key_size_in_bytes(),0);
 
   // clear in and out buffers
   m_in_bufr.clear();
   m_out_bufr.clear();
+
+  // and clear the output buffers for Gen and Evl
+  m_gen_out.clear();
+  m_evl_out.clear();
   
+
   // set clear mask to as many 1s as k
   Bytes tmp(16);
 
@@ -29,6 +34,11 @@ GarbledBase::GarbledBase():
   }
   m_clear_mask = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 
+  // m_gen_inp_mask and m_evl_inp will be initialized
+  // at circuit initialization when we seed m_prng
+  // generate m_R, and receive m_ot_keys
+  
+  
 }
 
 

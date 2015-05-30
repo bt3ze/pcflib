@@ -17,6 +17,8 @@ GarbledMal::GarbledMal() : GarbledBase() {
   // clear the input commitment and decommitment vectors
   m_gen_inp_com.clear();
   m_gen_inp_decom.clear();
+
+  
   
 }
 
@@ -508,6 +510,8 @@ void * evl_next_malicious_gate(PCFState *st, PCFGate *current_gate){
 
 		if (current_gate->tag == TAG_OUTPUT_A) // Gen output
 		{
+
+                  fprintf(stderr,"Gen Output!\n");
 			if (cct.m_gen_out.size()*8 <= cct.m_gen_out_ix)
 			{
 				// dynamically grown output array
@@ -522,6 +526,7 @@ void * evl_next_malicious_gate(PCFState *st, PCFGate *current_gate){
 		}
 		else if (current_gate->tag == TAG_OUTPUT_B) // Eval output
 		{
+                  fprintf(stderr,"eval output!\n");
                   if (cct.m_evl_out.size()*8 <= cct.m_evl_out_ix)
                     {
                       // dynamically grown output array
@@ -536,22 +541,6 @@ void * evl_next_malicious_gate(PCFState *st, PCFGate *current_gate){
                   cct.m_evl_out_ix++;
 		}
 	}
-/*
-switch(current_gate->tag)
-{
-case TAG_INPUT_A:
-std::cout << "INP_A "; break;
-case TAG_INPUT_B:
-std::cout << "INP_B "; break;
-case TAG_OUTPUT_A:
-std::cout << "OUT_A "; break;
-case TAG_OUTPUT_B:
-std::cout << "OUT_B "; break;
-}
-	tmp.resize(16);
-	_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), current_key);
-std::cout << cct.m_gate_ix << ": " << Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes()).to_hex() << std::endl;
-*/
 	//update_hash(cct, cct.m_in_bufr);
 	cct.m_gate_ix++;
 

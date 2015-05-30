@@ -202,7 +202,7 @@ void call_op (struct PCFState * st, struct PCFOP * op)
 
       if(st->inp_i < 32)
         { // why this if/else branch when i is between 0 and 32?
-          fprintf(stderr,"inp_i < 32\n");
+          //fprintf(stderr,"inp_i < 32\n");
           i = st->inp_i;
           st->inp_i++;
           st->input_g.wire1 = st->inp_idx + i;

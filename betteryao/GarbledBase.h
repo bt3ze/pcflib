@@ -51,7 +51,7 @@ public:
 
      // public methods
      inline void trim_output(){
-         assert(m_gen_out.size() > 0);
+       //assert(m_gen_out.size() > 0);
          m_gen_out.resize((m_gen_out_ix+7)/8);
          m_evl_out.resize((m_evl_out_ix+7)/8);
      }
@@ -117,6 +117,8 @@ public:
      Bytes               m_gen_inp_mask;
      // Bytes               m_gen_inp;
      Bytes               m_evl_inp;
+     
+     // output buffers for Gen and Evl
      Bytes               m_gen_out;
      Bytes               m_evl_out;
   

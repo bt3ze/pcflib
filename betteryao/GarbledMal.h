@@ -14,17 +14,34 @@ class GarbledMal: public GarbledBase
 
   /**
      accessor functions
+     and a setter
    */
   std::vector<Bytes> get_gen_decommitments (){
-    return m_gen_inp_decom;
+    return this->m_gen_inp_decom;
   }
 
   std::vector<Bytes> get_gen_commitments(){
-    return m_gen_inp_com;
+    return this->m_gen_inp_com;
+  }
+
+  void set_gen_decommitment(size_t index,Bytes buf){
+    /*
+    if(!(index < m_gen_inp_decom.size())){
+      fprintf(stderr,"index < gen decommitments:: %lu !< %lu\n",index,m_gen_inp_decom.size());
+      assert(index < m_gen_inp_decom.size());
+    }
+    */
+    assert(index < m_gen_inp_decom.size());
+    m_gen_inp_decom[index] = buf;
+  }
+
+  void resize_gen_decommitments(int size){
+    m_gen_inp_decom.resize(size);
+    
   }
 
   Bytes get_gen_inp_hash(){
-    return m_gen_inp_hash;
+    return this->m_gen_inp_hash;
   }
 
   
@@ -74,10 +91,16 @@ class GarbledMal: public GarbledBase
   // the following are specific to malicious circuit
   /**
      we need vectors for Gen's input commitments and decommitments
-     for both Gen and Evl -- Gen to store them and Eval to check them
+     for both Gen and Evl -- Gen to store them and Eval to check them.
+     By the end of the protocol, evaluation circuits should
+     have twice the number of commitments as decommitments
+     Eval reconstructs all of Gen's commitments in check circuits.
   */
-  std::vector<Bytes>  m_gen_inp_com; // commitments?
-  std::vector<Bytes>  m_gen_inp_decom; // decommitments?
+  std::vector<Bytes>  m_gen_inp_com; // Gen's input key commitments
+  std::vector<Bytes>  m_gen_inp_decom; // Gen's input key decommitments
+  
+  // This holds the hash output Gen's inputs
+  // compared between circuits to enforce Gen's input consistency
   Bytes               m_gen_inp_hash;
  
  

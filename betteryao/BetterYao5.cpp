@@ -432,6 +432,7 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
     {
       bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
       m_gen_inp_masks[ix] = bufr;
+      fprintf(stderr,"step 1\t rank %i\n",Env::group_rank());
     }
   m_timer_evl += MPI_Wtime() - start;
   EVL_END
@@ -470,6 +471,7 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
       m_gcs[ix].set_const_key(1, bufr_chunks[0]);
       //set_const_key(m_gcs[ix], 0, bufr_chunks[0]);
       //set_const_key(m_gcs[ix], 1, bufr_chunks[1]);
+      fprintf(stderr,"step 2\trank %i\n",Env::group_rank());
     }
   m_timer_evl += MPI_Wtime() - start;
   EVL_END
@@ -486,7 +488,11 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
   GEN_END
     
     EVL_BEGIN
-    if (!m_chks[ix]) { m_gcs[ix].get_gen_decommitments().resize(m_gen_inp_cnt); }
+    if (!m_chks[ix]) {
+      m_gcs[ix].resize_gen_decommitments(m_gen_inp_cnt);
+      //m_gcs[ix].get_gen_decommitments().resize(m_gen_inp_cnt); 
+      fprintf(stderr,"step 3\trank: %i\n",Env::group_rank());
+    }
   EVL_END
     
     for (size_t jx = 0; jx < m_gen_inp_cnt; jx++)
@@ -516,11 +522,16 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
         start = MPI_Wtime();
         if (!m_chks[ix]) // evaluation circuit
           {
+            fprintf(stderr,"step 4 start\t rank: %i\n",Env::group_rank());
+            //!! BUG HERE
             // eval receives decommitment and decrypts it
             // she now has the decommitments to Gen's input keys
             bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
+            fprintf(stderr,"step 4 mid\t rank: %i\n",Env::group_rank());
             //m_gcs[ix].m_gen_inp_decom[jx] = bufr;
-            m_gcs[ix].get_gen_decommitments()[jx] = bufr;
+            //m_gcs[ix].get_gen_decommitments()[jx] = bufr;
+            m_gcs[ix].set_gen_decommitment(jx,bufr);
+            fprintf(stderr,"step 4\trank: %i\n",Env::group_rank());
           }
         m_timer_evl += MPI_Wtime() - start;
         EVL_END
