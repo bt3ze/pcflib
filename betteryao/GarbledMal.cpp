@@ -187,198 +187,198 @@ void * gen_next_malicious_gate(PCFState *st, PCFGate *current_gate){
   GarbledMal &cct =
     *reinterpret_cast<GarbledMal*>(get_external_circuit(st));
   
-
-	static __m128i current_zero_key;
-
-	if (current_gate->tag == TAG_INPUT_A) // this is a Gen input
-	{
-		__m128i a[2];
-
-		Bytes tmp = cct.m_prng.rand_bits(Env::k());
-		tmp.resize(16, 0);
-		current_zero_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
-
-		uint32_t gen_inp_ix = current_gate->wire1;
-
-		a[0] = current_zero_key;
-		a[1] = _mm_xor_si128(current_zero_key, cct.m_R);
-
-                if(!(gen_inp_ix < cct.m_gen_inp_mask.size()*8)){
-                  fprintf(stderr,"error: gen inp index not less than m_gen_inp_mask size * 8: %u !< %lu*8 (%lu)\n",gen_inp_ix, cct.m_gen_inp_mask.size(), cct.m_gen_inp_mask.size()*8);
-                }
-		uint8_t bit = cct.m_gen_inp_mask.get_ith_bit(gen_inp_ix);
-
-		// std::cout <<"dcomsize: "<<cct.m_gen_inp_decom.size()<<"  input ix: "<< gen_inp_ix<<"\n";
-		assert(cct.m_gen_inp_decom.size() == 2*cct.m_gen_inp_ix);
-                
-		_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), a[bit]);
-		cct.m_gen_inp_decom
-                  .push_back(Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes())
-                             +cct.m_prng.rand_bits(Env::k()));
-                
-		_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), a[1-bit]);
-		cct.m_gen_inp_decom
-                  .push_back(Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes())
-                             +cct.m_prng.rand_bits(Env::k()));
-
-                cct.m_out_bufr += cct.m_gen_inp_decom[2*cct.m_gen_inp_ix+0].hash(Env::k());
-		cct.m_out_bufr += cct.m_gen_inp_decom[2*cct.m_gen_inp_ix+1].hash(Env::k());
-                
-		//cct.m_out_bufr.insert(cct.m_out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
-                
-
-		cct.m_gen_inp_ix++; // after PCF compiler, this isn't really necessary
-
-	
-                __m128i onev = _mm_xor_si128(cct.m_R, current_zero_key);
-	
-                /*
-                if(Env::is_root())
-                  {
-                    std::cout <<"GENbuffr: "<<cct.m_out_bufr.to_hex()<<"\n";		
-                    std::cout <<"GEN: gate: "<<cct.m_gate_ix<<" : "<< setBytes(current_zero_key).to_hex()<<" "<< setBytes(onev).to_hex() <<"  "<<current_gate->tag<<"\n";	
-                  }
-                */
-
-
+  
+  static __m128i current_zero_key;
+  
+  if (current_gate->tag == TAG_INPUT_A) // this is a Gen input
+    {
+      __m128i a[2];
+      
+      Bytes tmp = cct.m_prng.rand_bits(Env::k());
+      tmp.resize(16, 0);
+      current_zero_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
+      
+      uint32_t gen_inp_ix = current_gate->wire1;
+      
+      a[0] = current_zero_key;
+      a[1] = _mm_xor_si128(current_zero_key, cct.m_R);
+      
+      if(!(gen_inp_ix < cct.m_gen_inp_mask.size()*8)){
+        fprintf(stderr,"error: gen inp index not less than m_gen_inp_mask size * 8: %u !< %lu*8 (%lu)\n",gen_inp_ix, cct.m_gen_inp_mask.size(), cct.m_gen_inp_mask.size()*8);
+      }
+      uint8_t bit = cct.m_gen_inp_mask.get_ith_bit(gen_inp_ix);
+      
+      // std::cout <<"dcomsize: "<<cct.m_gen_inp_decom.size()<<"  input ix: "<< gen_inp_ix<<"\n";
+      assert(cct.m_gen_inp_decom.size() == 2*cct.m_gen_inp_ix);
+      
+      _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), a[bit]);
+      cct.m_gen_inp_decom
+        .push_back(Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes())
+                   +cct.m_prng.rand_bits(Env::k()));
+      
+      _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), a[1-bit]);
+      cct.m_gen_inp_decom
+        .push_back(Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes())
+                   +cct.m_prng.rand_bits(Env::k()));
+      
+      cct.m_out_bufr += cct.m_gen_inp_decom[2*cct.m_gen_inp_ix+0].hash(Env::k());
+      cct.m_out_bufr += cct.m_gen_inp_decom[2*cct.m_gen_inp_ix+1].hash(Env::k());
+      
+      //cct.m_out_bufr.insert(cct.m_out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
+      
+      
+      cct.m_gen_inp_ix++; // after PCF compiler, this isn't really necessary
+      
+      
+      __m128i onev = _mm_xor_si128(cct.m_R, current_zero_key);
+      
+      /*
+        if(Env::is_root())
+        {
+        std::cout <<"GENbuffr: "<<cct.m_out_bufr.to_hex()<<"\n";		
+        std::cout <<"GEN: gate: "<<cct.m_gate_ix<<" : "<< setBytes(current_zero_key).to_hex()<<" "<< setBytes(onev).to_hex() <<"  "<<current_gate->tag<<"\n";	
+        }
+      */
+      
+      
 	}
-	else if (current_gate->tag == TAG_INPUT_B) // this is an Eval input
-	{
-		__m128i a[2];
-
-		Bytes tmp = cct.m_prng.rand_bits(Env::k());
-		tmp.resize(16, 0);
-		current_zero_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
-		uint32_t evl_inp_ix = current_gate->wire1;
-                
-		tmp = (*cct.m_ot_keys)[2*evl_inp_ix+0];
-		tmp.resize(16, 0);
-		a[0] = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
-
-		tmp = (*cct.m_ot_keys)[2*evl_inp_ix+1];
-		tmp.resize(16, 0);
-		a[1] = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
-
-		// a[0] ^= zero_key; a[1] ^= zero_key ^ R;
-		a[0] = _mm_xor_si128(a[0], current_zero_key);
-		a[1] = _mm_xor_si128(a[1], _mm_xor_si128(current_zero_key, cct.m_R));
-                
-		// cct.m_out_bufr += a[0];
-		_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), a[0]);
-		cct.m_out_bufr.insert(cct.m_out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
-                
-		// cct.m_out_bufr += a[1];
-		_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), a[1]);
-		cct.m_out_bufr.insert(cct.m_out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
-
-		cct.m_evl_inp_ix++; // after PCF compiler, this isn't really necessary
-	}
-	else
-	{
+  else if (current_gate->tag == TAG_INPUT_B) // this is an Eval input
+    {
+      __m128i a[2];
+      
+      Bytes tmp = cct.m_prng.rand_bits(Env::k());
+      tmp.resize(16, 0);
+      current_zero_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
+      uint32_t evl_inp_ix = current_gate->wire1;
+      
+      tmp = (*cct.m_ot_keys)[2*evl_inp_ix+0];
+      tmp.resize(16, 0);
+      a[0] = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
+      
+      tmp = (*cct.m_ot_keys)[2*evl_inp_ix+1];
+      tmp.resize(16, 0);
+      a[1] = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
+      
+      // a[0] ^= zero_key; a[1] ^= zero_key ^ R;
+      a[0] = _mm_xor_si128(a[0], current_zero_key);
+      a[1] = _mm_xor_si128(a[1], _mm_xor_si128(current_zero_key, cct.m_R));
+      
+      // cct.m_out_bufr += a[0];
+      _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), a[0]);
+      cct.m_out_bufr.insert(cct.m_out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
+      
+      // cct.m_out_bufr += a[1];
+      _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), a[1]);
+      cct.m_out_bufr.insert(cct.m_out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
+      
+      cct.m_evl_inp_ix++; // after PCF compiler, this isn't really necessary
+    }
+  else
+    {
 #ifdef FREE_XOR
-		if (current_gate->truth_table == 0x06) // if XOR gate
-		{
-			current_zero_key = _mm_xor_si128
-			(
-				*reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire1)),
-				*reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire2))
-			);
-		}
-		else
+      if (current_gate->truth_table == 0x06) // if XOR gate
+        {
+          current_zero_key = _mm_xor_si128
+            (
+             *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire1)),
+             *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire2))
+             );
+        }
+      else
 #endif
-		{
-			uint8_t bit;
-			__m128i aes_key[2], aes_plaintext, aes_ciphertext;
-			__m128i X[2], Y[2], Z[2];
-			static Bytes tmp(16, 0);
-
-			aes_plaintext = _mm_set1_epi64x(cct.m_gate_ix);
-
-			X[0] = *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire1));
-			Y[0] = *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire2));
-
-			X[1] = _mm_xor_si128(X[0], cct.m_R); // X[1] = X[0] ^ R
-			Y[1] = _mm_xor_si128(Y[0], cct.m_R); // Y[1] = Y[0] ^ R
-
-			const uint8_t perm_x = _mm_extract_epi8(X[0], 0) & 0x01; // permutation bit for X
-			const uint8_t perm_y = _mm_extract_epi8(Y[0], 0) & 0x01; // permutation bit for Y
-			const uint8_t de_garbled_ix = (perm_y<<1)|perm_x; // wire1+2*wire2
-
-			// encrypt the 0-th entry : (X[x], Y[y])
-			aes_key[0] = _mm_load_si128(X+perm_x);
-			aes_key[1] = _mm_load_si128(Y+perm_y);
-
-			KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
-			aes_ciphertext = _mm_and_si128(aes_ciphertext, cct.m_clear_mask); // clear extra bits so that only k bits left
-			//bit = current_gate.m_table[de_garbled_ix];
-			bit = (current_gate->truth_table>>(3-de_garbled_ix))&0x01;
-
+        {
+          uint8_t bit;
+          __m128i aes_key[2], aes_plaintext, aes_ciphertext;
+          __m128i X[2], Y[2], Z[2];
+          static Bytes tmp(16, 0);
+          
+          aes_plaintext = _mm_set1_epi64x(cct.m_gate_ix);
+          
+          X[0] = *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire1));
+          Y[0] = *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire2));
+          
+          X[1] = _mm_xor_si128(X[0], cct.m_R); // X[1] = X[0] ^ R
+          Y[1] = _mm_xor_si128(Y[0], cct.m_R); // Y[1] = Y[0] ^ R
+          
+          const uint8_t perm_x = _mm_extract_epi8(X[0], 0) & 0x01; // permutation bit for X
+          const uint8_t perm_y = _mm_extract_epi8(Y[0], 0) & 0x01; // permutation bit for Y
+          const uint8_t de_garbled_ix = (perm_y<<1)|perm_x; // wire1+2*wire2
+          
+          // encrypt the 0-th entry : (X[x], Y[y])
+          aes_key[0] = _mm_load_si128(X+perm_x);
+          aes_key[1] = _mm_load_si128(Y+perm_y);
+          
+          KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
+          aes_ciphertext = _mm_and_si128(aes_ciphertext, cct.m_clear_mask); // clear extra bits so that only k bits left
+          //bit = current_gate.m_table[de_garbled_ix];
+          bit = (current_gate->truth_table>>(3-de_garbled_ix))&0x01;
+          
 #ifdef GRR
-			// GRR technique: using zero entry's key as one of the output keys
-			_mm_store_si128(Z+bit, aes_ciphertext);
-			Z[1-bit] = _mm_xor_si128(Z[bit], cct.m_R);
-			current_zero_key = _mm_load_si128(Z);
+          // GRR technique: using zero entry's key as one of the output keys
+          _mm_store_si128(Z+bit, aes_ciphertext);
+          Z[1-bit] = _mm_xor_si128(Z[bit], cct.m_R);
+          current_zero_key = _mm_load_si128(Z);
 #else
-			tmp = cct.m_prng.rand_bits(Env::k());
-			tmp.resize(16, 0);
-			Z[0] = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
-			Z[1] = _mm_xor_si128(Z[0], cct.m_R);
-
-			aes_ciphertext = _mm_xor_si128(aes_ciphertext, Z[bit]);
-			_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), aes_ciphertext);
-			cct.m_out_bufr.insert(cct.m_out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
+          tmp = cct.m_prng.rand_bits(Env::k());
+          tmp.resize(16, 0);
+          Z[0] = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
+          Z[1] = _mm_xor_si128(Z[0], cct.m_R);
+          
+          aes_ciphertext = _mm_xor_si128(aes_ciphertext, Z[bit]);
+          _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), aes_ciphertext);
+          cct.m_out_bufr.insert(cct.m_out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
 #endif
-
-			// encrypt the 1st entry : (X[1-x], Y[y])
-			aes_key[0] = _mm_xor_si128(aes_key[0], cct.m_R);
-
-			KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
-			aes_ciphertext = _mm_and_si128(aes_ciphertext, cct.m_clear_mask);
-			//bit = current_gate.m_table[0x01^de_garbled_ix];
-			bit = (current_gate->truth_table>>(3-(0x01^de_garbled_ix)))&0x01;
-			aes_ciphertext = _mm_xor_si128(aes_ciphertext, Z[bit]);
-			_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), aes_ciphertext);
-			cct.m_out_bufr.insert(cct.m_out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
-
-			// encrypt the 2nd entry : (X[x], Y[1-y])
-			aes_key[0] = _mm_xor_si128(aes_key[0], cct.m_R);
-			aes_key[1] = _mm_xor_si128(aes_key[1], cct.m_R);
-
-			KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
-			aes_ciphertext = _mm_and_si128(aes_ciphertext, cct.m_clear_mask);
-			//bit = current_gate.m_table[0x02^de_garbled_ix];
-			bit = (current_gate->truth_table>>(3-(0x02^de_garbled_ix)))&0x01;
-			aes_ciphertext = _mm_xor_si128(aes_ciphertext, Z[bit]);
-			_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), aes_ciphertext);
-			cct.m_out_bufr.insert(cct.m_out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
-
-			// encrypt the 3rd entry : (X[1-x], Y[1-y])
-			aes_key[0] = _mm_xor_si128(aes_key[0], cct.m_R);
-
-			KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
-			aes_ciphertext = _mm_and_si128(aes_ciphertext, cct.m_clear_mask);
-			//bit = current_gate.m_table[0x03^de_garbled_ix];
-			bit = (current_gate->truth_table>>(3-(0x03^de_garbled_ix)))&0x01;
-			aes_ciphertext = _mm_xor_si128(aes_ciphertext, Z[bit]);
-			_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), aes_ciphertext);
-			cct.m_out_bufr.insert(cct.m_out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
-
-		}
-
-		if (current_gate->tag == TAG_OUTPUT_A) // Gen output
-		{
-			cct.m_out_bufr.push_back(_mm_extract_epi8(current_zero_key, 0) & 0x01); // permutation bit
-			cct.m_gen_out_ix++;
-		}
-		else if (current_gate->tag == TAG_OUTPUT_B) // Eval output
-		{
-			cct.m_out_bufr.push_back(_mm_extract_epi8(current_zero_key, 0) & 0x01); // permutation bit
-			cct.m_evl_out_ix++;
-		}
-	}
-
-	cct.m_gate_ix++;
-	return &current_zero_key;
+          
+          // encrypt the 1st entry : (X[1-x], Y[y])
+          aes_key[0] = _mm_xor_si128(aes_key[0], cct.m_R);
+          
+          KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
+          aes_ciphertext = _mm_and_si128(aes_ciphertext, cct.m_clear_mask);
+          //bit = current_gate.m_table[0x01^de_garbled_ix];
+          bit = (current_gate->truth_table>>(3-(0x01^de_garbled_ix)))&0x01;
+          aes_ciphertext = _mm_xor_si128(aes_ciphertext, Z[bit]);
+          _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), aes_ciphertext);
+          cct.m_out_bufr.insert(cct.m_out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
+          
+          // encrypt the 2nd entry : (X[x], Y[1-y])
+          aes_key[0] = _mm_xor_si128(aes_key[0], cct.m_R);
+          aes_key[1] = _mm_xor_si128(aes_key[1], cct.m_R);
+          
+          KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
+          aes_ciphertext = _mm_and_si128(aes_ciphertext, cct.m_clear_mask);
+          //bit = current_gate.m_table[0x02^de_garbled_ix];
+          bit = (current_gate->truth_table>>(3-(0x02^de_garbled_ix)))&0x01;
+          aes_ciphertext = _mm_xor_si128(aes_ciphertext, Z[bit]);
+          _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), aes_ciphertext);
+          cct.m_out_bufr.insert(cct.m_out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
+          
+          // encrypt the 3rd entry : (X[1-x], Y[1-y])
+          aes_key[0] = _mm_xor_si128(aes_key[0], cct.m_R);
+          
+          KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
+          aes_ciphertext = _mm_and_si128(aes_ciphertext, cct.m_clear_mask);
+          //bit = current_gate.m_table[0x03^de_garbled_ix];
+          bit = (current_gate->truth_table>>(3-(0x03^de_garbled_ix)))&0x01;
+          aes_ciphertext = _mm_xor_si128(aes_ciphertext, Z[bit]);
+          _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), aes_ciphertext);
+          cct.m_out_bufr.insert(cct.m_out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
+          
+        }
+      
+      if (current_gate->tag == TAG_OUTPUT_A) // Gen output
+        {
+          cct.m_out_bufr.push_back(_mm_extract_epi8(current_zero_key, 0) & 0x01); // permutation bit
+          cct.m_gen_out_ix++;
+        }
+      else if (current_gate->tag == TAG_OUTPUT_B) // Eval output
+        {
+          cct.m_out_bufr.push_back(_mm_extract_epi8(current_zero_key, 0) & 0x01); // permutation bit
+          cct.m_evl_out_ix++;
+        }
+    }
+  
+  cct.m_gate_ix++;
+  return &current_zero_key;
 }
 
 void * evl_next_malicious_gate(PCFState *st, PCFGate *current_gate){

@@ -949,7 +949,7 @@ void BetterYao5::circuit_evaluate()
                     //bufr = get_and_clear_out_bufr(m_gcs[ix]);
                     m_timer_evl += MPI_Wtime() - start;
                     
-                    start = MPI_Wtime();
+                     start = MPI_Wtime();
                     Bytes recv = EVL_RECV();
                     m_timer_com += MPI_Wtime() - start;
                     
@@ -977,7 +977,7 @@ void BetterYao5::circuit_evaluate()
                   m_timer_com += MPI_Wtime() - start;
                   
                   // std::cout << "buffer size add" << std::endl;
-
+                  
                   m_comm_sz += bufr.size();
                   
                   start = MPI_Wtime();
@@ -998,64 +998,64 @@ void BetterYao5::circuit_evaluate()
               }
 
 	EVL_BEGIN // check the hash of all the garbled circuits
-		int all_verify = 0;
-
+          int all_verify = 0;
+        
         std::cout << "evl check hash of garbled circuits" << std::endl;
-		start = MPI_Wtime();
-			MPI_Reduce(&verify, &all_verify, 1, MPI_INT, MPI_LAND, 0, m_mpi_comm);
-		m_timer_mpi += MPI_Wtime() - start;
-
-		start = MPI_Wtime();
-			if (Env::is_root() && !all_verify)
-			{
-				LOG4CXX_FATAL(logger, "Verification failed");
-				//MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-			}
-
-			Bytes gen_inp_hash;
-
-			for (size_t ix = 0; ix < m_gcs.size(); ix++)
-			{
-				// check the commitments associated with the generator's input wires
-				if (m_chks[ix]) // check circuit
-				{
-					for (size_t jx = 0; jx < m_gen_inp_cnt*2; jx++)
-					{
-                                          if (!(m_gen_inp_decom[ix][jx] == m_gcs[ix].get_gen_decommitments()[jx]))//.m_gen_inp_decom[jx]))
-						{
-							LOG4CXX_FATAL(logger, "Commitment Verification Failure (check circuit)");
-							//MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-						}
-					}
-				}
-				else // evaluation circuit
-				{
-                                  if(!m_gcs[ix].pass_check())
-                                  //if (!pass_check(m_gcs[ix]))
-					{
-						LOG4CXX_FATAL(logger, "Commitment Verification Failure (evaluation circuit)");
-						//MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-					}
-
-					if (gen_inp_hash.size() == 0)
-					{
-						gen_inp_hash = m_gen_inp_hash[ix];
-					}
-					else if (!(gen_inp_hash == m_gen_inp_hash[ix]))
-					{
-						LOG4CXX_FATAL(logger, "Generator Input Hash Inconsistent Failure (evaluation circuit)");
-						//MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-					}
-				}
-
-				m_gcs[ix].trim_output();
-                                //trim_output(m_gcs[ix]);
-			}
-		m_timer_evl += MPI_Wtime() - start;
+        start = MPI_Wtime();
+        MPI_Reduce(&verify, &all_verify, 1, MPI_INT, MPI_LAND, 0, m_mpi_comm);
+        m_timer_mpi += MPI_Wtime() - start;
+        
+        start = MPI_Wtime();
+        if (Env::is_root() && !all_verify)
+          {
+            LOG4CXX_FATAL(logger, "Verification failed");
+            //MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+          }
+        
+        Bytes gen_inp_hash;
+        
+        for (size_t ix = 0; ix < m_gcs.size(); ix++)
+          {
+            // check the commitments associated with the generator's input wires
+            if (m_chks[ix]) // check circuit
+              {
+                for (size_t jx = 0; jx < m_gen_inp_cnt*2; jx++)
+                  {
+                    if (!(m_gen_inp_decom[ix][jx] == m_gcs[ix].get_gen_decommitments()[jx]))//.m_gen_inp_decom[jx]))
+                      {
+                        LOG4CXX_FATAL(logger, "Commitment Verification Failure (check circuit)");
+                        //MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+                      }
+                  }
+              }
+            else // evaluation circuit
+              {
+                if(!m_gcs[ix].pass_check())
+                  //if (!pass_check(m_gcs[ix]))
+                  {
+                    LOG4CXX_FATAL(logger, "Commitment Verification Failure (evaluation circuit)");
+                    //MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+                  }
+                
+                if (gen_inp_hash.size() == 0)
+                  {
+                    gen_inp_hash = m_gen_inp_hash[ix];
+                  }
+                else if (!(gen_inp_hash == m_gen_inp_hash[ix]))
+                  {
+                    LOG4CXX_FATAL(logger, "Generator Input Hash Inconsistent Failure (evaluation circuit)");
+                    //MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+                  }
+              }
+            
+            m_gcs[ix].trim_output();
+            //trim_output(m_gcs[ix]);
+          }
+        m_timer_evl += MPI_Wtime() - start;
 	EVL_END
-
-	step_report("circuit-evl");
-
+          
+          step_report("circuit-evl");
+        
 	if (m_gcs[0].get_evl_out_ix() != 0) //m_evl_out_ix != 0)
           proc_evl_out();
         
