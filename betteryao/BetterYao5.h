@@ -56,14 +56,26 @@ protected:
           a mask for his output and extra randomness
           that is necessary for the 2-UHF
         */
+        // calls the two other functions
         void gen_generate_aux_inputs();
-        
-        void gen_generate_input_randomness();
-
+        // generates Gen's output mask 
+        // (referred to as e)
         void gen_generate_output_mask();
+        // generates 2k+lg(k) extra random bits
+        void gen_generate_input_randomness();
         
+        /**
+           Gen has a couple of inputs segments, and therefore gets
+           extra input accessors
+         */
 
-
+        // get Gen's output mask
+        Bytes get_gen_output_mask();
+        // get Gen's extra inputs
+        Bytes get_gen_input_randomness();
+        // get all of Gen's inputs concatenated
+        // private_inp || e || rho_{2k+lg(k)}
+        Bytes get_gen_full_input();
 
 	size_t                          m_ot_bit_cnt;
 	Bytes                           m_ot_recv_bits;
@@ -86,6 +98,10 @@ protected:
         std::vector<Bytes>                   m_matrix;
         
         std::vector<Prng>		     m_prngs;
+
+        // Gen needs a couple of extra variables for his own inputs
+        Bytes m_gen_output_mask;
+        Bytes m_gen_aux_random_input;
 
 };
 
