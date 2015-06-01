@@ -99,7 +99,7 @@ class GarbledMal: public GarbledBase
   std::vector<Bytes>  m_gen_inp_com; // Gen's input key commitments
   std::vector<Bytes>  m_gen_inp_decom; // Gen's input key decommitments
   
-  // This holds the hash output Gen's inputs
+  // This holds the hash output of Gen's inputs (via 2-UHF)
   // compared between circuits to enforce Gen's input consistency
   Bytes               m_gen_inp_hash;
  

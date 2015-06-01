@@ -322,20 +322,7 @@ std::cerr << ", " << Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes()).to
 		}
 	}
 /*
-{
-switch(current_gate->tag)
-{
-case TAG_INPUT_A:
-std::cerr << "INP_A "; break;
-case TAG_INPUT_B:
-std::cerr << "INP_B "; break;
-case TAG_OUTPUT_A:
-std::cerr << "OUT_A "; break;
-case TAG_OUTPUT_B:
-std::cerr << "OUT_B "; break;
-default:
-std::cerr << "  ETC "; break;
-}
+
 Bytes tmp(16);
 	_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), current_zero_key);
 std::cerr << cct.m_gate_ix << ": (" << Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes()).to_hex();
@@ -349,103 +336,103 @@ std::cerr << ", " << Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes()).to
 
 void *evl_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 {
-	garbled_circuit_m_t &cct = *reinterpret_cast<garbled_circuit_m_t*>(get_external_circuit(st));
-
-	static __m128i current_key;
-	__m128i a;
-	static Bytes tmp;
-
-        // this function has no way of knowing or telling which of Gen's inputs we are pointing to, and is obviously a source of issues when we do not traverse them strictly in order
-	if (current_gate->tag == TAG_INPUT_A) // Gen Input
-	{
-          //std::cout <<cct.m_gen_inp_mask.size()*8<<" " <<cct.m_gen_inp_ix <<" \n";
+  garbled_circuit_m_t &cct = *reinterpret_cast<garbled_circuit_m_t*>(get_external_circuit(st));
+  
+  static __m128i current_key;
+  __m128i a;
+  static Bytes tmp;
+  
+  // this function has no way of knowing or telling which of Gen's inputs we are pointing to, and is obviously a source of issues when we do not traverse them strictly in order
+  if (current_gate->tag == TAG_INPUT_A) // Gen Input
+    {
+      //std::cout <<cct.m_gen_inp_mask.size()*8<<" " <<cct.m_gen_inp_ix <<" \n";
+      
+      //cct.tag_a_cnt++;
+      //fprintf(stderr, "INPUT ALICE: %u\n",cct.tag_a_cnt);
+      
+      if(!(cct.m_gen_inp_ix < 8LL*cct.m_gen_inp_mask.size())){
+        fprintf(stderr, "gen input index not < 8 * gen input mask size. %u !< %lu \n",cct.m_gen_inp_ix, 8*cct.m_gen_inp_mask.size());
+        // fprintf(stderr,"gen input size is: %lu\n",cct.m_gen_inp.size());
+      }
+      // assert(cct.m_gen_inp_ix < cct.m_gen_inp_mask.size());
+      // HERE! THE BUG IS HERE!
+      //fprintf(stderr,"gen input index: %u \t rank: %u\n",cct.m_gen_inp_ix, Env::group_rank());
+      uint8_t bit = cct.m_gen_inp_mask.get_ith_bit(cct.m_gen_inp_ix);
+      Bytes::const_iterator it = cct.m_in_bufr_ix + bit*Env::key_size_in_bytes();
+      
+      uint32_t gen_inp_ix = current_gate->wire1;
+      
+      assert(cct.m_gen_inp_com.size() == cct.m_gen_inp_ix);
+      
+      //cct.m_gen_inp_com[gen_inp_ix] = Bytes(it, it+Env::key_size_in_bytes());
+      cct.m_gen_inp_com.push_back(Bytes(it, it+Env::key_size_in_bytes()));
+      
+      it = cct.m_gen_inp_decom[cct.m_gen_inp_ix].begin();
+      tmp.assign(it, it+Env::key_size_in_bytes());
+      tmp.resize(16, 0);
+      current_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
           
-          //cct.tag_a_cnt++;
-          //fprintf(stderr, "INPUT ALICE: %u\n",cct.tag_a_cnt);
-          
-          if(!(cct.m_gen_inp_ix < 8LL*cct.m_gen_inp_mask.size())){
-             fprintf(stderr, "gen input index not < 8 * gen input mask size. %u !< %lu \n",cct.m_gen_inp_ix, 8*cct.m_gen_inp_mask.size());
-             // fprintf(stderr,"gen input size is: %lu\n",cct.m_gen_inp.size());
-          }
-          // assert(cct.m_gen_inp_ix < cct.m_gen_inp_mask.size());
-          // HERE! THE BUG IS HERE!
-          //fprintf(stderr,"gen input index: %u \t rank: %u\n",cct.m_gen_inp_ix, Env::group_rank());
-          uint8_t bit = cct.m_gen_inp_mask.get_ith_bit(cct.m_gen_inp_ix);
-          Bytes::const_iterator it = cct.m_in_bufr_ix + bit*Env::key_size_in_bytes();
-          
-          uint32_t gen_inp_ix = current_gate->wire1;
-          
-          assert(cct.m_gen_inp_com.size() == cct.m_gen_inp_ix);
-
-          //cct.m_gen_inp_com[gen_inp_ix] = Bytes(it, it+Env::key_size_in_bytes());
-          cct.m_gen_inp_com.push_back(Bytes(it, it+Env::key_size_in_bytes()));
-          
-          it = cct.m_gen_inp_decom[cct.m_gen_inp_ix].begin();
-          tmp.assign(it, it+Env::key_size_in_bytes());
-          tmp.resize(16, 0);
-          current_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
-          
-          
-          /*if(Env::is_root())
-            {
-            std::cout <<"EVLbuffr: "<<cct.m_in_bufr.to_hex()<<"\n";
-            std::cout <<"EVL: gate: "<<cct.m_gate_ix<<" : "<< setBytes(current_key).to_hex() <<"\n";	
-            }*/
-          
-          cct.m_gen_inp_ix++;
-	}
-	else if (current_gate->tag == TAG_INPUT_B) // Eval input
-	{
-          uint32_t evl_inp_ix = current_gate->wire1;
-          
-          if(!(evl_inp_ix < 8LL *cct.m_evl_inp.size())){
-            fprintf(stderr, "eval input index not < 8* circuit eval input size. %u !< %lu \n",evl_inp_ix, 8* cct.m_evl_inp.size());
-          }
-          assert(evl_inp_ix < 8LL * cct.m_evl_inp.size());
-          uint8_t bit = cct.m_evl_inp.get_ith_bit(evl_inp_ix);
-          Bytes::const_iterator it = cct.m_in_bufr_ix + bit*Env::key_size_in_bytes();
-          
-          tmp = (*cct.m_ot_keys)[evl_inp_ix];
-          tmp.resize(16, 0);
-          current_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
-          
-          tmp.assign(it, it+Env::key_size_in_bytes());
-          tmp.resize(16, 0);
-          a = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
-          
-          current_key = _mm_xor_si128(current_key, a);
-          
-          cct.m_in_bufr_ix += Env::key_size_in_bytes()*2;
-          cct.m_evl_inp_ix++;
-	}
-	else
-	{
+      /*
+      if(Env::is_root())
+        {
+        std::cout <<"EVLbuffr: "<<cct.m_in_bufr.to_hex()<<"\n";
+        std::cout <<"EVL: gate: "<<cct.m_gate_ix<<" : "<< setBytes(current_key).to_hex() <<"\n";	
+        }
+      */  
+      cct.m_gen_inp_ix++;
+    }
+  else if (current_gate->tag == TAG_INPUT_B) // Eval input
+    {
+      uint32_t evl_inp_ix = current_gate->wire1;
+      
+      if(!(evl_inp_ix < 8LL *cct.m_evl_inp.size())){
+        fprintf(stderr, "eval input index not < 8* circuit eval input size. %u !< %lu \n",evl_inp_ix, 8* cct.m_evl_inp.size());
+      }
+      assert(evl_inp_ix < 8LL * cct.m_evl_inp.size());
+      uint8_t bit = cct.m_evl_inp.get_ith_bit(evl_inp_ix);
+      Bytes::const_iterator it = cct.m_in_bufr_ix + bit*Env::key_size_in_bytes();
+      
+      tmp = (*cct.m_ot_keys)[evl_inp_ix];
+      tmp.resize(16, 0);
+      current_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
+      
+      tmp.assign(it, it+Env::key_size_in_bytes());
+      tmp.resize(16, 0);
+      a = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
+      
+      current_key = _mm_xor_si128(current_key, a);
+      
+      cct.m_in_bufr_ix += Env::key_size_in_bytes()*2;
+      cct.m_evl_inp_ix++;
+    }
+  else
+    {
 #ifdef FREE_XOR
-		if (current_gate->truth_table == 0x06)
-		{
-			current_key = _mm_xor_si128
-			(
-				*reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire1)),
-				*reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire2))
-			);
-		}
-		else
+      if (current_gate->truth_table == 0x06)
+        {
+          current_key = _mm_xor_si128
+            (
+             *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire1)),
+             *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire2))
+             );
+        }
+      else
 #endif
-		{
-			__m128i aes_key[2], aes_plaintext, aes_ciphertext;
-
-
-			aes_plaintext = _mm_set1_epi64x(cct.m_gate_ix);
-
-			aes_key[0] = *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire1));
-			aes_key[1] = *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire2));
-
-			const uint8_t perm_x = _mm_extract_epi8(aes_key[0], 0) & 0x01;
-			const uint8_t perm_y = _mm_extract_epi8(aes_key[1], 0) & 0x01;
-
-			KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
-			aes_ciphertext = _mm_and_si128(aes_ciphertext, cct.m_clear_mask);
-			uint8_t garbled_ix = (perm_y<<1)|perm_x;
+        {
+          __m128i aes_key[2], aes_plaintext, aes_ciphertext;
+          
+          
+          aes_plaintext = _mm_set1_epi64x(cct.m_gate_ix);
+          
+          aes_key[0] = *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire1));
+          aes_key[1] = *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire2));
+          
+          const uint8_t perm_x = _mm_extract_epi8(aes_key[0], 0) & 0x01;
+          const uint8_t perm_y = _mm_extract_epi8(aes_key[1], 0) & 0x01;
+          
+          KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
+          aes_ciphertext = _mm_and_si128(aes_ciphertext, cct.m_clear_mask);
+          uint8_t garbled_ix = (perm_y<<1)|perm_x;
 
 #ifdef GRR
 			if (garbled_ix == 0)
@@ -507,17 +494,7 @@ void *evl_next_gate_m(struct PCFState *st, struct PCFGate *current_gate)
 		}
 	}
 /*
-switch(current_gate->tag)
-{
-case TAG_INPUT_A:
-std::cout << "INP_A "; break;
-case TAG_INPUT_B:
-std::cout << "INP_B "; break;
-case TAG_OUTPUT_A:
-std::cout << "OUT_A "; break;
-case TAG_OUTPUT_B:
-std::cout << "OUT_B "; break;
-}
+
 	tmp.resize(16);
 	_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), current_key);
 std::cout << cct.m_gate_ix << ": " << Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes()).to_hex() << std::endl;

@@ -138,5 +138,17 @@ public:
 };
 
 
+inline Bytes setBytes( __m128i & i)
+// this function really just used for debugging
+{
+
+        Bytes q;
+        q.resize(16,0);
+        _mm_storeu_si128(reinterpret_cast<__m128i*>(&q[0]), i);
+
+        return q;
+}
+
+
 #endif
 

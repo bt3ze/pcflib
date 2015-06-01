@@ -233,7 +233,7 @@ void call_op (struct PCFState * st, struct PCFOP * op)
       else
         { // what is the point of this? reset inp_i so that it can go back to the top?
           // doesn't this miss good inputs?
-          fprintf(stderr, "st->inp_i over 32\n");
+          // fprintf(stderr, "st->inp_i over 32\n");
           st->inp_i = 0;
         } 
       

@@ -21,7 +21,7 @@ GarbledBase::GarbledBase():
   m_in_bufr.clear();
   m_out_bufr.clear();
 
-  // and clear the output buffers for Gen and Evl
+  // and clear the output buffers for Gen and 
   m_gen_out.clear();
   m_evl_out.clear();
   

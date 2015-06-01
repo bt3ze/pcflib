@@ -236,6 +236,7 @@ private:
 	}
 };
 
+
 inline size_t fit_to_byte_containers(size_t size){
   return (size + 7)/8;
 }

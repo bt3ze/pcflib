@@ -7,6 +7,7 @@
 #include <log4cxx/logger.h>
 static log4cxx::LoggerPtr logger(log4cxx::Logger::getLogger("BetterYao5.cpp"));
 
+#define debug_evl_fprintf(a,b) if(!m_chks[ix]){ std::cout << a << "  " << b << "\t rank: " << Env::group_rank() << std::endl; }
 
 BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
 {
@@ -396,6 +397,8 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
   
   Bytes bufr;
   
+  fprintf(stderr,"Begin sending things for evaluation circuit\n");
+
   // send masked gen inp
   GEN_BEGIN
     start = MPI_Wtime();
@@ -406,8 +409,19 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
   // mask gen's input
   //  bufr = m_gen_inp_masks[ix] ^ m_gen_inp;
   bufr = m_gen_inp_masks[ix] ^ m_private_input;
+
+  debug_evl_fprintf("Gen's decrypted inp mask xor input ", bufr.to_hex());
+
   // and then encrypt it again
+  // seriously, why do we need gen's input mask? Evl shouldn't see
+  // any form of Gen's input except his input keys
+  // which makes this kind of ridiculous:
+  // Gen send's Evl masked input which is also masked by a prng
+  // (seed for which was exchanged in OT)
   bufr ^= m_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
+
+  debug_evl_fprintf("Gen send inp mask xor input ", bufr.to_hex());
+
   m_timer_gen += MPI_Wtime() - start;
   
   start = MPI_Wtime();
@@ -417,12 +431,12 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
   GEN_END
     
     EVL_BEGIN
-    fprintf(stderr,"cut-choose-2-evl: %lu \t rank: %i\n",ix,Env::group_rank());
-  // there is something going on in the evaluation circuits causing seg fault  
-  fprintf(stderr,"cut-and-choose-2-evl: m_chks[ix] %i\trank: %i\n",m_chks[ix],Env::group_rank());
+    // fprintf(stderr,"cut-choose-2-evl: %lu \t rank: %i\n",ix,Env::group_rank());
+    // fprintf(stderr,"cut-and-choose-2-evl: m_chks[ix] %i\trank: %i\n",m_chks[ix],Env::group_rank());
   
   start = MPI_Wtime();
   bufr = EVL_RECV();
+  debug_evl_fprintf("Evl Receive inp mask xor input ", bufr.to_hex());
   m_timer_com += MPI_Wtime() - start;
   
   start = MPI_Wtime();
@@ -432,8 +446,9 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
     {
       bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
       m_gen_inp_masks[ix] = bufr;
-      fprintf(stderr,"step 1\t rank %i\n",Env::group_rank());
+      // fprintf(stderr,"step 1\t rank %i\n",Env::group_rank());
     }
+  debug_evl_fprintf("Evl decrypted inp mask xor input ", bufr.to_hex());
   m_timer_evl += MPI_Wtime() - start;
   EVL_END
     
@@ -448,8 +463,11 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
   
 //bufr = get_const_key(m_gcs[ix], 0, 0) + get_const_key(m_gcs[ix], 1, 1);
   bufr = m_gcs[ix].get_const_key(0, 0) + m_gcs[ix].get_const_key(1, 1);
-  
+  debug_evl_fprintf("Gen const keys", bufr.to_hex());
+
   bufr ^= m_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
+  debug_evl_fprintf("Gen encrypted const keys", bufr.to_hex());
+  
   m_timer_gen += MPI_Wtime() - start;
   
   start = MPI_Wtime();
@@ -460,18 +478,20 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
     EVL_BEGIN
     start = MPI_Wtime();
   bufr = EVL_RECV();
+  debug_evl_fprintf("Evl encrypted const keys", bufr.to_hex());
   m_timer_com += MPI_Wtime() - start;
     
   start = MPI_Wtime();
   if (!m_chks[ix]) // evaluation circuit
     {
       bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
+      debug_evl_fprintf("Evl const keys", bufr.to_hex());
       std::vector<Bytes> bufr_chunks = bufr.split(Env::key_size_in_bytes());
       m_gcs[ix].set_const_key(0, bufr_chunks[0]);
-      m_gcs[ix].set_const_key(1, bufr_chunks[0]);
+      m_gcs[ix].set_const_key(1, bufr_chunks[1]);
       //set_const_key(m_gcs[ix], 0, bufr_chunks[0]);
       //set_const_key(m_gcs[ix], 1, bufr_chunks[1]);
-      fprintf(stderr,"step 2\trank %i\n",Env::group_rank());
+      //fprintf(stderr,"step 2\trank %i\n",Env::group_rank());
     }
   m_timer_evl += MPI_Wtime() - start;
   EVL_END
@@ -491,7 +511,7 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
     if (!m_chks[ix]) {
       m_gcs[ix].resize_gen_decommitments(m_gen_inp_cnt);
       //m_gcs[ix].get_gen_decommitments().resize(m_gen_inp_cnt); 
-      fprintf(stderr,"step 3\trank: %i\n",Env::group_rank());
+      // fprintf(stderr,"step 3\trank: %i\n",Env::group_rank());
     }
   EVL_END
     
@@ -504,7 +524,9 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
         byte bit = m_private_input.get_ith_bit(jx) ^ m_gen_inp_masks[ix].get_ith_bit(jx);
         //bufr = m_gcs[ix].m_gen_inp_decom[2*jx+bit];
         bufr = m_gcs[ix].get_gen_decommitments()[2*jx+bit];
+        debug_evl_fprintf("Gen ith input decommitment", bufr.to_hex());
         bufr ^= m_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
+        debug_evl_fprintf("Gen ith input decommitment encrypted", bufr.to_hex());
         // remember, even m_prngs are for evaluation circuits
         // and odd m_prngs are for check circuits
         m_timer_gen += MPI_Wtime() - start;
@@ -518,20 +540,23 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
           start = MPI_Wtime();
         bufr = EVL_RECV();
         m_timer_com += MPI_Wtime() - start;
-        
+ 
+        debug_evl_fprintf("Evl ith input decommitment encrypted", bufr.to_hex());
+       
         start = MPI_Wtime();
         if (!m_chks[ix]) // evaluation circuit
           {
-            fprintf(stderr,"step 4 start\t rank: %i\n",Env::group_rank());
+            //fprintf(stderr,"step 4 start\t rank: %i\n",Env::group_rank());
             //!! BUG HERE
             // eval receives decommitment and decrypts it
             // she now has the decommitments to Gen's input keys
             bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
-            fprintf(stderr,"step 4 mid\t rank: %i\n",Env::group_rank());
+            debug_evl_fprintf("Evl ith input decommitment", bufr.to_hex());
+           //fprintf(stderr,"step 4 mid\t rank: %i\n",Env::group_rank());
             //m_gcs[ix].m_gen_inp_decom[jx] = bufr;
             //m_gcs[ix].get_gen_decommitments()[jx] = bufr;
             m_gcs[ix].set_gen_decommitment(jx,bufr);
-            fprintf(stderr,"step 4\trank: %i\n",Env::group_rank());
+            //fprintf(stderr,"step 4\trank: %i\n",Env::group_rank());
           }
         m_timer_evl += MPI_Wtime() - start;
         EVL_END
@@ -1085,10 +1110,13 @@ void BetterYao5::proc_evl_out()
 
 void BetterYao5::proc_gen_out()
 {
+  // THIS SIMPLY TAKES THE OUTPUT OF THE FIRST CIRCUIT!
+  // NO MAJORITY OPERATION IS DONE
+
 	reset_timers();
 
 	// TODO: implement Ki08
-	m_gen_out = m_gcs[0].get_gen_out();//.m_gen_out;
+	//m_gen_out = m_gcs[0].get_gen_out();//.m_gen_out;
 
 	EVL_BEGIN
           m_gen_out = m_gcs[0].get_gen_out();//m_gen_out;
