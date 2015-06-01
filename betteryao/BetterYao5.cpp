@@ -43,6 +43,21 @@ void BetterYao5::start()
   final_report();
 }
 
+
+/**
+   First, a couple of utility functions before we get into the heavy stuff
+   like cut-and-choose and gate evaluation
+
+   Flip-coins
+   gen_generate_aux_inputs
+   gen_generate_output_mask
+   gen_generate_input_randomness
+   gen_output_auth_proof
+   choose_k_probe_resistant_matrix
+   evl_generate_new_input
+*/
+
+
 // interactive coin flipping protocol by ?
 // Gen commits to some random coins
 // Eval sends her random coins
@@ -112,6 +127,42 @@ Bytes BetterYao5::flip_coins(size_t len_in_bytes)
     }
   
   return bufr;
+}
+
+
+void BetterYao5::choose_k_probe_resitant_matrix(){
+  // TODO: implement
+}
+
+
+void BetterYao5::evl_generate_new_input(){
+  // TODO: implement
+}
+
+void BetterYao5::gen_generate_output_mask(){
+  Prng output_mask_prng = Prng();
+  static Bytes output_mask = output_mask_prng.rand_bits();
+
+  m_gen_output_mask = output_mask;
+
+}
+
+void BetterYao5::gen_generate_input_randomness(){
+  // compute ceil(lg_2(k)) and then generate some random bits 
+
+  Prng input_prng = Prng();
+  uint32_t lg_k = 1;
+  uint32_t tmp = 2;
+
+  while(tmp < Env::k()){
+    lg_k++;
+    tmp << 1;
+  }
+
+  static Bytes aux_input = input_prng.rand_bits(2*Env::k() + lg_k);
+  
+  m_gen_aux_random_input = aux_input;
+
 }
 
 
@@ -1167,13 +1218,6 @@ void BetterYao5::gen_output_auth_proof(){
 }
 
 
-void BetterYao5::choose_k_probe_resitant_matrix(){
-}
-
-
-void BetterYao5::evl_generate_new_input(){
-
-}
 
 //
 // Implementation of "Two-Output Secure Computation with Malicious Adversaries"
