@@ -130,7 +130,7 @@ Bytes BetterYao5::flip_coins(size_t len_in_bytes)
 }
 
 
-void BetterYao5::choose_k_probe_resitant_matrix(){
+void BetterYao5::choose_k_probe_resistant_matrix(){
   // TODO: implement
 }
 
@@ -141,7 +141,9 @@ void BetterYao5::evl_generate_new_input(){
 
 void BetterYao5::gen_generate_output_mask(){
   Prng output_mask_prng = Prng();
-  static Bytes output_mask = output_mask_prng.rand_bits();
+  // how many random bits do we generate?
+  // 
+  static Bytes output_mask = output_mask_prng.rand_bits(m_private_input.size()*8);
 
   m_gen_output_mask = output_mask;
 
