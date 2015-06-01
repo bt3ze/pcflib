@@ -166,6 +166,10 @@ void YaoBase::init_environ(EnvParams &params)
 
 	Env::init(params);
 
+        /*
+          // SS13 does not use claw-free collections... remove
+          // for this version
+
 	// synchronize claw-free collections
 	ClawFree claw_free;
 	claw_free.init();
@@ -186,6 +190,7 @@ void YaoBase::init_environ(EnvParams &params)
 	// synchronize claw-free collections to the root evaluator's
 	MPI_Bcast(&bufr[0], bufr.size(), MPI_BYTE, 0, m_mpi_comm);
 	Env::claw_free_from_bytes(bufr);
+        */
 }
 
 

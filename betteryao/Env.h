@@ -141,6 +141,7 @@ public:
 		return instance->m_params.private_file;
 	}
 
+        /*
 	static ClawFree &clawfree()
 	{
 		assert(instance != 0);
@@ -152,7 +153,8 @@ public:
 		assert(instance != 0);
 		instance->m_params.claw_free.from_bytes(b);
 	}
-
+        */
+        
 	static int world_rank()
 	{
 		assert(instance != 0);

@@ -436,7 +436,7 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
   
   start = MPI_Wtime();
   bufr = EVL_RECV();
-  debug_evl_fprintf("Evl Receive inp mask xor input ", bufr.to_hex());
+  // debug_evl_fprintf("Evl Receive inp mask xor input ", bufr.to_hex());
   m_timer_com += MPI_Wtime() - start;
   
   start = MPI_Wtime();
@@ -448,7 +448,7 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
       m_gen_inp_masks[ix] = bufr;
       // fprintf(stderr,"step 1\t rank %i\n",Env::group_rank());
     }
-  debug_evl_fprintf("Evl decrypted inp mask xor input ", bufr.to_hex());
+  // debug_evl_fprintf("Evl decrypted inp mask xor input ", bufr.to_hex());
   m_timer_evl += MPI_Wtime() - start;
   EVL_END
     
@@ -463,10 +463,10 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
   
 //bufr = get_const_key(m_gcs[ix], 0, 0) + get_const_key(m_gcs[ix], 1, 1);
   bufr = m_gcs[ix].get_const_key(0, 0) + m_gcs[ix].get_const_key(1, 1);
-  debug_evl_fprintf("Gen const keys", bufr.to_hex());
+  // debug_evl_fprintf("Gen const keys", bufr.to_hex());
 
   bufr ^= m_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
-  debug_evl_fprintf("Gen encrypted const keys", bufr.to_hex());
+  // debug_evl_fprintf("Gen encrypted const keys", bufr.to_hex());
   
   m_timer_gen += MPI_Wtime() - start;
   
@@ -478,14 +478,16 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
     EVL_BEGIN
     start = MPI_Wtime();
   bufr = EVL_RECV();
-  debug_evl_fprintf("Evl encrypted const keys", bufr.to_hex());
+  //debug_evl_fprintf("Evl encrypted const keys", bufr.to_hex());
+  
   m_timer_com += MPI_Wtime() - start;
     
   start = MPI_Wtime();
   if (!m_chks[ix]) // evaluation circuit
     {
       bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
-      debug_evl_fprintf("Evl const keys", bufr.to_hex());
+      //debug_evl_fprintf("Evl const keys", bufr.to_hex());
+      
       std::vector<Bytes> bufr_chunks = bufr.split(Env::key_size_in_bytes());
       m_gcs[ix].set_const_key(0, bufr_chunks[0]);
       m_gcs[ix].set_const_key(1, bufr_chunks[1]);
@@ -520,13 +522,16 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
         GEN_BEGIN
           start = MPI_Wtime();
         // this bit selects which decommitment to select and send
+        
         //byte bit = m_gen_inp.get_ith_bit(jx) ^ m_gen_inp_masks[ix].get_ith_bit(jx);
         byte bit = m_private_input.get_ith_bit(jx) ^ m_gen_inp_masks[ix].get_ith_bit(jx);
         //bufr = m_gcs[ix].m_gen_inp_decom[2*jx+bit];
+        
         bufr = m_gcs[ix].get_gen_decommitments()[2*jx+bit];
-        debug_evl_fprintf("Gen ith input decommitment", bufr.to_hex());
+        //debug_evl_fprintf("Gen ith input decommitment", bufr.to_hex());
         bufr ^= m_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
-        debug_evl_fprintf("Gen ith input decommitment encrypted", bufr.to_hex());
+        // debug_evl_fprintf("Gen ith input decommitment encrypted", bufr.to_hex());
+        
         // remember, even m_prngs are for evaluation circuits
         // and odd m_prngs are for check circuits
         m_timer_gen += MPI_Wtime() - start;
@@ -541,7 +546,7 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
         bufr = EVL_RECV();
         m_timer_com += MPI_Wtime() - start;
  
-        debug_evl_fprintf("Evl ith input decommitment encrypted", bufr.to_hex());
+        //debug_evl_fprintf("Evl ith input decommitment encrypted", bufr.to_hex());
        
         start = MPI_Wtime();
         if (!m_chks[ix]) // evaluation circuit
@@ -551,7 +556,7 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
             // eval receives decommitment and decrypts it
             // she now has the decommitments to Gen's input keys
             bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
-            debug_evl_fprintf("Evl ith input decommitment", bufr.to_hex());
+            //debug_evl_fprintf("Evl ith input decommitment", bufr.to_hex());
            //fprintf(stderr,"step 4 mid\t rank: %i\n",Env::group_rank());
             //m_gcs[ix].m_gen_inp_decom[jx] = bufr;
             //m_gcs[ix].get_gen_decommitments()[jx] = bufr;
@@ -791,52 +796,52 @@ void BetterYao5::consistency_check()
 
 	// now everyone agrees on the UHF given by m_matrix
 	for (size_t ix = 0; ix < m_gcs.size(); ix++)
-		for (size_t kx = 0; kx < m_matrix.size(); kx++)
-	{
-		GEN_BEGIN
-                  start = MPI_Wtime();
-                //gen_next_gen_inp_com(m_gcs[ix], m_matrix[kx], kx);
-                m_gcs[ix].gen_next_gen_inp_com(m_matrix[kx], kx);
-                bufr = m_gcs[ix].get_and_clear_out_bufr();
-                //bufr = get_and_clear_out_bufr(m_gcs[ix]);
-                m_timer_gen += MPI_Wtime() - start;
-                
+          for (size_t kx = 0; kx < m_matrix.size(); kx++)
+            {
+              GEN_BEGIN
                 start = MPI_Wtime();
-                GEN_SEND(bufr);
-                m_timer_com += MPI_Wtime() - start;
+              //gen_next_gen_inp_com(m_gcs[ix], m_matrix[kx], kx);
+              m_gcs[ix].gen_next_gen_inp_com(m_matrix[kx], kx);
+              bufr = m_gcs[ix].get_and_clear_out_bufr();
+              //bufr = get_and_clear_out_bufr(m_gcs[ix]);
+              m_timer_gen += MPI_Wtime() - start;
+              
+              start = MPI_Wtime();
+              GEN_SEND(bufr);
+              m_timer_com += MPI_Wtime() - start;
+              
+              GEN_END
                 
-		GEN_END
-
 		EVL_BEGIN
-			start = MPI_Wtime();
-				bufr = EVL_RECV();
-			m_timer_com += MPI_Wtime() - start;
+                start = MPI_Wtime();
+              bufr = EVL_RECV();
+              m_timer_com += MPI_Wtime() - start;
 
-			if (!m_chks[ix]) // evaluation circuit
-			{
-				start = MPI_Wtime();
-                                m_gcs[ix].clear_and_replace_in_bufr(bufr);
-                                //clear_and_replace_in_bufr(m_gcs[ix], bufr);
-                                m_gcs[ix].evl_next_gen_inp_com(m_matrix[kx], kx);
-                                //evl_next_gen_inp_com(m_gcs[ix], m_matrix[kx], kx);
-				m_timer_evl += MPI_Wtime() - start;
-			}
-		EVL_END
-
+              if (!m_chks[ix]) // evaluation circuit
+                {
+                  start = MPI_Wtime();
+                  m_gcs[ix].clear_and_replace_in_bufr(bufr);
+                  //clear_and_replace_in_bufr(m_gcs[ix], bufr);
+                  m_gcs[ix].evl_next_gen_inp_com(m_matrix[kx], kx);
+                  //evl_next_gen_inp_com(m_gcs[ix], m_matrix[kx], kx);
+                  m_timer_evl += MPI_Wtime() - start;
+                }
+              EVL_END
+                
 		m_comm_sz += bufr.size();
-	}
+            }
 
         // std::cout << "EVL check hashes" << std::endl;
 
 	EVL_BEGIN
-		for (size_t ix = 0; ix < m_gcs.size(); ix++)
-                  if (!m_chks[ix]) // if evaluation circuit, save this hash
-		{
-                  m_gen_inp_hash[ix] = m_gcs[ix].get_gen_inp_hash();//m_gen_inp_hash;
-		}
+          for (size_t ix = 0; ix < m_gcs.size(); ix++)
+            if (!m_chks[ix]) // if evaluation circuit, save this hash
+              {
+                m_gen_inp_hash[ix] = m_gcs[ix].get_gen_inp_hash();//m_gen_inp_hash;
+              }
 	EVL_END
-
-	step_report("const-check");
+          
+          step_report("const-check");
 }
 
 void BetterYao5::circuit_evaluate()
@@ -1062,56 +1067,61 @@ void BetterYao5::circuit_evaluate()
 
 void BetterYao5::proc_evl_out()
 {
-	EVL_BEGIN
-		reset_timers();
-
-		double start;
-		Bytes send, recv;
-
-		start = MPI_Wtime();
-			for (size_t ix = 0; ix < m_gcs.size(); ix++) // fill zeros for uniformity (convenient for MPIs)
-			{
-                          send += m_gcs[ix].get_evl_out(); // m_evl_out;
-			}
-
-			if (Env::is_root() == 0)
-			{
-				recv.resize(send.size()*Env::node_amnt());
-			}
-		m_timer_evl += MPI_Wtime() - start;
-
-		start = MPI_Wtime();
-			MPI_Gather(&send[0], send.size(), MPI_BYTE, &recv[0], send.size(), MPI_BYTE, 0, m_mpi_comm);
-		m_timer_mpi += MPI_Wtime() - start;
-
-		start = MPI_Wtime();
-			if (Env::is_root())
-			{
-				size_t chks_total = 0;
-				for (size_t ix = 0; ix < m_all_chks.size(); ix++)
-					chks_total += m_all_chks[ix];
-
-				// find majority by locating the median of output from evaluation-circuits
-
-                                // this line is OBVIOUSLY wrong. evl_out_cnt was never anything but 0
-				// std::vector<Bytes> vec = recv.split((Env::circuit().evl_out_cnt()+7)/8); 
-                                std::vector<Bytes> vec = recv.split(0);
-                                
-				size_t median_ix = (chks_total+vec.size())/2;
-				std::nth_element(vec.begin(), vec.begin()+median_ix, vec.end());
-
-				m_evl_out = *(vec.begin()+median_ix);
-			}
-		m_timer_evl += MPI_Wtime() - start;
-
-		step_report_no_sync("chk-evl-out");
-	EVL_END
+  fprintf(stderr,"begin evl out\n");
+  EVL_BEGIN
+    reset_timers();
+  
+  double start;
+  Bytes send, recv;
+  
+  start = MPI_Wtime();
+  for (size_t ix = 0; ix < m_gcs.size(); ix++) // fill zeros for uniformity (convenient for MPIs)
+    {
+      send += m_gcs[ix].get_evl_out(); // m_evl_out;
+    }
+  
+  if (Env::is_root() == 0)
+    {
+      fprintf(stderr,"node amount %i\n", Env::node_amnt());
+      recv.resize(send.size()*Env::node_amnt());
+    }
+  m_timer_evl += MPI_Wtime() - start;
+  
+  start = MPI_Wtime();
+  MPI_Gather(&send[0], send.size(), MPI_BYTE, &recv[0], send.size(), MPI_BYTE, 0, m_mpi_comm);
+  m_timer_mpi += MPI_Wtime() - start;
+  
+  start = MPI_Wtime();
+  if (Env::is_root())
+    {
+      size_t chks_total = 0;
+      for (size_t ix = 0; ix < m_all_chks.size(); ix++)
+        chks_total += m_all_chks[ix];
+      
+      // find majority by locating the median of output from evaluation-circuits
+      
+      // this line is OBVIOUSLY wrong. evl_out_cnt was never anything but 0
+      // std::vector<Bytes> vec = recv.split((Env::circuit().evl_out_cnt()+7)/8); 
+      std::vector<Bytes> vec = recv.split(0);
+      
+      size_t median_ix = (chks_total+vec.size())/2;
+      std::nth_element(vec.begin(), vec.begin()+median_ix, vec.end());
+      
+      m_evl_out = *(vec.begin()+median_ix);
+    }
+  m_timer_evl += MPI_Wtime() - start;
+  
+  step_report_no_sync("chk-evl-out");
+  EVL_END
 }
+
 
 void BetterYao5::proc_gen_out()
 {
   // THIS SIMPLY TAKES THE OUTPUT OF THE FIRST CIRCUIT!
   // NO MAJORITY OPERATION IS DONE
+  // if Gen cheats, that's his problem?
+  // not if Evl tries to mess with the first circuit
 
 	reset_timers();
 
@@ -1140,72 +1150,72 @@ void BetterYao5::proc_gen_out()
 //
 void BetterYao5::ot_init()
 {
-	double start;
-
-	start = MPI_Wtime();
-		std::vector<Bytes> bufr_chunks;
-		Bytes bufr(Env::elm_size_in_bytes()*4);
-
-		Z y, a;
-	m_timer_gen += MPI_Wtime() - start;
-	m_timer_evl += MPI_Wtime() - start;
-
-	// step 1: ZKPoK of the CRS: g[0], h[0], g[1], h[1]
-	if (Env::is_root())
-	{
-		EVL_BEGIN // evaluator (OT receiver)
-			start = MPI_Wtime();
-				y.random();
-
-				a.random();
-
-				m_ot_g[0].random();
-				m_ot_g[1] = m_ot_g[0]^y;          // g[1] = g[0]^y
-
-				m_ot_h[0] = m_ot_g[0]^a;          // h[0] = g[0]^a
-				m_ot_h[1] = m_ot_g[1]^(a + Z(1)); // h[1] = g[1]^(a+1)
-
-				bufr.clear();
-				bufr += m_ot_g[0].to_bytes();
-				bufr += m_ot_g[1].to_bytes();
-				bufr += m_ot_h[0].to_bytes();
-				bufr += m_ot_h[1].to_bytes();
-			m_timer_evl += MPI_Wtime() - start;
-
-			start = MPI_Wtime();
-				EVL_SEND(bufr);
-			m_timer_com += MPI_Wtime() - start;
-		EVL_END
-
-		GEN_BEGIN // generator (OT sender)
-			start = MPI_Wtime();
-				bufr = GEN_RECV();
-			m_timer_com += MPI_Wtime() - start;
-		GEN_END
-
-	    m_comm_sz += bufr.size();
-	}
-
-	// send g[0], g[1], h[0], h[1] to slave processes
-	start = MPI_Wtime();
-		MPI_Bcast(&bufr[0], bufr.size(), MPI_BYTE, 0, m_mpi_comm);
-	m_timer_mpi += MPI_Wtime() - start;
-
-	start = MPI_Wtime();
-		bufr_chunks = bufr.split(Env::elm_size_in_bytes());
-
-		m_ot_g[0].from_bytes(bufr_chunks[0]);
-		m_ot_g[1].from_bytes(bufr_chunks[1]);
-		m_ot_h[0].from_bytes(bufr_chunks[2]);
-		m_ot_h[1].from_bytes(bufr_chunks[3]);
-
-		// group element pre-processing
-		m_ot_g[0].fast_exp();
-		m_ot_g[1].fast_exp();
-		m_ot_h[0].fast_exp();
-		m_ot_h[1].fast_exp();
-	m_timer_gen += MPI_Wtime() - start;
-	m_timer_evl += MPI_Wtime() - start;
+  double start;
+  
+  start = MPI_Wtime();
+  std::vector<Bytes> bufr_chunks;
+  Bytes bufr(Env::elm_size_in_bytes()*4);
+  
+  Z y, a;
+  m_timer_gen += MPI_Wtime() - start;
+  m_timer_evl += MPI_Wtime() - start;
+  
+  // step 1: ZKPoK of the CRS: g[0], h[0], g[1], h[1]
+  if (Env::is_root())
+    {
+      EVL_BEGIN // evaluator (OT receiver)
+        start = MPI_Wtime();
+      y.random();
+      
+      a.random();
+      
+      m_ot_g[0].random();
+      m_ot_g[1] = m_ot_g[0]^y;          // g[1] = g[0]^y
+      
+      m_ot_h[0] = m_ot_g[0]^a;          // h[0] = g[0]^a
+      m_ot_h[1] = m_ot_g[1]^(a + Z(1)); // h[1] = g[1]^(a+1)
+      
+      bufr.clear();
+      bufr += m_ot_g[0].to_bytes();
+      bufr += m_ot_g[1].to_bytes();
+      bufr += m_ot_h[0].to_bytes();
+      bufr += m_ot_h[1].to_bytes();
+      m_timer_evl += MPI_Wtime() - start;
+      
+      start = MPI_Wtime();
+      EVL_SEND(bufr);
+      m_timer_com += MPI_Wtime() - start;
+      EVL_END
+        
+        GEN_BEGIN // generator (OT sender)
+        start = MPI_Wtime();
+      bufr = GEN_RECV();
+      m_timer_com += MPI_Wtime() - start;
+      GEN_END
+        
+        m_comm_sz += bufr.size();
+    }
+  
+  // send g[0], g[1], h[0], h[1] to slave processes
+  start = MPI_Wtime();
+  MPI_Bcast(&bufr[0], bufr.size(), MPI_BYTE, 0, m_mpi_comm);
+  m_timer_mpi += MPI_Wtime() - start;
+  
+  start = MPI_Wtime();
+  bufr_chunks = bufr.split(Env::elm_size_in_bytes());
+  
+  m_ot_g[0].from_bytes(bufr_chunks[0]);
+  m_ot_g[1].from_bytes(bufr_chunks[1]);
+  m_ot_h[0].from_bytes(bufr_chunks[2]);
+  m_ot_h[1].from_bytes(bufr_chunks[3]);
+  
+  // group element pre-processing
+  m_ot_g[0].fast_exp();
+  m_ot_g[1].fast_exp();
+  m_ot_h[0].fast_exp();
+  m_ot_h[1].fast_exp();
+  m_timer_gen += MPI_Wtime() - start;
+  m_timer_evl += MPI_Wtime() - start;
 }
 
 
