@@ -1140,6 +1140,40 @@ void BetterYao5::proc_gen_out()
 	step_report("chk-gen-out");
 }
 
+/** 
+    witness indestinguishable proof of Gen's output authenticity
+    Gen has output keys {u_0^j,u_1^j}for j in all circuits
+    Eval knows the index m of the majority circuit (representing other circuits)
+    and the random key v corresponding to Gen's output wire of semantic value a
+    they share the security parameter, statistical parameter, commitments to Gen's output keys, and Gen's output a, which presumably Evl tells Gen in the clear (protected by their secure channel)
+*/
+void BetterYao5::gen_output_auth_proof(){
+  
+  // step 1: Gen chooses random nonce r in {0,1}^k and encrypts it with each gate key u_a^j
+  // then sends Evl the encryptions of r under each key
+
+  // step 2: Evl commits to the decryption of the nonce with the output key for this bit from circuit m
+
+  // step 3: Gen receives Evl's commitment and decommits to his output keys (which technically were shared inputs)
+
+  // step 4: Eval checks Gen's decommitments:
+  //         making sure the output keys decommit properly, and
+  //         all of the decryptions using the keys produce the same nonce
+  // if so Evl accepts, and then she decommits to r'
+
+  // step 5: Gen checks that com(r') properly decommits to r. If so, he accepts.
+  
+  
+}
+
+
+void BetterYao5::choose_k_probe_resitant_matrix(){
+}
+
+
+void BetterYao5::evl_generate_new_input(){
+
+}
 
 //
 // Implementation of "Two-Output Secure Computation with Malicious Adversaries"

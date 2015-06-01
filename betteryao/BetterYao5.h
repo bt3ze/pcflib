@@ -35,6 +35,34 @@ protected:
 
 	void proc_gen_out();
 	void proc_evl_out();
+        
+        /**
+           a couple of functions used as gadgets in the protocol
+           for enforcing privacy or security properties
+        */
+        // Eval proves Gen's output authenticity
+        void gen_output_auth_proof();
+        
+        // Eval protects her inputs by generating
+        // a k-probe-resistant matrix
+        void choose_k_probe_resistant_matrix();
+        
+        // Eval determines her protocol input based on
+        // her private input and the matrix
+        void evl_generate_new_input();
+        
+        /**
+          gen must generate two auxiliary inputs:
+          a mask for his output and extra randomness
+          that is necessary for the 2-UHF
+        */
+        void gen_generate_aux_inputs();
+        
+        void gen_generate_input_randomness();
+
+        void gen_generate_output_mask();
+        
+
 
 
 	size_t                          m_ot_bit_cnt;
