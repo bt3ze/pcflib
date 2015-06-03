@@ -26,6 +26,9 @@ public:
         void SS13();
 	
 protected:
+        /**
+           new protocol functions
+         */
 
         // highest level functions
         void modify_inputs();
@@ -43,20 +46,27 @@ protected:
 
         void evl_select_cut_and_choose_circuits();
 
+        /**
+           old and new protocol functions
+         */
 
 	void ot_init();
 	void ot_random(); // sender has m pairs of l-bit strings, and receiver has m bits
+        Bytes flip_coins(size_t len);
+        void seed_m_prngs(size_t num_prngs, std::vector<Bytes> seeds);
+
+        /**
+           old protocol functions
+         */
 	void cut_and_choose2_ot();
 	void cut_and_choose2_precomputation();
 	void cut_and_choose2_evl_circuit(size_t ix);
 	void cut_and_choose2_chk_circuit(size_t ix);
 
-	Bytes flip_coins(size_t len);
-        void seed_m_prngs(size_t num_prngs, std::vector<Bytes> seeds);
-
 	void proc_gen_out();
 	void proc_evl_out();
         
+
         /**
            a couple of functions used as gadgets in the protocol
            for enforcing privacy or security properties
@@ -77,11 +87,14 @@ protected:
           a mask for his output and extra randomness
           that is necessary for the 2-UHF
         */
+
         // calls the two other functions
         void gen_generate_aux_inputs();
+
         // generates Gen's output mask 
         // (referred to as e)
         void gen_generate_output_mask();
+
         // generates 2k+lg(k) extra random bits
         void gen_generate_input_randomness();
         
@@ -98,31 +111,79 @@ protected:
         // private_inp || e || rho_{2k+lg(k)}
         Bytes get_gen_full_input();
 
-	size_t                          m_ot_bit_cnt;
-	Bytes                           m_ot_recv_bits;
-        std::vector<Bytes>              m_ot_out;
+        /**
+           new variables
+         */
+        // Gen needs a couple of extra variables for his own inputs
+        Bytes m_gen_output_mask;
 
-	// variables for cut-and-choose
+        // Gen must generate extra random input
+        // to make the output of the 2-UHF appear random
+        Bytes m_gen_aux_random_input;
+
+        // list of Gen's input commitments
+        std::vector<Bytes>   m_gen_commitments;
+        
+        
+        /**
+           new and old variables
+        */
+        // access to the garbled circuits (important!)
+        std::vector<GarbledMal>             m_gcs;
+        
+
+        // variables for cut-and-choose
 	Bytes                           m_chks;
 	Bytes                           m_all_chks;
 
-	// variables for Yao protocol
-        std::vector<Bytes>                   m_gen_inp_masks;
-        std::vector<Bytes>                   m_coms;
-        std::vector<Bytes>                   m_rnds;
-        //std::vector<garbled_circuit_m_t>     m_gcs; 
-        std::vector<GarbledMal>             m_gcs;
-
-        // variables for Gen's input check
-        std::vector<Bytes>                   m_gen_inp_hash;
+        // Gen's input decommitments
         std::vector<std::vector<Bytes> >      m_gen_inp_decom;
-        std::vector<Bytes>                   m_matrix;
+
+        // m_rnds holds the seeds that Gen uses for his circuit Prngs
+        // these are the "randomness" that Gen uses to construct his circuits
+        // and are very important to the protocol
+        std::vector<Bytes>                   m_rnds;
         
+        // m_prngs are used to "extend the OTs",
+        // using the random seeds send in the OTs to compute
+        // masks (or one-time pads) over the information
+        // that Gen must obliviously send to Eval
+        // and for which Eval must only have access to 1/2 of the information
+        // (depending on check or evaluation circuit)
         std::vector<Prng>		     m_prngs;
 
-        // Gen needs a couple of extra variables for his own inputs
-        Bytes m_gen_output_mask;
-        Bytes m_gen_aux_random_input;
+        // variables for Gen's input check
+        // this is the vector of Gen's input hashes, which must all be consistent
+        std::vector<Bytes>                   m_gen_inp_hash;
+        
+        // this matrix defines the 2-UHF that is used to enforce
+        // Gen's input consistency
+        // each entry in the array is a row (or column?)
+        std::vector<Bytes>                   m_matrix;
+
+
+        /**
+           old variables
+         */
+
+        // m_ot_bit_cnt is the number of circuit OTs that each processor has to do
+        // (set to node_load)
+	size_t                          m_ot_bit_cnt;
+
+        // m_ot_recv_bits
+        // these indicate to Evl whether the circuit is
+        // a check circuit or evaluation circuit
+        // and the bits are selected based on m_chks
+        // it seems that this may be eliminated by just using m_chks
+	//Bytes                           m_ot_recv_bits;
+
+        std::vector<Bytes>              m_ot_out;
+
+
+        // i do not understand what this is used for
+        // or why it is used as it is
+        std::vector<Bytes>                   m_gen_inp_masks;
+                
 
 };
 

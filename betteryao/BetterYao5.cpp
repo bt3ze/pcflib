@@ -20,17 +20,17 @@ BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
   
   for (size_t ix = 0; ix < m_gcs.size(); ix++)
     {
-      //initialize_malicious_circuit(m_gcs[ix]);
       m_gcs[ix] = GarbledMal();
-      //m_gcs[ix].initialize_circuit();
   }
   
   m_gen_inp_hash.resize(Env::node_load());
   m_gen_inp_masks.resize(Env::node_load());
-  m_gen_inp_decom.resize(Env::node_load());
-  
+  // m_gen_inp_decom.resize(Env::node_load());
+
   get_and_size_inputs();
 
+  m_gen_inp_decom.resize(m_gen_inp_cnt);
+  
   GEN_BEGIN
     gen_generate_output_mask();
   gen_generate_input_randomness();
@@ -469,11 +469,13 @@ void BetterYao5::cut_and_choose2_ot()
   
   EVL_BEGIN
   start = MPI_Wtime();
+  /*
   m_ot_recv_bits.resize((m_ot_bit_cnt+7)/8);
   for (size_t ix = 0; ix < m_chks.size(); ix++)
     {
       m_ot_recv_bits.set_ith_bit(ix, m_chks[ix]);
     }
+  */
   m_timer_evl += MPI_Wtime() - start;
   EVL_END
    
@@ -1506,48 +1508,51 @@ void BetterYao5::ot_random()
 	m_timer_evl += MPI_Wtime() - start;
 
 	EVL_BEGIN // evaluator (OT receiver)
-		assert(m_ot_recv_bits.size() >= ((m_ot_bit_cnt+7)/8));
+          //assert(m_ot_recv_bits.size() >= ((m_ot_bit_cnt+7)/8));
+          assert(m_chks.size() == Env::node_load());
 
-		for (size_t bix = 0; bix < m_ot_bit_cnt; bix++)
-		{
-			// Step 1: gr=g[b]^r, hr=h[b]^r, where b is the receiver's bit
-			start = MPI_Wtime();
-				int bit_value = m_ot_recv_bits.get_ith_bit(bix);
-
-				r.random();
-
-				gr = m_ot_g[bit_value]^r;
-				hr = m_ot_h[bit_value]^r;
-
-				send.clear();
-				send += gr.to_bytes();
-				send += hr.to_bytes();
-			m_timer_evl += MPI_Wtime() - start;
-
-			start = MPI_Wtime();
-				EVL_SEND(send);
-
-				// Step 2: the evaluator computes X[0], Y[0], X[1], Y[1]
-				recv.clear();
-				recv += EVL_RECV(); // receive X[0], Y[0], X[1], Y[1]
-			m_timer_com += MPI_Wtime() - start;
-
-			m_comm_sz += send.size() + recv.size();
-
-			// Step 3: the evaluator computes K = Y[b]/X[b]^r
-			start = MPI_Wtime();
-				recv_chunks = recv.split(Env::elm_size_in_bytes());
-
-				X[bit_value].from_bytes(recv_chunks[    bit_value]); // X[b]
-				Y[bit_value].from_bytes(recv_chunks[2 + bit_value]); // Y[b]
-
-				// K = Y[b]/(X[b]^r)
-				Y[bit_value] /= X[bit_value]^r;
-				m_ot_out.push_back(Y[bit_value].to_bytes().hash(Env::k()));
-			m_timer_evl += MPI_Wtime() - start;
-		}
-
-		assert(m_ot_out.size() == m_ot_bit_cnt);
+	//for (size_t bix = 0; bix < m_ot_bit_cnt; bix++)
+        for(size_t bix = 0; bix < m_chks.size(); bix++)
+        {
+            // Step 1: gr=g[b]^r, hr=h[b]^r, where b is the receiver's bit
+            start = MPI_Wtime();
+            int bit_value = m_chks[bix];
+            //int bit_value = m_ot_recv_bits.get_ith_bit(bix);
+            
+            r.random();
+            
+            gr = m_ot_g[bit_value]^r;
+            hr = m_ot_h[bit_value]^r;
+            
+            send.clear();
+            send += gr.to_bytes();
+            send += hr.to_bytes();
+            m_timer_evl += MPI_Wtime() - start;
+            
+            start = MPI_Wtime();
+            EVL_SEND(send);
+            
+            // Step 2: the evaluator computes X[0], Y[0], X[1], Y[1]
+            recv.clear();
+            recv += EVL_RECV(); // receive X[0], Y[0], X[1], Y[1]
+            m_timer_com += MPI_Wtime() - start;
+            
+            m_comm_sz += send.size() + recv.size();
+            
+            // Step 3: the evaluator computes K = Y[b]/X[b]^r
+            start = MPI_Wtime();
+            recv_chunks = recv.split(Env::elm_size_in_bytes());
+            
+            X[bit_value].from_bytes(recv_chunks[    bit_value]); // X[b]
+            Y[bit_value].from_bytes(recv_chunks[2 + bit_value]); // Y[b]
+            
+            // K = Y[b]/(X[b]^r)
+            Y[bit_value] /= X[bit_value]^r;
+            m_ot_out.push_back(Y[bit_value].to_bytes().hash(Env::k()));
+            m_timer_evl += MPI_Wtime() - start;
+          }
+        
+        assert(m_ot_out.size() == m_ot_bit_cnt);
 	EVL_END
 
 	GEN_BEGIN // generator (OT sender)
