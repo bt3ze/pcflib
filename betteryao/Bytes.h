@@ -38,11 +38,16 @@ public:
 	Bytes(const_iterator first, const_iterator last) :
 		std::vector<byte>(last - first)
 	{
-          // how in the world is this function supposed to fast
-          // copy anything if it's a CONSTRUCTOR
-          // and only allocating space??
           fast_copy(first, last, this->begin());
 	}
+                /*
+        // does the same thing as above optimized constructer, but
+        // accepts another Bytes instead 
+        Bytes(const Bytes &rhs){
+          fast_copy(rhs.begin(),rhs.end(),this->begin());
+        }
+                */
+               
 
 	const Bytes &operator =(const Bytes &rhs)
 	{

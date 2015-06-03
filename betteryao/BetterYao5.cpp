@@ -30,6 +30,11 @@ BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
   m_gen_inp_decom.resize(Env::node_load());
   
   get_and_size_inputs();
+
+  GEN_BEGIN
+    gen_generate_output_mask();
+  gen_generate_input_randomness();
+    GEN_END
 }
 
 
@@ -43,19 +48,164 @@ void BetterYao5::start()
   final_report();
 }
 
+void BetterYao5::SS13(){
+
+  modify_inputs();
+  gen_generate_and_commit_to_inputs();
+  agree_on_objective_circuit();
+  gen_commit_to_io_labels();
+  eval_input_OT();
+  SS13_cut_and_choose();
+  garble_and_check_circuits();
+  retrieve_outputs();
+
+}
 
 /**
-   First, a couple of utility functions before we get into the heavy stuff
-   like cut-and-choose and gate evaluation
+   Define high-level functions from SS13
+   these call functions located below
+ */
 
-   Flip-coins
-   gen_generate_aux_inputs
+// Gen appends an output mask and extra randomness to his inputs
+// Evl tranforms her input in order to hide it from Gen
+void BetterYao5::modify_inputs(){
+  gen_generate_output_mask();
+  gen_generate_input_randomness();
+  choose_k_probe_resistant_matrix();
+  evl_generate_new_input();
+}
+
+void BetterYao5::gen_generate_and_commit_to_inputs(){
+  
+  gen_commit_to_inputs();
+}
+
+void BetterYao5::agree_on_objective_circuit(){}
+
+void BetterYao5::gen_commit_to_io_labels(){}
+
+void BetterYao5::eval_input_OT(){}
+
+// Gen doesn't know which are check and which are evaluation circuits
+void BetterYao5::SS13_cut_and_choose(){
+  evl_select_cut_and_choose_circuits();
+}
+
+void BetterYao5::garble_and_check_circuits(){}
+
+void BetterYao5::retrieve_outputs(){}
+
+
+
+/**
+   First, the functions that we use to modify inputs
+   (these are step 1 in SS13)
+
    gen_generate_output_mask
    gen_generate_input_randomness
    gen_output_auth_proof
    choose_k_probe_resistant_matrix
    evl_generate_new_input
+
 */
+
+
+
+void BetterYao5::choose_k_probe_resistant_matrix(){
+  // this algorithm is given by SS13
+  Prng choose_poly = Prng();
+  uint32_t lg_4k,lg_4n,t,K,N;
+
+  // initialize proper constants
+  uint32_t k = Env::k();
+  uint32_t n = m_private_input.size()*8; // multiply by 8, the byte width
+  lg_4k = ceil_log_base_2(4*k);
+  lg_4n = ceil_log_base_2(4*n);
+  
+  // find minimum t
+  t = lg_4k > lg_4n ? lg_4k : lg_4n;
+  while(1 << (t-1) > (k + (ceil_log_base_2(n)+n+k)/(t-1))){
+    // while 2^(t-1) > k + (lg(n) + n + k)/(t-1)
+    t--;
+  }
+  
+  // set K and N
+  K = ceil_log_base_2(n)+n+k;
+  K = (K % t == 0) ? K : (K/t) + 1;
+  N = K + k -1;
+
+
+}
+
+
+void BetterYao5::evl_generate_new_input(){
+  // TODO: implement
+}
+
+void BetterYao5::gen_generate_output_mask(){
+  // how many random bits do we generate?
+  // assume for now that the output is at most the size of the input
+
+  Prng output_mask_prng = Prng();
+
+  Bytes output_mask;
+
+  if(Env::is_root()){
+    output_mask = output_mask_prng.rand_bits(m_private_input.size()*8);
+  }
+  
+  output_mask.resize(m_private_input.size());
+
+  MPI_Bcast(&output_mask[0],output_mask.size(),MPI_BYTE,0,m_mpi_comm);
+  
+  m_gen_output_mask = Bytes(output_mask.begin(), output_mask.end());
+  
+  std::cout<< "ouput mask: " << m_gen_output_mask.to_hex() << "\t length: " << m_gen_output_mask.size()*8 << std::endl;
+
+}
+
+
+void BetterYao5::gen_generate_input_randomness(){
+  // compute ceil(lg_2(k)) and then generate some random bits 
+  // these random bits are added as auxiliary inputs for Gen
+  // in order to make the output of the 2-UHF appear random
+  // to protect Gen's input privacy while enforcing
+  // Gen's input consistency
+
+  Prng input_prng = Prng();
+  Bytes aux_input;
+  
+  std::cout << "before loop" << std::endl;
+  uint32_t lg_k = ceil_log_base_2(Env::k());
+  std::cout << "after loop" << std::endl;
+  
+  
+  if(Env::is_root()){
+    aux_input = input_prng.rand_bits(2*Env::k() + lg_k);
+  }
+  
+  aux_input.resize((2*Env::k()+lg_k+7)/8);
+  MPI_Bcast(&aux_input[0], aux_input.size(), MPI_BYTE, 0, m_mpi_comm);
+  
+  m_gen_aux_random_input = Bytes(aux_input.begin(), aux_input.end());
+  
+  std::cout<< "input randomness: " << m_gen_aux_random_input.to_hex() << "\t length: " << m_gen_aux_random_input.size()*8 << "\t2k+lg(k): " << 2*Env::k() + lg_k << std::endl;
+
+}
+
+/**
+   Next, Gen generates and commits to his input keys (steps 2 and 3)
+   gen_generate_input_keys();
+   gen_commit_to_inputs();
+ */
+
+void BetterYao5::gen_generate_input_keys(){
+
+}
+
+void BetterYao5::gen_commit_to_inputs(){
+  
+}
 
 
 // interactive coin flipping protocol by ?
@@ -129,41 +279,81 @@ Bytes BetterYao5::flip_coins(size_t len_in_bytes)
   return bufr;
 }
 
-
-void BetterYao5::choose_k_probe_resistant_matrix(){
-  // TODO: implement
-}
-
-
-void BetterYao5::evl_generate_new_input(){
-  // TODO: implement
-}
-
-void BetterYao5::gen_generate_output_mask(){
-  Prng output_mask_prng = Prng();
-  // how many random bits do we generate?
-  // 
-  static Bytes output_mask = output_mask_prng.rand_bits(m_private_input.size()*8);
-
-  m_gen_output_mask = output_mask;
-
-}
-
-void BetterYao5::gen_generate_input_randomness(){
-  // compute ceil(lg_2(k)) and then generate some random bits 
-
-  Prng input_prng = Prng();
-  uint32_t lg_k = 1;
-  uint32_t tmp = 2;
-
-  while(tmp < Env::k()){
-    lg_k++;
-    tmp << 1;
-  }
-
-  static Bytes aux_input = input_prng.rand_bits(2*Env::k() + lg_k);
+void BetterYao5::evl_select_cut_and_choose_circuits(){
+  Bytes coins;
+  double start;
   
-  m_gen_aux_random_input = aux_input;
+  EVL_BEGIN
+    // should be enough random bits to select choose or cut for every circuit
+
+      Prng prng;
+  
+  if(Env::is_root()){
+    coins = m_prng.rand_bits(Env::key_size_in_bytes());
+  
+    std::cout << "cut-and-choose coins: " << coins.to_hex() << std::endl; 
+
+    prng.seed_rand(coins);
+
+    m_all_chks.assign(Env::s(),1);
+    // FisherÐYates shuffle
+    std::vector<uint16_t> indices(m_all_chks.size());
+    for (size_t ix = 0; ix < indices.size(); ix++) { indices[ix] = ix; }
+  
+    // starting from 1 since the 0-th circuit is always evaluation-circuit
+    for (size_t ix = 1; ix < indices.size(); ix++)
+      {
+        int rand_ix = prng.rand_range(indices.size()-ix);
+        std::swap(indices[ix], indices[ix+rand_ix]);
+      }
+  
+    int num_of_evls;
+    std::cout << "m_all_chks.size: " << m_all_chks.size() << std::endl;
+    switch(m_all_chks.size())
+      {
+      case 0: case 1:
+        LOG4CXX_FATAL(logger, "there aren't enough circuits for cut-and-choose");
+        MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        break;
+      
+      case 2: case 3:
+        num_of_evls = 1;
+        break;
+      
+      case 4:
+        num_of_evls = 2;
+        break;
+      
+      default:
+        num_of_evls = m_all_chks.size()*2/5;
+        break;
+      }
+  
+    for (size_t ix = 0; ix < num_of_evls; ix++) {
+      m_all_chks[indices[ix]] = 0;
+    }
+    m_timer_evl += MPI_Wtime() - start;
+
+  }
+  
+  start = MPI_Wtime();
+  // resize m_chks to prepare for scatter, which will tell whether each processor evaluates
+  // check or evaluation circuits
+  m_chks.resize(Env::node_load());
+  m_timer_evl += MPI_Wtime() - start;
+  
+  start = MPI_Wtime();
+
+  // MPI_Scatter sends a fragment of the array to each processor, which in turn allows each processor to only operate on its 0th circuit, rather than use Env::group_rank() to select which to work on.
+  // will think about which one I want to use here.
+  MPI_Scatter(&m_all_chks[0], m_chks.size(), MPI_BYTE, &m_chks[0], m_chks.size(), MPI_BYTE, 0, m_mpi_comm);
+  // distributes m_all_chks to all subprocesses
+  // because the prng is seeded with the same (collaboratively tossed) coins, these arrays will be equivalent
+  m_timer_mpi += MPI_Wtime() - start;
+  
+  step_report("cut-&-check");
+  
+    EVL_END
 
 }
 
@@ -1411,3 +1601,17 @@ void BetterYao5::ot_random()
 		assert(m_ot_out.size() == 2*m_ot_bit_cnt);
 	GEN_END
 }
+
+
+uint32_t ceil_log_base_2(uint32_t k){
+  uint32_t tmp = 2;
+  uint32_t lg_k = 1;
+
+  while(tmp<k){
+    lg_k++;
+    tmp = tmp << 1;
+  }
+  return tmp;
+}
+
+

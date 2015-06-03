@@ -14,15 +14,36 @@ public:
 	BetterYao5(EnvParams &params);
 	virtual ~BetterYao5() {}
 
+        // old protocol:
 	void start();
-
-	//void oblivious_transfer();
-	void cut_and_choose();
+        //void oblivious_transfer();
+        void cut_and_choose();
 	void cut_and_choose2();
 	void consistency_check();
 	void circuit_evaluate();
 
+        // new protocol:
+        void SS13();
+	
 protected:
+
+        // highest level functions
+        void modify_inputs();
+        void gen_generate_and_commit_to_inputs();
+        void agree_on_objective_circuit();
+        void gen_commit_to_io_labels();
+        void eval_input_OT();
+        void SS13_cut_and_choose();
+        void garble_and_check_circuits();
+        void retrieve_outputs();
+
+        // intermediate level functions
+        void gen_generate_input_keys();
+        void gen_commit_to_inputs();
+
+        void evl_select_cut_and_choose_circuits();
+
+
 	void ot_init();
 	void ot_random(); // sender has m pairs of l-bit strings, and receiver has m bits
 	void cut_and_choose2_ot();
@@ -104,6 +125,8 @@ protected:
         Bytes m_gen_aux_random_input;
 
 };
+
+uint32_t ceil_log_base_2(uint32_t k);
 
 
 #endif /* BETTERYAO5_H_ */
