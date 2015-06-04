@@ -31,6 +31,7 @@ protected:
          */
 
         // highest level functions
+        // roughly correspond to steps in the SS13 protocol
         void modify_inputs();
         void gen_generate_and_commit_to_inputs();
         void agree_on_objective_circuit();
@@ -123,7 +124,9 @@ protected:
 
         // list of Gen's input commitments
         std::vector<Bytes>   m_gen_commitments;
-        
+
+        // placeholder for the k-probe-resistant matrix we'll need
+        std::vector<Bytes>                   m_k_probe_resistant_matrix;
         
         /**
            new and old variables
@@ -139,16 +142,16 @@ protected:
         // Gen's input decommitments
         std::vector<std::vector<Bytes> >      m_gen_inp_decom;
 
-        // m_rnds holds the seeds that Gen uses for his circuit Prngs
+        // m_rnd_seeds holds the seeds that Gen uses for his circuit Prngs
         // these are the "randomness" that Gen uses to construct his circuits
         // and are very important to the protocol
-        std::vector<Bytes>                   m_rnds;
+        std::vector<Bytes>                   m_rnd_seeds;
         
         // m_prngs are used to "extend the OTs",
-        // using the random seeds send in the OTs to compute
+        // using the random seeds sent in the OTs to compute
         // masks (or one-time pads) over the information
-        // that Gen must obliviously send to Eval
-        // and for which Eval must only have access to 1/2 of the information
+        // that Gen must obliviously send to Eval;
+        // Eval must only have access to 1/2 of the information
         // (depending on check or evaluation circuit)
         std::vector<Prng>		     m_prngs;
 
@@ -159,8 +162,8 @@ protected:
         // this matrix defines the 2-UHF that is used to enforce
         // Gen's input consistency
         // each entry in the array is a row (or column?)
-        std::vector<Bytes>                   m_matrix;
-
+        std::vector<Bytes>                   m_2UHF_matrix;
+        
 
         /**
            old variables
@@ -170,20 +173,19 @@ protected:
         // (set to node_load)
 	size_t                          m_ot_bit_cnt;
 
-        // m_ot_recv_bits
-        // these indicate to Evl whether the circuit is
-        // a check circuit or evaluation circuit
-        // and the bits are selected based on m_chks
-        // it seems that this may be eliminated by just using m_chks
-	//Bytes                           m_ot_recv_bits;
-
+        // m_ot_out contains the output of the OTs for Gen and Evl
+        // and serves as the container for the seeds
+        // for the prngs (m_prngs) that will mask the information
+        // that Gen sends to Eval
+        // so that Eval can only decrypt if she chose the seed in the OT
+        // contemplating changing the name to m_seeds
         std::vector<Bytes>              m_ot_out;
 
 
         // i do not understand what this is used for
         // or why it is used as it is
-        std::vector<Bytes>                   m_gen_inp_masks;
-                
+        std::vector<Bytes>              m_gen_inp_masks;
+        
 
 };
 
