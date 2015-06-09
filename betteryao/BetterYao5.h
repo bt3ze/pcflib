@@ -8,6 +8,11 @@
 
 #include <vector>
 
+
+// useful function for modifying Gen and Evl inputs
+uint32_t ceil_log_base_2(uint32_t k); 
+
+
 class BetterYao5 : public YaoBase
 {
 public:
@@ -75,6 +80,7 @@ protected:
         // private_inp || e || rho_{2k+lg(k)}
         Bytes get_gen_full_input();
 
+        uint32_t get_gen_full_input_size();
 
         /**
            STEP 2: GEN INPUT COMMITMENTS
@@ -100,11 +106,13 @@ protected:
          */
 
         // unimplemented
-
+        // gen_commit_to_io_labels declared above
+        
         /**
            STEP 5: EVAL'S INPUT OTS
          */
 
+        // unimplemented
         //eval_input_ot delared above
         
         /**
@@ -151,14 +159,31 @@ protected:
         
 
         /**
-           new variables
+ 
+          new variables
+
+ 
          */
+
+        /**
+           Gen's inputs
+         */
+
         // Gen needs a couple of extra variables for his own inputs
         Bytes m_gen_output_mask;
 
         // Gen must generate extra random input
         // to make the output of the 2-UHF appear random
         Bytes m_gen_aux_random_input;
+
+        // Gen also has m_private_input
+        // both parties have m_gen_inp_cnt
+        // and m_evl_inp_cnt
+        
+        
+        /**
+           
+         */
 
         // list of Gen's input commitments
         std::vector<Bytes>   m_gen_commitments;
@@ -226,8 +251,6 @@ protected:
         
 
 };
-
-uint32_t ceil_log_base_2(uint32_t k);
 
 
 #endif /* BETTERYAO5_H_ */

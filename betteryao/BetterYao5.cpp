@@ -9,6 +9,7 @@ static log4cxx::LoggerPtr logger(log4cxx::Logger::getLogger("BetterYao5.cpp"));
 
 #define debug_evl_fprintf(a,b) if(!m_chks[ix]){ std::cout << a << "  " << b << "\t rank: " << Env::group_rank() << std::endl; }
 
+
 BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
 {
 
@@ -40,12 +41,15 @@ BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
 // old start function
 void BetterYao5::start()
 {
+  SS13();
+  /*
   oblivious_transfer();
   cut_and_choose();
   cut_and_choose2();
   consistency_check();
   circuit_evaluate();
   final_report();
+  */
 }
 
 
@@ -78,6 +82,7 @@ void BetterYao5::modify_inputs(){
   choose_k_probe_resistant_matrix();
   evl_generate_new_input();
 }
+
 
 void BetterYao5::gen_generate_output_mask(){
   // how many random bits do we generate?
@@ -115,8 +120,7 @@ void BetterYao5::gen_generate_input_randomness(){
   std::cout << "before loop" << std::endl;
   uint32_t lg_k = ceil_log_base_2(Env::k());
   std::cout << "after loop" << std::endl;
-  
-  
+    
   if(Env::is_root()){
     aux_input = input_prng.rand_bits(2*Env::k() + lg_k);
   }
@@ -126,9 +130,16 @@ void BetterYao5::gen_generate_input_randomness(){
   
   m_gen_aux_random_input = Bytes(aux_input.begin(), aux_input.end());
   
-  std::cout<< "input randomness: " << m_gen_aux_random_input.to_hex() << "\t length: " << m_gen_aux_random_input.size()*8 << "\t2k+lg(k): " << 2*Env::k() + lg_k << std::endl;
+  std::cout<< "input randomness: " << m_gen_aux_random_input.to_hex() << "\t length: " << m_gen_aux_random_input.size()*8 << "\t2k+lg(k): " << 2*Env::k() + lg_k << "\t lg_k: " << lg_k << std::endl;
 
 }
+
+uint32_t BetterYao5::get_gen_full_input_size(){
+  // assume Gen's output mask is the same size as his input mask
+  // returns the number of bits of gen's fill input size
+  return m_gen_inp_cnt + m_gen_inp_cnt + 2*Env::k() + ceil_log_base_2(Env::k()); 
+}
+
 
 void BetterYao5::choose_k_probe_resistant_matrix(){
   // this algorithm is given by SS13
@@ -174,11 +185,30 @@ void BetterYao5::gen_generate_and_commit_to_inputs(){
 
 
 void BetterYao5::gen_generate_input_keys(){
+  
 
+  GEN_BEGIN
+
+  int i,j;
+  G rand;
+  m_ot_keys.resize(Env::node_load());
+  
+  for(j=0; j < Env::node_load(); j++){
+    for(i=0;i < get_gen_full_input_size()*2;i++){
+      rand.random();
+      //m_ot_keys[j].push_back(rand.to_bytes().hash(Env::k()));
+      m_ot_keys[j].push_back(rand.to_bytes());
+      std::cout << "generate input key: " << m_ot_keys[j][m_ot_keys[j].size()-1].to_hex() << std::endl;
+    }
+  }
+  
+  GEN_END
 }
 
+
+
 void BetterYao5::gen_commit_to_inputs(){
-  
+  // TODO: committing procedure
 }
 
 
@@ -198,8 +228,43 @@ void BetterYao5::eval_announce_k_probe_matrix(){
 } 
 
 void BetterYao5::collaboratively_choose_2UHF(){
-  // TODO: Implement
   // flip coins
+  
+  std::cout << "collaboratively choose 2UHF" << std::endl;
+
+
+  Bytes bufr;
+  std::vector<Bytes> bufr_chunks;
+  double start; // for timing
+
+  reset_timers();
+
+  // jointly pick a 2-UHF matrix
+  // use gen's full input size (inputs + output xor pad + auxiliary randomness)
+  // to come up with the proper size of a 2-UHF
+  // number of bits is gen's input size * k
+  bufr = flip_coins(Env::k()*((get_gen_full_input_size()+7)/8)); // only roots get the result
+
+  // must resize buffer for all the subprocesses before sending it
+  start = MPI_Wtime();
+  bufr.resize(Env::k()*((get_gen_full_input_size()+7)/8));
+  m_timer_evl += MPI_Wtime() - start;
+  m_timer_gen += MPI_Wtime() - start;
+
+  start = MPI_Wtime();
+  MPI_Bcast(&bufr[0], bufr.size(), MPI_BYTE, 0, m_mpi_comm);
+  m_timer_mpi += MPI_Wtime() - start;
+
+  start = MPI_Wtime();
+        
+  // create m rows of length k
+  m_2UHF_matrix = bufr.split(bufr.size()/Env::k());
+  
+  m_timer_evl += MPI_Wtime() - start;
+  m_timer_gen += MPI_Wtime() - start;
+
+  // std::cout << "agree on UHF" << std::endl;
+    
 }
 
 
@@ -288,7 +353,15 @@ void BetterYao5::gen_commit_to_io_labels(){}
    STEP 5: EVAL'S INPUT OTs
  */
 
-void BetterYao5::eval_input_OT(){}
+void BetterYao5::eval_input_OT(){
+  // the OT used in the old version is good for this OT
+  // but it must be updated to use the keys
+  // that Gen already committed to
+  // at simplest, this requires changing the lines
+  // Y[0].random(); Y[1].random();
+  // to selecting the keys from list of pre-committed keys
+  oblivious_transfer();
+}
 
 
 /**
@@ -390,7 +463,21 @@ void BetterYao5::garble_and_check_circuits(){}
 
 void BetterYao5::retrieve_outputs(){}
 
+/**
+   UTILITY FUNCTIONS
+ */
 
+
+uint32_t ceil_log_base_2(uint32_t k){
+  uint32_t tmp = 2;
+  uint32_t lg_k = 1;
+
+  while(tmp<k){
+    lg_k++;
+    tmp = tmp << 1;
+  }
+  return lg_k;
+}
 
 
 
@@ -404,8 +491,6 @@ void BetterYao5::retrieve_outputs(){}
    ALL OF EVL_NEXT_GEN_INP_COMMITMENT
    AND RUN THE PROTOCOL AS IF NOTHING CHANGED
  */
-
-
 
 
 
@@ -1461,7 +1546,6 @@ void BetterYao5::ot_init()
       EVL_BEGIN // evaluator (OT receiver)
         start = MPI_Wtime();
       y.random();
-      
       a.random();
       
       m_ot_g[0].random();
@@ -1477,7 +1561,7 @@ void BetterYao5::ot_init()
       bufr += m_ot_h[1].to_bytes();
       m_timer_evl += MPI_Wtime() - start;
       
-      start = MPI_Wtime();
+      start = MPI_Wtime(); // send to Gen
       EVL_SEND(bufr);
       m_timer_com += MPI_Wtime() - start;
       EVL_END
@@ -1629,16 +1713,5 @@ void BetterYao5::ot_random()
 	GEN_END
 }
 
-
-uint32_t ceil_log_base_2(uint32_t k){
-  uint32_t tmp = 2;
-  uint32_t lg_k = 1;
-
-  while(tmp<k){
-    lg_k++;
-    tmp = tmp << 1;
-  }
-  return tmp;
-}
 
 
