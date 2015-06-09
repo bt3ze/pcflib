@@ -3,6 +3,8 @@
 
 #include "GarbledBase.h"
 #include <vector>
+#include <stdio.h>
+#include <iostream>
 
 class GarbledMal: public GarbledBase
 {
@@ -50,12 +52,18 @@ class GarbledMal: public GarbledBase
      it ensures that Gen's input decommitments are consistent with his commitments.
    */
   inline bool pass_check(){
+    std::cout << "pass check?" << std::endl;
     assert(m_gen_inp_decom.size() == m_gen_inp_com.size());
     
     bool pass_chk = true;
+
+    Bytes m_gen_decom_hashed;
     for (size_t ix = 0; ix < m_gen_inp_decom.size(); ix++)
       {
-        pass_chk &= (m_gen_inp_decom[ix].hash(Env::k()) == m_gen_inp_com[ix]);
+        m_gen_decom_hashed = m_gen_inp_decom[ix].hash(Env::k());
+        //std::cout << m_gen_inp_decom[ix].to_hex() << " " << m_gen_decom_hashed.to_hex() << " " << m_gen_inp_com[ix].to_hex() << std::endl;
+        //pass_chk &= (m_gen_inp_decom[ix].hash(Env::k()) == m_gen_inp_com[ix]);
+        pass_chk &= (m_gen_decom_hashed == m_gen_inp_com[ix]);
       }
     return pass_chk;
   }

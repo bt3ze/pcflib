@@ -76,11 +76,13 @@ void BetterYao5::modify_inputs(){
 }
 
 void BetterYao5::gen_generate_and_commit_to_inputs(){
-  
   gen_commit_to_inputs();
 }
 
-void BetterYao5::agree_on_objective_circuit(){}
+void BetterYao5::agree_on_objective_circuit(){
+  eval_announce_k_probe_matrix();
+  collaboratively_choose_2UHF();
+}
 
 void BetterYao5::gen_commit_to_io_labels(){}
 
@@ -280,13 +282,13 @@ Bytes BetterYao5::flip_coins(size_t len_in_bytes)
 }
 
 void BetterYao5::evl_select_cut_and_choose_circuits(){
-  Bytes coins;
+  EVL_BEGIN
+
+    Bytes coins;
   double start;
   
-  EVL_BEGIN
-    // should be enough random bits to select choose or cut for every circuit
-
-      Prng prng;
+  // should be enough random bits to select choose or cut for every circuit
+  Prng prng;
   
   if(Env::is_root()){
     coins = m_prng.rand_bits(Env::key_size_in_bytes());
@@ -294,19 +296,21 @@ void BetterYao5::evl_select_cut_and_choose_circuits(){
     std::cout << "cut-and-choose coins: " << coins.to_hex() << std::endl; 
 
     prng.seed_rand(coins);
-
+    
     m_all_chks.assign(Env::s(),1);
     // FisherÐYates shuffle
     std::vector<uint16_t> indices(m_all_chks.size());
     for (size_t ix = 0; ix < indices.size(); ix++) { indices[ix] = ix; }
-  
+    
     // starting from 1 since the 0-th circuit is always evaluation-circuit
+    // NOTE: 0th circuit need not always be evaluation circuit
+    // will change this in time
     for (size_t ix = 1; ix < indices.size(); ix++)
       {
         int rand_ix = prng.rand_range(indices.size()-ix);
         std::swap(indices[ix], indices[ix+rand_ix]);
       }
-  
+    
     int num_of_evls;
     std::cout << "m_all_chks.size: " << m_all_chks.size() << std::endl;
     switch(m_all_chks.size())
@@ -344,16 +348,14 @@ void BetterYao5::evl_select_cut_and_choose_circuits(){
   
   start = MPI_Wtime();
 
-  // MPI_Scatter sends a fragment of the array to each processor, which in turn allows each processor to only operate on its 0th circuit, rather than use Env::group_rank() to select which to work on.
-  // will think about which one I want to use here.
+  // MPI_Scatter sends a fragment of the array to each processor, which in turn allows each processor to only operate on its circuits
   MPI_Scatter(&m_all_chks[0], m_chks.size(), MPI_BYTE, &m_chks[0], m_chks.size(), MPI_BYTE, 0, m_mpi_comm);
-  // distributes m_all_chks to all subprocesses
-  // because the prng is seeded with the same (collaboratively tossed) coins, these arrays will be equivalent
+  
   m_timer_mpi += MPI_Wtime() - start;
   
   step_report("cut-&-check");
   
-    EVL_END
+  EVL_END
 
 }
 
@@ -683,7 +685,6 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
   GEN_BEGIN
     start = MPI_Wtime();
   
-//bufr = get_const_key(m_gcs[ix], 0, 0) + get_const_key(m_gcs[ix], 1, 1);
   bufr = m_gcs[ix].get_const_key(0, 0) + m_gcs[ix].get_const_key(1, 1);
   // debug_evl_fprintf("Gen const keys", bufr.to_hex());
 
@@ -981,85 +982,88 @@ void BetterYao5::consistency_check()
 {
   // std::cout << "const check start" << std::endl;
 
-	reset_timers();
+  reset_timers();
 
-	Bytes bufr;
-	std::vector<Bytes> bufr_chunks;
+  Bytes bufr;
+  std::vector<Bytes> bufr_chunks;
 
-	double start;
+  double start;
 
-	// jointly pick a 2-UHF matrix
-        // m_gen_inp_cnt is almost the right number to use here, since
-        // the number of random bits should equal k * gen's input size,
-        // but in the current protocol Gen does not supplement his inputs
-        // by selecting random ciphertext "c" (used for masking his output)
-        // and he doesn't add the extra 2k+lg(k) bits
-	bufr = flip_coins(Env::k()*((m_gen_inp_cnt+7)/8)); // only roots get the result
+  // jointly pick a 2-UHF matrix
+  // m_gen_inp_cnt is almost the right number to use here, since
+  // the number of random bits should equal k * gen's input size,
+  // but in the current protocol Gen does not supplement his inputs
+  // by selecting random ciphertext "c" (used for masking his output)
+  // and he doesn't add the extra 2k+lg(k) bits
+  bufr = flip_coins(Env::k()*((m_gen_inp_cnt+7)/8)); // only roots get the result
 
-	start = MPI_Wtime();
-		bufr.resize(Env::k()*((m_gen_inp_cnt+7)/8));
-        m_timer_evl += MPI_Wtime() - start;
-	m_timer_gen += MPI_Wtime() - start;
+  // must resize buffer for all the subprocesses before sending it
+  start = MPI_Wtime();
+  bufr.resize(Env::k()*((m_gen_inp_cnt+7)/8));
+  m_timer_evl += MPI_Wtime() - start;
+  m_timer_gen += MPI_Wtime() - start;
 
-	start = MPI_Wtime();
-                MPI_Bcast(&bufr[0], bufr.size(), MPI_BYTE, 0, m_mpi_comm);
-	m_timer_mpi += MPI_Wtime() - start;
+  start = MPI_Wtime();
+  MPI_Bcast(&bufr[0], bufr.size(), MPI_BYTE, 0, m_mpi_comm);
+  m_timer_mpi += MPI_Wtime() - start;
 
-	start = MPI_Wtime();
+  start = MPI_Wtime();
         
-        // create m rows of length k
-        m_2UHF_matrix = bufr.split(bufr.size()/Env::k());
-        
-        m_timer_evl += MPI_Wtime() - start;
-	m_timer_gen += MPI_Wtime() - start;
+  // create m rows of length k
+  m_2UHF_matrix = bufr.split(bufr.size()/Env::k());
+  
+  m_timer_evl += MPI_Wtime() - start;
+  m_timer_gen += MPI_Wtime() - start;
 
-        // std::cout << "agree on UHF" << std::endl;
+  // std::cout << "agree on UHF" << std::endl;
 
-	// now everyone agrees on the UHF given by m_2UHF_matrix
-	for (size_t ix = 0; ix < m_gcs.size(); ix++)
-          for (size_t kx = 0; kx < m_2UHF_matrix.size(); kx++)
-            {
-              GEN_BEGIN
-                start = MPI_Wtime();
-              m_gcs[ix].gen_next_gen_inp_com(m_2UHF_matrix[kx], kx);
-              bufr = m_gcs[ix].get_and_clear_out_bufr();
-              //bufr = get_and_clear_out_bufr(m_gcs[ix]);
-              m_timer_gen += MPI_Wtime() - start;
+  // now everyone agrees on the UHF given by m_2UHF_matrix
+  for (size_t ix = 0; ix < m_gcs.size(); ix++)
+    for (size_t kx = 0; kx < m_2UHF_matrix.size(); kx++) // kx ranges from 0 to m1
+      {
+        // in this loop, 
+        GEN_BEGIN
+        start = MPI_Wtime();
+        m_gcs[ix].gen_next_gen_inp_com(m_2UHF_matrix[kx], kx);
+        // this doesn't really generate an input commitment. we shouldn't call it that.
+        bufr = m_gcs[ix].get_and_clear_out_bufr();
+        m_timer_gen += MPI_Wtime() - start;
               
-              start = MPI_Wtime();
-              GEN_SEND(bufr);
-              m_timer_com += MPI_Wtime() - start;
+        start = MPI_Wtime();
+        GEN_SEND(bufr);
+        m_timer_com += MPI_Wtime() - start;
               
-              GEN_END
+        GEN_END
                 
-		EVL_BEGIN
-                start = MPI_Wtime();
-              bufr = EVL_RECV();
-              m_timer_com += MPI_Wtime() - start;
+        EVL_BEGIN
+        start = MPI_Wtime();
+        bufr = EVL_RECV();
+        m_timer_com += MPI_Wtime() - start;
 
-              if (!m_chks[ix]) // evaluation circuit
-                {
-                  start = MPI_Wtime();
-                  m_gcs[ix].clear_and_replace_in_bufr(bufr);
-                  m_gcs[ix].evl_next_gen_inp_com(m_2UHF_matrix[kx], kx);
-                  m_timer_evl += MPI_Wtime() - start;
-                }
-              EVL_END
+        if (!m_chks[ix]) // evaluation circuit
+          {
+            start = MPI_Wtime();
+            m_gcs[ix].clear_and_replace_in_bufr(bufr);
+            m_gcs[ix].evl_next_gen_inp_com(m_2UHF_matrix[kx], kx);
+            m_timer_evl += MPI_Wtime() - start;
+          }
+        EVL_END
                 
-		m_comm_sz += bufr.size();
-            }
+          m_comm_sz += bufr.size();
+      }
 
-        // std::cout << "EVL check hashes" << std::endl;
+  // std::cout << "EVL check hashes" << std::endl;
 
-	EVL_BEGIN
-          for (size_t ix = 0; ix < m_gcs.size(); ix++)
-            if (!m_chks[ix]) // if evaluation circuit, save this hash
-              {
-                m_gen_inp_hash[ix] = m_gcs[ix].get_gen_inp_hash();//m_gen_inp_hash;
-              }
-	EVL_END
+  EVL_BEGIN
+    for (size_t ix = 0; ix < m_gcs.size(); ix++)
+      if (!m_chks[ix]) // if evaluation circuit, save this hash
+        {
+          std::cout << "save Gen input hash: " << m_gcs[ix].get_gen_inp_hash().to_hex() << std::endl;
+          m_gen_inp_hash[ix] = m_gcs[ix].get_gen_inp_hash();//m_gen_inp_hash;
+        }
+  EVL_END
           
-          step_report("const-check");
+    step_report("const-check");
 }
 
 void BetterYao5::circuit_evaluate()
@@ -1083,10 +1087,10 @@ void BetterYao5::circuit_evaluate()
             std::cout << ix << " gen const 0: " << get_const_key(m_gcs[ix], 0, 0).to_hex() << std::endl;
             std::cout << ix << " gen const 1: " << get_const_key(m_gcs[ix], 1, 1).to_hex() << std::endl;
             */
-            std::cout << ix << " gen const 0: " << m_gcs[ix].get_const_key( 0, 0).to_hex() << std::endl;
-            std::cout << ix << " gen const 1: " << m_gcs[ix].get_const_key( 1, 1).to_hex() << std::endl;
-            m_timer_gen += MPI_Wtime() - start;
-            GEN_END
+          std::cout << ix << " gen const 0: " << m_gcs[ix].get_const_key( 0, 0).to_hex() << std::endl;
+          std::cout << ix << " gen const 1: " << m_gcs[ix].get_const_key( 1, 1).to_hex() << std::endl;
+          m_timer_gen += MPI_Wtime() - start;
+          GEN_END
               
               EVL_BEGIN
               std::cout << "eval start evaluating" << std::endl;
@@ -1135,6 +1139,7 @@ void BetterYao5::circuit_evaluate()
                 m_timer_gen += MPI_Wtime() - start;
                 
                 start = MPI_Wtime();
+                std::cout << "Gen Send Gate: " << bufr.to_hex() << std::endl; 
                 GEN_SEND(bufr);
                 m_timer_com += MPI_Wtime() - start;
                 
@@ -1187,6 +1192,7 @@ void BetterYao5::circuit_evaluate()
                   
                   start = MPI_Wtime();
                   bufr = EVL_RECV();
+                  std::cout << "Eval receive gate: " << bufr.to_hex() << std::endl;
                   m_timer_com += MPI_Wtime() - start;
                   
                   // std::cout << "buffer size add" << std::endl;
@@ -1242,8 +1248,8 @@ void BetterYao5::circuit_evaluate()
               }
             else // evaluation circuit
               {
+                
                 if(!m_gcs[ix].pass_check())
-                  //if (!pass_check(m_gcs[ix]))
                   {
                     LOG4CXX_FATAL(logger, "Commitment Verification Failure (evaluation circuit)");
                     //MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
@@ -1251,6 +1257,7 @@ void BetterYao5::circuit_evaluate()
                 
                 if (gen_inp_hash.size() == 0)
                   {
+                    std::cout << "gen inp hash is empty?" << std::endl;
                     gen_inp_hash = m_gen_inp_hash[ix];
                   }
                 else if (!(gen_inp_hash == m_gen_inp_hash[ix]))

@@ -12,14 +12,13 @@ GarbledMal::GarbledMal() : GarbledBase() {
   // clear mask set to length of security parameter
   
   // set the input hash to zeros
-  // (do we actually use the input hash?)
+  // it will eventually hold the hashed output of
+  // Gen's inputs for comparison between circuits
   m_gen_inp_hash.assign(Env::key_size_in_bytes(), 0);
   
   // clear the input commitment and decommitment vectors
   m_gen_inp_com.clear();
   m_gen_inp_decom.clear();
-  
-  
   
 }
 
@@ -108,24 +107,32 @@ void GarbledMal::evl_next_gen_inp_com(const Bytes &row, size_t kx){
   // it defaults to 0
   Bytes out(this->m_gen_inp_decom[0].size());
   
-  std::cout << "m_gen_inp_decom.size(): " << this->m_gen_inp_decom.size() << std::endl;
-  std::cout << "Out (bytes): " << out.to_hex() << std::endl;
+  
+  /*   
+  // std::cout << "m_gen_inp_decom.size(): " << this->m_gen_inp_decom.size() << std::endl;
+  // std::cout << "key size(bytes): "<< Env::key_size_in_bytes() << "\t key size(bits): " << Env::key_size_in_bytes()*8 << std::endl;
+
+  // std::cout << "Out (bytes): " << out.to_hex() << std::endl;
+  
+
   // this takes the XOR of all of Gen's input decommitments for which
   // the ith value in the 2-UHF row is set
   // this is equivalent to evaluating a circuit of only
   // XOR gates that evaluates the 2-UHF
   // since every time a bit is set in the UHF,
   // we XOR the current key with all of the previous
-  // and we end up with the output of the 2-UHF
+  // and we end up with the output of the 2-UHF.
   // below, we will extract the semantics of the final bit
+  // but how is this a secure way of getting input commitments?
   for (size_t jx = 0; jx < this->m_gen_inp_decom.size(); jx++)
     {
-      if (row.get_ith_bit(jx)) { out ^= this->m_gen_inp_decom[jx];
-        std::cout << "Out (bytes): " << out.to_hex() << std::endl;
+      if (row.get_ith_bit(jx)) {
+        out ^= this->m_gen_inp_decom[jx];
+        // std::cout << "Out (bytes): " << out.to_hex() << std::endl;
       }
     }
   
-  std::cout << "Out (bytes): " << out.to_hex() << std::endl;
+  // std::cout << "Out (bytes): " << out.to_hex() << std::endl;
   
   // now get the 0th bit
   // this should be the permutation bit
@@ -138,9 +145,10 @@ void GarbledMal::evl_next_gen_inp_com(const Bytes &row, size_t kx){
 
   //static Bytes tmp;
   Bytes tmp;
+  Bytes tmp2;
 
   // this piece is a little troubling: where is m_in_bufr_ix?
-  //  std::cout << "m_in_bufr_ix: " << (this->m_in_bufr_ix) << std::endl;
+  // std::cout << "m_in_bufr_ix: " << (this->m_in_bufr_ix) << std::endl;
   Bytes::iterator it = this->m_in_bufr_ix + bit*Env::key_size_in_bytes();
   
   __m128i aes_key, aes_plaintext, aes_ciphertext, out_key;
@@ -149,26 +157,42 @@ void GarbledMal::evl_next_gen_inp_com(const Bytes &row, size_t kx){
   tmp.resize(16, 0);
   aes_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 
-  std::cout << "aes key: " << tmp.to_hex() << std::endl;
-  aes_plaintext = _mm_set1_epi64x((uint64_t)kx+10); // why +10??
-  
-  KDF128((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)&aes_key);
+  //  std::cout << "aes key: " << tmp.to_hex() << std::endl;
+  //aes_plaintext = _mm_set1_epi64x((uint64_t)kx+10); // why +10??
+  aes_plaintext = _mm_set1_epi64x((uint64_t)kx); // why do we set both 64-bit integers to kx? 
+  // changing this value not affecting anything! something's up here.
+
+  tmp2.resize(16,0);
+  _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp2[0]),aes_plaintext);
+  // std::cout << "Aes plaintext: " << tmp2.to_hex() << std::endl;
+
+
+  //KDF128((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)&aes_key);
+  //THIS LINE USED TO BE INCLUDED, AND THE RESULTS WERE THE SAME!!!
+  //MAJOR, SERIOUS BUG
+   
   aes_ciphertext = _mm_and_si128(aes_ciphertext, this->m_clear_mask);
+
+  // look at the aes_ciphertext
+  tmp2.resize(16,0);
+  _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp2[0]),aes_ciphertext);
+  // std::cout << "Aes ciphertext: " << tmp2.to_hex() << std::endl;
   
   tmp.assign(it, it+Env::key_size_in_bytes());
   tmp.resize(16, 0);
   out_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
   out_key = _mm_xor_si128(out_key, aes_ciphertext);
   
-  std::cout << "out key: " << tmp.to_hex() << std::endl;
+  // std::cout << "out key: " << tmp.to_hex() << std::endl;
 
   bit = _mm_extract_epi8(out_key, 0) & 0x01;
 
-  std::cout << "hash bit: " << (bit == 0? "0" : "1") << std::endl;
+  //  std::cout << "hash bit: " << (bit == 0? "0" : "1") << std::endl;
   this->m_gen_inp_hash.set_ith_bit(kx, bit);
   
   this->m_in_bufr_ix += 2*Env::key_size_in_bytes();
-
+  
+  */
 }
 
 void GarbledMal::gen_next_gen_inp_com(const Bytes &row, size_t kx){
@@ -195,12 +219,15 @@ void GarbledMal::gen_next_gen_inp_com(const Bytes &row, size_t kx){
     }
   std::cout << "msg (2): " << msg.to_hex() << std::endl;
   
-  
-
   __m128i in_key[2], aes_plaintext, aes_ciphertext;
-  
-  aes_plaintext = _mm_set1_epi64x((uint64_t)kx+10);
-  
+  Bytes tmp2;
+
+  //aes_plaintext = _mm_set1_epi64x((uint64_t)kx+10);
+  aes_plaintext = _mm_set1_epi64x((uint64_t)kx);
+  tmp2.resize(16,0);
+  _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp2[0]),aes_plaintext);
+  std::cout << "Aes plaintext: " << tmp2.to_hex() << std::endl;
+
   tmp.assign(msg.begin(), msg.begin()+Env::key_size_in_bytes());
   tmp.resize(16, 0);
   in_key[0] = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
@@ -245,6 +272,8 @@ void * gen_next_malicious_gate(PCFState *st, PCFGate *current_gate){
   
   if (current_gate->tag == TAG_INPUT_A) // this is a Gen input
     {
+
+      std::cout << "Generate Tag Input A " << std::endl;
       __m128i a[2];
       
       Bytes tmp = cct.m_prng.rand_bits(Env::k());
@@ -298,6 +327,8 @@ void * gen_next_malicious_gate(PCFState *st, PCFGate *current_gate){
   else if (current_gate->tag == TAG_INPUT_B) // this is an Eval input
     {
       __m128i a[2];
+      
+      std::cout << "Gen Tag Input B" << std::endl;
       
       Bytes tmp = cct.m_prng.rand_bits(Env::k());
       tmp.resize(16, 0);
@@ -420,11 +451,14 @@ void * gen_next_malicious_gate(PCFState *st, PCFGate *current_gate){
       
       if (current_gate->tag == TAG_OUTPUT_A) // Gen output
         {
+          std::cout << "Gen Tag Output A" << std::endl;
           cct.m_out_bufr.push_back(_mm_extract_epi8(current_zero_key, 0) & 0x01); // permutation bit
           cct.m_gen_out_ix++;
         }
       else if (current_gate->tag == TAG_OUTPUT_B) // Eval output
         {
+
+          std::cout << "Gen Tag Output B" << std::endl;
           cct.m_out_bufr.push_back(_mm_extract_epi8(current_zero_key, 0) & 0x01); // permutation bit
           cct.m_evl_out_ix++;
         }
@@ -456,8 +490,13 @@ void * evl_next_malicious_gate(PCFState *st, PCFGate *current_gate){
       }
       
       uint8_t bit = cct.m_gen_inp_mask.get_ith_bit(cct.m_gen_inp_ix);
+
+      Bytes::const_iterator it_null = cct.m_in_bufr_ix;
       Bytes::const_iterator it = cct.m_in_bufr_ix + bit*Env::key_size_in_bytes();
-      
+    
+      //std::cout << "push commitment, slot 1: " <<  Bytes(it_null,it_null+4*Env::key_size_in_bytes()).to_hex() << std::endl;
+      // std::cout << "push commitment, slot 2:  " <<  Bytes(it_null - Env::key_size_in_bytes(),it_null + 5*Env::key_size_in_bytes() ).to_hex() << std::endl;
+  
       uint32_t gen_inp_ix = current_gate->wire1;
       
       assert(cct.m_gen_inp_com.size() == cct.m_gen_inp_ix);
@@ -465,6 +504,8 @@ void * evl_next_malicious_gate(PCFState *st, PCFGate *current_gate){
       //cct.m_gen_inp_com[gen_inp_ix] = Bytes(it, it+Env::key_size_in_bytes());
       cct.m_gen_inp_com.push_back(Bytes(it, it+Env::key_size_in_bytes()));
       
+      // std::cout << "push commitment: " <<  Bytes(it,it+Env::key_size_in_bytes()).to_hex() << std::endl;
+
       it = cct.m_gen_inp_decom[cct.m_gen_inp_ix].begin();
       tmp.assign(it, it+Env::key_size_in_bytes());
       tmp.resize(16, 0);

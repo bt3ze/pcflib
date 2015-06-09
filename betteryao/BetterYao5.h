@@ -40,40 +40,19 @@ protected:
         void SS13_cut_and_choose();
         void garble_and_check_circuits();
         void retrieve_outputs();
-
-        // intermediate level functions
-        void gen_generate_input_keys();
-        void gen_commit_to_inputs();
-
-        void evl_select_cut_and_choose_circuits();
-
-        /**
-           old and new protocol functions
-         */
-
-	void ot_init();
-	void ot_random(); // sender has m pairs of l-bit strings, and receiver has m bits
-        Bytes flip_coins(size_t len);
-        void seed_m_prngs(size_t num_prngs, std::vector<Bytes> seeds);
-
-        /**
-           old protocol functions
-         */
-	void cut_and_choose2_ot();
-	void cut_and_choose2_precomputation();
-	void cut_and_choose2_evl_circuit(size_t ix);
-	void cut_and_choose2_chk_circuit(size_t ix);
-
-	void proc_gen_out();
-	void proc_evl_out();
         
-
         /**
-           a couple of functions used as gadgets in the protocol
-           for enforcing privacy or security properties
+           STEP 1: MODIFY INPUT KEYS
+           gen must generate two auxiliary inputs:
+          a mask for his output and extra randomness
+          that is necessary for the 2-UHF
         */
-        // Eval proves Gen's output authenticity
-        void gen_output_auth_proof();
+
+        // generates Gen's output mask (referred to as e)
+        void gen_generate_output_mask();
+
+        // generates 2k+lg(k) extra random bits
+        void gen_generate_input_randomness();
         
         // Eval protects her inputs by generating
         // a k-probe-resistant matrix
@@ -82,22 +61,6 @@ protected:
         // Eval determines her protocol input based on
         // her private input and the matrix
         void evl_generate_new_input();
-        
-        /**
-          gen must generate two auxiliary inputs:
-          a mask for his output and extra randomness
-          that is necessary for the 2-UHF
-        */
-
-        // calls the two other functions
-        void gen_generate_aux_inputs();
-
-        // generates Gen's output mask 
-        // (referred to as e)
-        void gen_generate_output_mask();
-
-        // generates 2k+lg(k) extra random bits
-        void gen_generate_input_randomness();
         
         /**
            Gen has a couple of inputs segments, and therefore gets
@@ -111,6 +74,81 @@ protected:
         // get all of Gen's inputs concatenated
         // private_inp || e || rho_{2k+lg(k)}
         Bytes get_gen_full_input();
+
+
+        /**
+           STEP 2: GEN INPUT COMMITMENTS
+         */
+        
+        // Gen 
+        void gen_generate_input_keys();
+        void gen_commit_to_inputs();
+
+        /**
+           STEP 3: AGREE ON OBJECTIVE CIRCUIT
+         */
+
+        // Objective Circuit Agreement
+        void eval_announce_k_probe_matrix();
+        void collaboratively_choose_2UHF();
+
+
+        /**
+           STEP 4: COMMITMENT TO INPUT (AND OUTPUT) LABELS
+           note: Gen commits to a method of generating output labels,
+                 not the labels themselves
+         */
+
+        // unimplemented
+
+        /**
+           STEP 5: EVAL'S INPUT OTS
+         */
+
+        //eval_input_ot delared above
+        
+        /**
+           STEP 6: CUT AND CHOOSE
+         */
+
+        // Cut and Choose
+        void evl_select_cut_and_choose_circuits();
+
+        // the following are legacy functions
+        // will need new ones that perform the special OT
+        // where Eval gets seeds for check circuits
+        // and inputs for evaluation circuits
+        void ot_init();
+        void ot_random(); // sender has m pairs of l-bit strings, and receiver has m bits
+        Bytes flip_coins(size_t len);
+        void seed_m_prngs(size_t num_prngs, std::vector<Bytes> seeds);
+
+        void cut_and_choose2_ot();
+	void cut_and_choose2_precomputation();
+	void cut_and_choose2_evl_circuit(size_t ix);
+	void cut_and_choose2_chk_circuit(size_t ix);
+
+
+        /**
+           STEP 7: GARBLE CIRCUITS
+           AND CHECK CIRCUIT CONSISTENCY
+
+        */
+        // unimplemented
+
+        /**
+           STEP 8: RETRIEVE OUTPUTS
+         */
+
+
+        // Eval proves Gen's output authenticity
+        void gen_output_auth_proof();
+        
+        // these are legacy functions for this 
+	void proc_gen_out();
+	void proc_evl_out();
+        
+        
 
         /**
            new variables
