@@ -37,7 +37,7 @@ BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
     GEN_END
 }
 
-
+// old start function
 void BetterYao5::start()
 {
   oblivious_transfer();
@@ -48,6 +48,8 @@ void BetterYao5::start()
   final_report();
 }
 
+
+// new start function
 void BetterYao5::SS13(){
 
   modify_inputs();
@@ -61,91 +63,20 @@ void BetterYao5::SS13(){
 
 }
 
+
 /**
-   Define high-level functions from SS13
-   these call functions located below
+
+   STEP 1: INPUT MODIFICATIONS
+
  */
 
+void BetterYao5::modify_inputs(){
 // Gen appends an output mask and extra randomness to his inputs
 // Evl tranforms her input in order to hide it from Gen
-void BetterYao5::modify_inputs(){
   gen_generate_output_mask();
   gen_generate_input_randomness();
   choose_k_probe_resistant_matrix();
   evl_generate_new_input();
-}
-
-void BetterYao5::gen_generate_and_commit_to_inputs(){
-  gen_commit_to_inputs();
-}
-
-void BetterYao5::agree_on_objective_circuit(){
-  eval_announce_k_probe_matrix();
-  collaboratively_choose_2UHF();
-}
-
-void BetterYao5::gen_commit_to_io_labels(){}
-
-void BetterYao5::eval_input_OT(){}
-
-// Gen doesn't know which are check and which are evaluation circuits
-void BetterYao5::SS13_cut_and_choose(){
-  evl_select_cut_and_choose_circuits();
-}
-
-void BetterYao5::garble_and_check_circuits(){}
-
-void BetterYao5::retrieve_outputs(){}
-
-
-void BetterYao5::eval_announce_k_probe_matrix(){} 
-
-void BetterYao5::collaboratively_choose_2UHF(){}
-
-
-/**
-   First, the functions that we use to modify inputs
-   (these are step 1 in SS13)
-
-   gen_generate_output_mask
-   gen_generate_input_randomness
-   gen_output_auth_proof
-   choose_k_probe_resistant_matrix
-   evl_generate_new_input
-
-*/
-
-
-
-void BetterYao5::choose_k_probe_resistant_matrix(){
-  // this algorithm is given by SS13
-  Prng choose_poly = Prng();
-  uint32_t lg_4k,lg_4n,t,K,N;
-
-  // initialize proper constants
-  uint32_t k = Env::k();
-  uint32_t n = m_private_input.size()*8; // multiply by 8, the byte width
-  lg_4k = ceil_log_base_2(4*k);
-  lg_4n = ceil_log_base_2(4*n);
-  
-  // find minimum t
-  t = lg_4k > lg_4n ? lg_4k : lg_4n;
-  while(1 << (t-1) > (k + (ceil_log_base_2(n)+n+k)/(t-1))){
-    // while 2^(t-1) > k + (lg(n) + n + k)/(t-1)
-    t--;
-  }
-  
-  // set K and N
-  K = ceil_log_base_2(n)+n+k;
-  K = (K % t == 0) ? K : (K/t) + 1;
-  N = K + k -1;
-
-
-}
-
-
-void BetterYao5::evl_generate_new_input(){
-  // TODO: implement
 }
 
 void BetterYao5::gen_generate_output_mask(){
@@ -199,11 +130,48 @@ void BetterYao5::gen_generate_input_randomness(){
 
 }
 
+void BetterYao5::choose_k_probe_resistant_matrix(){
+  // this algorithm is given by SS13
+  Prng choose_poly = Prng();
+  uint32_t lg_4k,lg_4n,t,K,N;
+
+  // initialize proper constants
+  uint32_t k = Env::k();
+  uint32_t n = m_private_input.size()*8; // multiply by 8, the byte width
+  lg_4k = ceil_log_base_2(4*k);
+  lg_4n = ceil_log_base_2(4*n);
+  
+  // find minimum t
+  t = lg_4k > lg_4n ? lg_4k : lg_4n;
+  while(1 << (t-1) > (k + (ceil_log_base_2(n)+n+k)/(t-1))){
+    // while 2^(t-1) > k + (lg(n) + n + k)/(t-1)
+    t--;
+  }
+  
+  // set K and N
+  K = ceil_log_base_2(n)+n+k;
+  K = (K % t == 0) ? K : (K/t) + 1;
+  N = K + k -1;
+
+
+}
+
+
+void BetterYao5::evl_generate_new_input(){
+  // TODO: implement
+}
+
+
 /**
-   Next, Gen generates and commits to his input keys (steps 2 and 3)
-   gen_generate_input_keys();
-   gen_commit_to_inputs();
+   STEP 2: GEN COMMITS TO INPUTS
  */
+
+
+void BetterYao5::gen_generate_and_commit_to_inputs(){
+  gen_generate_input_keys();
+  gen_commit_to_inputs();
+}
+
 
 void BetterYao5::gen_generate_input_keys(){
 
@@ -211,6 +179,27 @@ void BetterYao5::gen_generate_input_keys(){
 
 void BetterYao5::gen_commit_to_inputs(){
   
+}
+
+
+/**
+   STEP 3: AGREE ON OBJECTIVE CIRCUIT
+ */
+
+void BetterYao5::agree_on_objective_circuit(){
+  eval_announce_k_probe_matrix();
+  collaboratively_choose_2UHF();
+}
+
+void BetterYao5::eval_announce_k_probe_matrix(){
+  // TODO: Implement
+  // eval sends Gen the representation of the k-probe-matrix
+  // as a binary array
+} 
+
+void BetterYao5::collaboratively_choose_2UHF(){
+  // TODO: Implement
+  // flip coins
 }
 
 
@@ -284,6 +273,32 @@ Bytes BetterYao5::flip_coins(size_t len_in_bytes)
   
   return bufr;
 }
+
+
+/**
+
+   STEP 4: COMMIT TO INPUT AND OUTPUT LABELS
+
+ */
+
+void BetterYao5::gen_commit_to_io_labels(){}
+
+
+/**
+   STEP 5: EVAL'S INPUT OTs
+ */
+
+void BetterYao5::eval_input_OT(){}
+
+
+/**
+   STEP 6: CUT AND CHOOSE
+ */
+// Gen doesn't know which are check and which are evaluation circuits
+void BetterYao5::SS13_cut_and_choose(){
+  evl_select_cut_and_choose_circuits();
+}
+
 
 void BetterYao5::evl_select_cut_and_choose_circuits(){
   EVL_BEGIN
@@ -362,6 +377,36 @@ void BetterYao5::evl_select_cut_and_choose_circuits(){
   EVL_END
 
 }
+
+/**
+   STEP 7: GARBLE AND CHECK
+ */
+
+void BetterYao5::garble_and_check_circuits(){}
+
+/**
+   STEP 8: RETRIEVE OUTPUTS
+ */
+
+void BetterYao5::retrieve_outputs(){}
+
+
+
+
+
+
+
+/**
+   THE FUNCTIONS BELOW ARE LEGACY FUNCTIONS
+   USED BY BETTERYAO4 (WITH SOME MODIFICATION)
+   THE PROTOCOL WORKS, BUT THERE ARE MANY BUGS
+   INCLUDING ONE THAT ALLOWS US TO COMMENT OUT
+   ALL OF EVL_NEXT_GEN_INP_COMMITMENT
+   AND RUN THE PROTOCOL AS IF NOTHING CHANGED
+ */
+
+
+
 
 
 // this function uses an interactive coin flipping protocol between
