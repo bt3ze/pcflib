@@ -98,6 +98,10 @@ void BetterYao5::garble_and_check_circuits(){}
 void BetterYao5::retrieve_outputs(){}
 
 
+void BetterYao5::eval_announce_k_probe_matrix(){} 
+
+void BetterYao5::collaboratively_choose_2UHF(){}
+
 
 /**
    First, the functions that we use to modify inputs
