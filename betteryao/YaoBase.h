@@ -120,6 +120,9 @@ protected:
         // variables for input counts
 	uint32_t               m_gen_inp_cnt;
 	uint32_t               m_evl_inp_cnt;
+        inline uint32_t get_evl_inp_count(){
+             return m_evl_inp_cnt; 
+        }
 
 };
 

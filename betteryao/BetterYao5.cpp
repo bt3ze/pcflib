@@ -94,11 +94,13 @@ void BetterYao5::gen_generate_output_mask(){
   Bytes output_mask;
 
   if(Env::is_root()){
+    // completely cover the input size (vector of bytes)
     output_mask = output_mask_prng.rand_bits(m_private_input.size()*8);
   }
   
   output_mask.resize(m_private_input.size());
-
+  
+  // send output mask to all processors
   MPI_Bcast(&output_mask[0],output_mask.size(),MPI_BYTE,0,m_mpi_comm);
   
   m_gen_output_mask = Bytes(output_mask.begin(), output_mask.end());
@@ -167,13 +169,15 @@ void BetterYao5::choose_k_probe_resistant_matrix(){
   K = ceil_log_base_2(n)+n+k;
   K = (K % t == 0) ? K : (K/t) + 1;
   N = K + k -1;
-
+  
+  
 
 }
 
 
 void BetterYao5::evl_generate_new_input(){
   // TODO: implement
+  // transform input using k-probe-matrix
 }
 
 
@@ -183,25 +187,43 @@ void BetterYao5::evl_generate_new_input(){
 
 
 void BetterYao5::gen_generate_and_commit_to_inputs(){
-  gen_generate_input_keys();
-  gen_commit_to_inputs();
+  gen_generate_gen_input_keys();
+  gen_commit_to_gen_input_keys();
 }
 
 
-void BetterYao5::gen_generate_input_keys(){
-  
+void BetterYao5::gen_generate_gen_input_keys(){
+  // this function should be executed in parallel by all processors
 
   GEN_BEGIN
 
   int i,j;
-  G rand;
+  // G rand;
+  Bytes rand;
+
+  // this will probably be replaced 
+  // with a specific prng or one
+  // with a seed that we know
+  // which corresponds to a particular circuit
+  Prng rng = Prng(); 
+  
+
   m_gen_inp_keys.resize(Env::node_load());
   
+
   for(j=0; j < Env::node_load(); j++){
+
+    // generate all input keys (even the ones we won't use) here
     for(i=0;i < get_gen_full_input_size()*2;i++){
-      rand.random();
-      //m_ot_keys[j].push_back(rand.to_bytes().hash(Env::k()));
-      m_gen_inp_keys[j].push_back(rand.to_bytes());
+
+      rand = rng.rand_bits(Env::k());
+
+      // and save them for later.
+      // we will send the key
+      // and this format (still a group element)
+      // will be convenient
+      m_gen_inp_keys[j].push_back(rand);
+ 
       //std::cout << "generate input key: " << m_gen_inp_keys[j][m_gen_inp_keys[j].size()-1].to_hex() << std::endl;
     }
   }
@@ -211,8 +233,8 @@ void BetterYao5::gen_generate_input_keys(){
 
 
 
-void BetterYao5::gen_commit_to_inputs(){
-  // TODO: committing procedure
+void BetterYao5::gen_commit_to_gen_input_keys(){
+  
   int i,j;
   m_gen_inp_commitments.resize(Env::node_load());
   m_gen_committed_inputs.resize(Env::node_load());
@@ -223,23 +245,23 @@ void BetterYao5::gen_commit_to_inputs(){
   for(j=0;j<Env::node_load();j++){
     for(i=0;i<get_gen_full_input_size()*2;i++){
       // in this loop,
-      // gen creates a commitment for each input ley
+      // gen creates a commitment for each input key
       // and then sends the commitment to Evl
 
       GEN_BEGIN
-        
-        commitment = make_commitment(m_prng.rand_bits(Env::k()),m_gen_inp_keys[j][i]);
-      committed = commit(commitment);
-      GEN_SEND(committed);
+      
+        // this m_prng will probably need to be replaced with a prng that has
+        // been seeded specifically for the circuit
+        // which will use the keys that the commitments protect
+        // since Evl may need to regenerate them later
+      commitment = make_commitment(m_prng.rand_bits(Env::k()),m_gen_inp_keys[j][i]);
+      GEN_SEND(commit(commitment)); 
       m_gen_inp_commitments[j].push_back(commitment);
-      std::cout << "commitment:: " << committed.to_hex() << "\trank: " << Env::group_rank() << "\trandomness: " << commitment.r.to_hex() << std::endl;
-
       GEN_END
       
       EVL_BEGIN
-        committed = EVL_RECV();
+      committed = EVL_RECV();
       m_gen_committed_inputs[j].push_back(committed);
-      std::cout << "receive commitment: " << committed.to_hex() << "\trank: " << Env::group_rank() << std::endl;
 
       EVL_END
 
@@ -387,8 +409,53 @@ Bytes BetterYao5::flip_coins(size_t len_in_bytes)
 
  */
 
-void BetterYao5::gen_commit_to_io_labels(){}
+void BetterYao5::gen_commit_to_io_labels(){
+  // Gen has already generated his own input labels;
+  // Now he constructs Eval's and then commits to both.
+  // In the protocol, Gen must also commit to a method of constructing
+  // his output labels, e.g. either generate output labels
+  // immediately after output labels, or use a counter mode
+  // stream cipher to generate output labels according to their 
+  // gate indices (encrypt a nonce concatenated with the gate index).
+  // This logic is embedded
+  // TODO: fill out how we choose to do it.
+  gen_generate_eval_input_keys();
+  gen_commit_to_gen_input_labels();
+  gen_commit_to_eval_input_labels();
+}
 
+
+void BetterYao5::gen_generate_eval_input_keys(){
+
+  GEN_BEGIN
+    
+  uint32_t i,j;
+  G rand;
+  m_evl_inp_keys.resize(Env::node_load());
+  
+  for(j=0; j < Env::node_load(); j++){
+
+    // generate all input keys here
+    for(i=0;i < get_evl_inp_count() *2;i++){
+      rand.random();
+
+      // and save them for later.
+      // we will send the key during OTs
+      // and this format (still a group element)
+      // will be convenient
+      m_evl_inp_keys[j].push_back(rand.to_bytes());
+      
+    }
+  }
+
+  GEN_END    
+}
+
+void BetterYao5::gen_commit_to_gen_input_labels(){}
+
+void BetterYao5::gen_commit_to_eval_input_labels(){
+  
+}
 
 /**
    STEP 5: EVAL'S INPUT OTs

@@ -88,8 +88,8 @@ protected:
          */
         
         // Gen 
-        void gen_generate_input_keys();
-        void gen_commit_to_inputs();
+        void gen_generate_gen_input_keys();
+        void gen_commit_to_gen_input_keys();
 
         /**
            STEP 3: AGREE ON OBJECTIVE CIRCUIT
@@ -106,9 +106,11 @@ protected:
                  not the labels themselves
          */
 
-        // unimplemented
         // gen_commit_to_io_labels declared above
-        
+        void gen_generate_eval_input_keys();
+        void gen_commit_to_gen_input_labels();
+        void gen_commit_to_eval_input_labels();
+
         /**
            STEP 5: EVAL'S INPUT OTS
          */
@@ -187,10 +189,16 @@ protected:
          */
 
         std::vector<std::vector<Bytes> > m_gen_inp_keys;
+        std::vector<std::vector<Bytes> > m_evl_inp_keys;
 
         // list of Gen's input commitments
         std::vector<std::vector<commitment_t> >   m_gen_inp_commitments;
-        std::vector<std::vector<Bytes> >           m_gen_committed_inputs;
+        std::vector<std::vector<Bytes> >          m_gen_committed_inputs;
+        
+        std::vector<std::vector<commitment_t> >   m_evl_inp_commitments;
+        std::vector<std::vector<Bytes> >          m_evl_committed_inputs;
+        
+        
 
         // placeholder for the k-probe-resistant matrix we'll need
         std::vector<Bytes>                   m_k_probe_resistant_matrix;
