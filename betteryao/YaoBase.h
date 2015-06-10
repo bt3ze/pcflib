@@ -10,6 +10,7 @@
 
 #include "Env.h"
 #include "NetIO.h"
+#include "Commitment.h"
 
 #include "../pcflib.h"
 
@@ -108,7 +109,6 @@ protected:
 
         Bytes               m_private_input;
         
-
 	Prng                m_prng;
 
         // variables for IKNP03 OT-extension implementation

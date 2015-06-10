@@ -4,9 +4,9 @@ MPI_CXX    = mpicxx
 
 LIBS       = -lpbc -lgmp -lcrypto -llog4cxx -lpthread
 HEADERS    = Algebra.h Aes.h Bytes.h Env.h garbled_circuit.h garbled_circuit_hbc.h garbled_circuit_m.h NetIO.h Prng.h ClawFree.h \
-	GarbledBase.h GarbledHBC.h GarbledMal.h # Circuit.h 
+	GarbledBase.h GarbledHBC.h GarbledMal.h Commitment.h # Circuit.h 
 OBJS       = Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o \
-	garbled_circuit.o garbled_circuit_hbc.o garbled_circuit_m.o  # Circuit.o GarbledCct3.o
+	garbled_circuit.o garbled_circuit_hbc.o garbled_circuit_m.o Commitment.o  # Circuit.o GarbledCct3.o
 GARBLES    = GarbledBase.o GarbledHBC.o GarbledMal.o
 MAINS      = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp
 SPLITMAINS = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp splityao/BetterYao5.cpp splityao/BetterYaoEvl.cpp splityao/BetterYaoGen.cpp 
@@ -96,6 +96,9 @@ Aes.o: Bytes.h Aes.h Aes.cpp
 
 Bytes.o: Bytes.h Hash.h Bytes.cpp
 	$(CXX) $(CXX_CFLAGS) -c Bytes.cpp
+
+Commitment.o: Bytes.h Hash.h Prng.h Commitment.h Commitment.cpp
+	$(CXX) $(CXX_CFLAGS) -c Commitment.cpp
 
 clean :
 	rm -f *.o gen evl sim test-circuit server

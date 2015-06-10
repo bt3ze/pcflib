@@ -12,6 +12,7 @@
 // useful function for modifying Gen and Evl inputs
 uint32_t ceil_log_base_2(uint32_t k); 
 
+//Bytes make_commitment(Bytes commit_value);
 
 class BetterYao5 : public YaoBase
 {
@@ -182,11 +183,14 @@ protected:
         
         
         /**
-           
+           new variables
          */
 
+        std::vector<std::vector<Bytes> > m_gen_inp_keys;
+
         // list of Gen's input commitments
-        std::vector<Bytes>   m_gen_commitments;
+        std::vector<std::vector<commitment_t> >   m_gen_inp_commitments;
+        std::vector<std::vector<Bytes> >           m_gen_committed_inputs;
 
         // placeholder for the k-probe-resistant matrix we'll need
         std::vector<Bytes>                   m_k_probe_resistant_matrix;

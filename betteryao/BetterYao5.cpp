@@ -87,6 +87,7 @@ void BetterYao5::modify_inputs(){
 void BetterYao5::gen_generate_output_mask(){
   // how many random bits do we generate?
   // assume for now that the output is at most the size of the input
+  GEN_BEGIN
 
   Prng output_mask_prng = Prng();
 
@@ -104,6 +105,8 @@ void BetterYao5::gen_generate_output_mask(){
   
   std::cout<< "ouput mask: " << m_gen_output_mask.to_hex() << "\t length: " << m_gen_output_mask.size()*8 << std::endl;
 
+  GEN_END
+
 }
 
 
@@ -113,13 +116,12 @@ void BetterYao5::gen_generate_input_randomness(){
   // in order to make the output of the 2-UHF appear random
   // to protect Gen's input privacy while enforcing
   // Gen's input consistency
-
+  GEN_BEGIN
+  
   Prng input_prng = Prng();
   Bytes aux_input;
   
-  std::cout << "before loop" << std::endl;
   uint32_t lg_k = ceil_log_base_2(Env::k());
-  std::cout << "after loop" << std::endl;
     
   if(Env::is_root()){
     aux_input = input_prng.rand_bits(2*Env::k() + lg_k);
@@ -131,6 +133,8 @@ void BetterYao5::gen_generate_input_randomness(){
   m_gen_aux_random_input = Bytes(aux_input.begin(), aux_input.end());
   
   std::cout<< "input randomness: " << m_gen_aux_random_input.to_hex() << "\t length: " << m_gen_aux_random_input.size()*8 << "\t2k+lg(k): " << 2*Env::k() + lg_k << "\t lg_k: " << lg_k << std::endl;
+
+  GEN_END
 
 }
 
@@ -191,14 +195,14 @@ void BetterYao5::gen_generate_input_keys(){
 
   int i,j;
   G rand;
-  m_ot_keys.resize(Env::node_load());
+  m_gen_inp_keys.resize(Env::node_load());
   
   for(j=0; j < Env::node_load(); j++){
     for(i=0;i < get_gen_full_input_size()*2;i++){
       rand.random();
       //m_ot_keys[j].push_back(rand.to_bytes().hash(Env::k()));
-      m_ot_keys[j].push_back(rand.to_bytes());
-      std::cout << "generate input key: " << m_ot_keys[j][m_ot_keys[j].size()-1].to_hex() << std::endl;
+      m_gen_inp_keys[j].push_back(rand.to_bytes());
+      //std::cout << "generate input key: " << m_gen_inp_keys[j][m_gen_inp_keys[j].size()-1].to_hex() << std::endl;
     }
   }
   
@@ -209,6 +213,39 @@ void BetterYao5::gen_generate_input_keys(){
 
 void BetterYao5::gen_commit_to_inputs(){
   // TODO: committing procedure
+  int i,j;
+  m_gen_inp_commitments.resize(Env::node_load());
+  m_gen_committed_inputs.resize(Env::node_load());
+
+  commitment_t commitment;
+  Bytes committed;
+  
+  for(j=0;j<Env::node_load();j++){
+    for(i=0;i<get_gen_full_input_size()*2;i++){
+      // in this loop,
+      // gen creates a commitment for each input ley
+      // and then sends the commitment to Evl
+
+      GEN_BEGIN
+        
+        commitment = make_commitment(m_prng.rand_bits(Env::k()),m_gen_inp_keys[j][i]);
+      committed = commit(commitment);
+      GEN_SEND(committed);
+      m_gen_inp_commitments[j].push_back(commitment);
+      std::cout << "commitment:: " << committed.to_hex() << "\trank: " << Env::group_rank() << "\trandomness: " << commitment.r.to_hex() << std::endl;
+
+      GEN_END
+      
+      EVL_BEGIN
+        committed = EVL_RECV();
+      m_gen_committed_inputs[j].push_back(committed);
+      std::cout << "receive commitment: " << committed.to_hex() << "\trank: " << Env::group_rank() << std::endl;
+
+      EVL_END
+
+    }
+  }
+
 }
 
 
@@ -232,7 +269,6 @@ void BetterYao5::collaboratively_choose_2UHF(){
   
   std::cout << "collaboratively choose 2UHF" << std::endl;
 
-
   Bytes bufr;
   std::vector<Bytes> bufr_chunks;
   double start; // for timing
@@ -250,7 +286,7 @@ void BetterYao5::collaboratively_choose_2UHF(){
   bufr.resize(Env::k()*((get_gen_full_input_size()+7)/8));
   m_timer_evl += MPI_Wtime() - start;
   m_timer_gen += MPI_Wtime() - start;
-
+  
   start = MPI_Wtime();
   MPI_Bcast(&bufr[0], bufr.size(), MPI_BYTE, 0, m_mpi_comm);
   m_timer_mpi += MPI_Wtime() - start;
@@ -263,8 +299,13 @@ void BetterYao5::collaboratively_choose_2UHF(){
   m_timer_evl += MPI_Wtime() - start;
   m_timer_gen += MPI_Wtime() - start;
 
-  // std::cout << "agree on UHF" << std::endl;
-    
+  if(Env::is_root()){
+    std::cout << "agree on 2-UHF: " << std::endl;
+    int i;
+    for(i=0;i<m_2UHF_matrix.size();i++){
+      std::cout << m_2UHF_matrix[i].to_hex() << std::endl;
+    }
+  }
 }
 
 
@@ -463,6 +504,8 @@ void BetterYao5::garble_and_check_circuits(){}
 
 void BetterYao5::retrieve_outputs(){}
 
+
+
 /**
    UTILITY FUNCTIONS
  */
@@ -479,8 +522,12 @@ uint32_t ceil_log_base_2(uint32_t k){
   return lg_k;
 }
 
-
-
+//TODO: IMPLEMENT PROPERLY!!!
+/*
+Bytes make_commitment(Bytes commit_value){
+  return commit_value.hash();
+};
+*/
 
 
 /**
