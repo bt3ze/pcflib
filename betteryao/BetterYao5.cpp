@@ -24,6 +24,14 @@ BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
       m_gcs[ix] = GarbledMal();
   }
   
+  // the next few lines are a placeholder for doing a better job with the prngs.
+  // will actually implement prng seeding properly later
+  m_prngs.resize(Env::node_load());
+  for(int j=0;j<m_prngs.size();j++){
+    m_prngs[j] = Prng();
+  }
+  m_prng = Prng();
+
   m_gen_inp_hash.resize(Env::node_load());
   m_gen_inp_masks.resize(Env::node_load());
   // m_gen_inp_decom.resize(Env::node_load());
@@ -33,8 +41,8 @@ BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
   m_gen_inp_decom.resize(m_gen_inp_cnt);
   
   GEN_BEGIN
-    gen_generate_output_mask();
-  gen_generate_input_randomness();
+    gen_generate_output_mask(m_prng);
+  gen_generate_input_randomness(m_prng);
     GEN_END
 }
 
@@ -77,19 +85,19 @@ void BetterYao5::SS13(){
 void BetterYao5::modify_inputs(){
 // Gen appends an output mask and extra randomness to his inputs
 // Evl tranforms her input in order to hide it from Gen
-  gen_generate_output_mask();
-  gen_generate_input_randomness();
+  gen_generate_output_mask(m_prng);
+  gen_generate_input_randomness(m_prng);
   choose_k_probe_resistant_matrix();
   evl_generate_new_input();
 }
 
 
-void BetterYao5::gen_generate_output_mask(){
+void BetterYao5::gen_generate_output_mask(Prng & output_mask_prng){
   // how many random bits do we generate?
   // assume for now that the output is at most the size of the input
   GEN_BEGIN
 
-  Prng output_mask_prng = Prng();
+    //  Prng output_mask_prng = Prng();
 
   Bytes output_mask;
 
@@ -112,7 +120,7 @@ void BetterYao5::gen_generate_output_mask(){
 }
 
 
-void BetterYao5::gen_generate_input_randomness(){
+void BetterYao5::gen_generate_input_randomness(Prng & input_prng){
   // compute ceil(lg_2(k)) and then generate some random bits 
   // these random bits are added as auxiliary inputs for Gen
   // in order to make the output of the 2-UHF appear random
@@ -120,7 +128,7 @@ void BetterYao5::gen_generate_input_randomness(){
   // Gen's input consistency
   GEN_BEGIN
   
-  Prng input_prng = Prng();
+    //  Prng input_prng = Prng();
   Bytes aux_input;
   
   uint32_t lg_k = ceil_log_base_2(Env::k());
@@ -187,12 +195,16 @@ void BetterYao5::evl_generate_new_input(){
 
 
 void BetterYao5::gen_generate_and_commit_to_inputs(){
-  gen_generate_gen_input_keys();
+  gen_generate_gen_input_keys(m_prng);
   gen_commit_to_gen_input_keys();
 }
 
 
-void BetterYao5::gen_generate_gen_input_keys(){
+// this function takes a reference 
+// to a specific prng
+// with a known seed, corresponding to a particular circuit
+// for repeatability
+void BetterYao5::gen_generate_gen_input_keys(Prng & rng){
   // this function should be executed in parallel by all processors
 
   GEN_BEGIN
@@ -201,16 +213,13 @@ void BetterYao5::gen_generate_gen_input_keys(){
   // G rand;
   Bytes rand;
 
-  // this will probably be replaced 
-  // with a specific prng or one
-  // with a seed that we know
-  // which corresponds to a particular circuit
-  Prng rng = Prng(); 
   
-
+  
   m_gen_inp_keys.resize(Env::node_load());
   
 
+  // first, generate all of the input keys for Gen
+  // (K_{0},K_{1}) <-$ {0,1}^{2k}
   for(j=0; j < Env::node_load(); j++){
 
     // generate all input keys (even the ones we won't use) here
@@ -228,6 +237,14 @@ void BetterYao5::gen_generate_gen_input_keys(){
     }
   }
   
+  // next generate permutation bits for Gen's input keys
+  // { pi_{i} } <-$ {0,1} for i in (0, (gen_inputs) ]
+  
+  m_gen_inp_permutation_bits.resize(Env::node_load());
+  for(j=0;j < Env::node_load();j++){
+    m_gen_inp_permutation_bits[j] = rng.rand_bits(get_gen_full_input_size());
+  }
+
   GEN_END
 }
 
@@ -254,15 +271,21 @@ void BetterYao5::gen_commit_to_gen_input_keys(){
         // been seeded specifically for the circuit
         // which will use the keys that the commitments protect
         // since Evl may need to regenerate them later
-      commitment = make_commitment(m_prng.rand_bits(Env::k()),m_gen_inp_keys[j][i]);
-      GEN_SEND(commit(commitment)); 
+        //commitment = make_commitment(m_prng.rand_bits(Env::k()),m_gen_inp_keys[j][i]);
+      commitment = make_commitment(m_prng ,m_gen_inp_keys[j][i]);
+
+      committed = commit(commitment);
+      GEN_SEND(committed); 
       m_gen_inp_commitments[j].push_back(commitment);
-      GEN_END
+      std::cout << "r,msg: " << decommit(commitment).to_hex() << "\t commitment: " << committed.to_hex() << "\t rank: " << Env::group_rank() << std::endl;
       
+      GEN_END
+        
       EVL_BEGIN
       committed = EVL_RECV();
       m_gen_committed_inputs[j].push_back(committed);
-
+      std::cout << "receive commitment: " << committed.to_hex() << "\t rank: " << Env::group_rank() << std::endl;
+      
       EVL_END
 
     }
@@ -451,7 +474,40 @@ void BetterYao5::gen_generate_eval_input_keys(){
   GEN_END    
 }
 
-void BetterYao5::gen_commit_to_gen_input_labels(){}
+void BetterYao5::gen_commit_to_gen_input_labels(){
+  // Gen commits to his input labels
+  // Theta^{(j)} = { com(W_{i,0 ^ pi_{i}}; Theta_{i}^{(j)}),
+  //                 com(W_{i,1 ^ pi_{i}}; Theta_{i}^{(j)}) }
+  // where com() is the commitment to the wire label
+  // and Theta is the randomness
+  // these should have separate randomnesses
+
+  m_gen_inp_commitments.resize(Env::node_load());
+  
+  int i,j;
+  commitment_t commitment;
+  Bytes committed;
+
+  Prng rng = Prng(); // to be replaced with the right one
+
+  for(j=0; j< Env::node_load(); j++){
+    for(i=0;i< m_gen_inp_cnt*2;i++){
+    
+      GEN_BEGIN
+      
+        commitment = make_commitment(rng.rand_bits(Env::k()), 0);
+        
+        
+      GEN_END
+        
+      EVL_BEGIN
+        
+      EVL_END
+      
+    }
+    
+  }
+}
 
 void BetterYao5::gen_commit_to_eval_input_labels(){
   

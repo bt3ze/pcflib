@@ -7,7 +7,7 @@
 #include "Prng.h"
 
 
-commitment_t make_commitment(Prng rnd, Bytes msg){
+commitment_t make_commitment(Prng &rnd, Bytes msg){
   Bytes r = rnd.rand_bits(Env::k());
   commitment_t comm;
   comm.r = r;

@@ -55,10 +55,10 @@ protected:
         */
 
         // generates Gen's output mask (referred to as e)
-        void gen_generate_output_mask();
+        void gen_generate_output_mask(Prng &);
 
         // generates 2k+lg(k) extra random bits
-        void gen_generate_input_randomness();
+        void gen_generate_input_randomness(Prng &);
         
         // Eval protects her inputs by generating
         // a k-probe-resistant matrix
@@ -88,7 +88,7 @@ protected:
          */
         
         // Gen 
-        void gen_generate_gen_input_keys();
+        void gen_generate_gen_input_keys(Prng & rng);
         void gen_commit_to_gen_input_keys();
 
         /**
@@ -239,6 +239,9 @@ protected:
         // each entry in the array is a row (or column?)
         std::vector<Bytes>                   m_2UHF_matrix;
         
+        // this vector tracks Gen's permutation bits
+        // 
+        std::vector<Bytes>     m_gen_inp_permutation_bits;
 
         /**
            old variables
@@ -257,8 +260,9 @@ protected:
         std::vector<Bytes>              m_ot_out;
 
 
-        // i do not understand what this is used for
-        // or why it is used as it is
+        // i think this was used for 
+        // permutation bits
+        // it is replaced with m_gen_inp_permutation_bits
         std::vector<Bytes>              m_gen_inp_masks;
         
 

@@ -15,7 +15,7 @@ Bytes commit(commitment_t com);
 
 Bytes decommit(commitment_t com);
 
-commitment_t make_commitment(Prng rnd, Bytes msg);
+commitment_t make_commitment(Prng & rnd, Bytes msg);
 
 commitment_t make_commitment(Bytes r,Bytes msg);
 
