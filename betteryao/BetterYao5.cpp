@@ -15,7 +15,6 @@ BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
 
   std::cout << "node load: " << Env::node_load() << std::endl;
   // Init variables
-  m_rnd_seeds.resize(Env::node_load());
   m_gcs.resize(Env::node_load());
   
   
@@ -205,6 +204,9 @@ void BetterYao5::gen_generate_and_commit_to_inputs(){
 
   GEN_BEGIN
   generate_random_seeds();
+  
+  //MPI_Barrier(m_mpi_comm);
+  
   //m_prngs.resize(Env::node_load());
   seed_prngs(m_prngs,m_rnd_seeds);
   
@@ -221,19 +223,18 @@ void BetterYao5::gen_generate_and_commit_to_inputs(){
 // since we use those in OT
 // 
 void BetterYao5::generate_random_seeds(){
-  //  Prng prng = Prng();
-  m_rnd_seeds.resize(Env::node_load());
-  
+ 
   G rand_elem;
   Bytes rand;
   uint32_t i;
  
-  MPI_Barrier(m_mpi_comm);
+  m_rnd_seeds.clear();
+
   for(i=0;i<Env::node_load();i++){
     //rand = prng.rand_bits(element_length_in_bytes(element_t)*8);
     //rand = prng.rand_bits(128);
     rand_elem.random();
-    std::cout << "random seed: " << rand_elem.to_bytes().to_hex() << "\t rank: " << Env::group_rank() << std::endl;
+    // std::cout << "random seed: " << rand_elem.to_bytes().to_hex() << "\t rank: " << Env::group_rank() << std::endl;
     m_rnd_seeds.push_back(rand_elem.to_bytes());
   }
 
@@ -318,7 +319,7 @@ void BetterYao5::gen_send_evl_commitments(std::vector<commitment_t> & commits){
       committed = commit(commits[j]);
       GEN_SEND(committed); 
       
-      //std::cout << "r,msg: " << decommit(commits[j]).to_hex() << "\t commitment: " << committed.to_hex() << "\t rank: " << Env::group_rank() << std::endl;
+      std::cout << "r,msg: " << decommit(commits[j]).to_hex() << "\t commitment: " << committed.to_hex() << "\t rank: " << Env::group_rank() << std::endl;
     }
 
     
@@ -336,7 +337,7 @@ void BetterYao5::evl_receive_gen_commitments(std::vector<Bytes> & commits,uint32
     committed = EVL_RECV();
     commits.push_back(committed);
   
-    //std::cout << "receive commitment: " << committed.to_hex() << "\t rank: " << Env::group_rank() << std::endl;
+    std::cout << "receive commitment: " << committed.to_hex() << "\t rank: " << Env::group_rank() << std::endl;
   
   }
 
