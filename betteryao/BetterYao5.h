@@ -87,10 +87,20 @@ protected:
            STEP 2: GEN INPUT COMMITMENTS
          */
         
-        // Gen 
-        void gen_generate_gen_input_keys(Prng & rng);
-        void gen_commit_to_gen_input_keys();
+        void generate_random_seeds();
+        void seed_prngs(std::vector<Prng> & prngs, std::vector<Bytes> & seeds);
 
+        // Gen 
+        void generate_gen_input_keys();
+
+        void generate_commitments(Prng & rng, std::vector<Bytes> & keys, std::vector<commitment_t> & commitments);
+        
+        void commit_to_gen_input_keys();
+
+        void generate_input_keys(Prng & rng, std::vector<Bytes> & keys, uint32_t num_keys);
+
+        void gen_send_evl_commitments(std::vector<commitment_t> &commits);
+        void evl_receive_gen_commitments(std::vector<Bytes> &commits, uint32_t num_commitments);
         /**
            STEP 3: AGREE ON OBJECTIVE CIRCUIT
          */
@@ -107,9 +117,14 @@ protected:
          */
 
         // gen_commit_to_io_labels declared above
-        void gen_generate_eval_input_keys();
-        void gen_commit_to_gen_input_labels();
-        void gen_commit_to_eval_input_labels();
+        void generate_eval_input_keys();
+        
+
+        void generate_gen_input_commitments();
+        void generate_eval_input_commitments();
+
+        void commit_to_gen_input_labels();
+        void commit_to_eval_input_labels();
 
         /**
            STEP 5: EVAL'S INPUT OTS

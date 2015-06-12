@@ -33,7 +33,7 @@ public:
 
 	// merge vector<Bytes> into Bytes.
 	Bytes(const std::vector<Bytes> &chunks) { merge(chunks); }
-
+        
 	// optimized constructor: copy in chunks, if possible
 	Bytes(const_iterator first, const_iterator last) :
 		std::vector<byte>(last - first)
