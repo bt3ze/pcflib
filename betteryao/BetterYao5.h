@@ -255,14 +255,20 @@ protected:
         // (technically, we can do without them,
         // but I think it makes the code cleaner to store and differentiate) 
         // TODO: come up with better names than "1,2,3"
-        std::vector<Bytes>                   m_rnd_seeds;
-        std::vector<Bytes>                   m_rnd_seeds2;
-        std::vector<Bytes>                   m_rnd_seeds3;
+        std::vector<Bytes>                   m_circuit_seeds;
+        std::vector<Prng>		     m_circuit_prngs;
         
-        std::vector<Prng>		     m_prngs;
-        std::vector<Prng>                    m_prngs2;
-        std::vector<Prng>                    m_prngs3;
+        std::vector<Bytes>                   m_commitment_seeds;
+        std::vector<Prng>                    m_commitment_prngs;
 
+        // the otp-prng (or one-time pad prng)
+        // is #3 above, and is used in our "special OT"
+        // that we use to transmit information after the cut-and-choose
+        // is selected
+        std::vector<Bytes>                   m_otp_seeds;
+        std::vector<Prng>                    m_otp_prng;
+
+        
         
         // variables for Gen's input check
         // this contains Gen's input hashes, which must all be consistent

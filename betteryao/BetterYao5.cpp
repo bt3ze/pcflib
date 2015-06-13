@@ -23,13 +23,6 @@ BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
       m_gcs[ix] = GarbledMal();
   }
   
-  // the next few lines are a placeholder for doing a better job with the prngs.
-  // will actually implement prng seeding properly later
-  m_prngs.resize(Env::node_load());
-  for(int j=0;j<m_prngs.size();j++){
-    m_prngs[j] = Prng();
-  }
-  m_prng = Prng();
 
   m_gen_inp_hash.resize(Env::node_load());
   m_gen_inp_masks.resize(Env::node_load());
@@ -41,8 +34,8 @@ BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
   
   GEN_BEGIN
     gen_generate_output_mask(m_prng);
-  gen_generate_input_randomness(m_prng);
-    GEN_END
+    gen_generate_input_randomness(m_prng);
+  GEN_END
 }
 
 // old start function
@@ -207,8 +200,8 @@ void BetterYao5::gen_generate_and_commit_to_inputs(){
   
   //MPI_Barrier(m_mpi_comm);
   
-  //m_prngs.resize(Env::node_load());
-  seed_prngs(m_prngs,m_rnd_seeds);
+  m_circuit_prngs.resize(Env::node_load());
+  seed_prngs(m_circuit_prngs,m_circuit_seeds);
   
   generate_gen_input_keys();
   
@@ -228,14 +221,14 @@ void BetterYao5::generate_random_seeds(){
   Bytes rand;
   uint32_t i;
  
-  m_rnd_seeds.clear();
+  m_circuit_seeds.clear();
 
   for(i=0;i<Env::node_load();i++){
     //rand = prng.rand_bits(element_length_in_bytes(element_t)*8);
     //rand = prng.rand_bits(128);
     rand_elem.random();
-    // std::cout << "random seed: " << rand_elem.to_bytes().to_hex() << "\t rank: " << Env::group_rank() << std::endl;
-    m_rnd_seeds.push_back(rand_elem.to_bytes());
+    //std::cout << "random seed: " << rand_elem.to_bytes().to_hex() << "\t rank: " << Env::group_rank() << std::endl;
+    m_circuit_seeds.push_back(rand_elem.to_bytes());
   }
 
   MPI_Barrier(m_mpi_comm);
@@ -268,7 +261,7 @@ void BetterYao5::generate_gen_input_keys(){
   // (K_{0},K_{1}) <-$ {0,1}^{2k}
   for(j=0; j < Env::node_load(); j++){
 
-    generate_input_keys(m_prngs[j],m_gen_inp_keys[j], get_gen_full_input_size()*2);
+    generate_input_keys(m_circuit_prngs[j],m_gen_inp_keys[j], get_gen_full_input_size()*2);
  
   }
   
@@ -277,7 +270,7 @@ void BetterYao5::generate_gen_input_keys(){
   
   m_gen_inp_permutation_bits.resize(Env::node_load());
   for(j=0;j < Env::node_load();j++){
-    m_gen_inp_permutation_bits[j] = m_prngs[j].rand_bits(get_gen_full_input_size());
+    m_gen_inp_permutation_bits[j] = m_circuit_prngs[j].rand_bits(get_gen_full_input_size());
   }
 
 }
@@ -352,7 +345,7 @@ void BetterYao5::commit_to_gen_input_keys(){
   GEN_BEGIN
     
   for(j=0;j<Env::node_load();j++){
-    // this time, Gen uses m_prng rather than one of m_prngs
+    // this time, Gen uses m_prng rather than one of m_circuit_prngs
     // since this randomness has to be independent of the randomness
     // used to generate the the keys and hte wire labels
     generate_commitments(m_prng,m_gen_inp_keys[j],m_gen_inp_commitments[j]);
@@ -552,7 +545,7 @@ void BetterYao5::generate_eval_input_keys(){
   
   for(j=0; j < Env::node_load(); j++){
 
-    generate_input_keys(m_prngs[j],m_evl_inp_keys[j],get_evl_inp_count()*2);
+    generate_input_keys(m_circuit_prngs[j],m_evl_inp_keys[j],get_evl_inp_count()*2);
 
   }
 
@@ -865,7 +858,7 @@ void BetterYao5::cut_and_choose2()
 // this function computes OTs between Gen and Eval on random inputs
 // the randomness they exchange will be used to seed the prngs which
 // Gen and Eval use to generate the circuits and key generators
-// Outputs: m_prngs[]
+// Outputs: m_circuit_prngs[]
 //
 void BetterYao5::cut_and_choose2_ot()
 {
@@ -902,14 +895,14 @@ void BetterYao5::cut_and_choose2_ot()
 
   GEN_BEGIN
     start = MPI_Wtime();
-  // seeds m_prngs with seeds from m_ot_out
+  // seeds m_circuit_prngs with seeds from m_ot_out
   seed_m_prngs(2*Env::node_load(), m_ot_out);
   m_timer_gen += MPI_Wtime() - start;
   GEN_END
     
   EVL_BEGIN
     start = MPI_Wtime();
-  // seeds m_prngs with seeds from m_ot_out
+  // seeds m_circuit_prngs with seeds from m_ot_out
   seed_m_prngs(Env::node_load(), m_ot_out);
   
   m_timer_evl += MPI_Wtime() - start;
@@ -919,15 +912,15 @@ void BetterYao5::cut_and_choose2_ot()
     }
 
 /**
-   this function seeds m_prngs with the seeds provided.
+   this function seeds m_circuit_prngs with the seeds provided.
    the number of prngs is provided as a bounds check
-   (rather than just using m_prngs.size())
+   (rather than just using m_circuit_prngs.size())
  */
-void BetterYao5::seed_m_prngs(size_t num_prngs, std::vector<Bytes> seeds){
-  assert(seeds.size() == num_prngs); // this actually not really necessary if assertion is programmatically true. We could just use the size of the seeds, but it is a useful assertion
-  m_prngs.resize(num_prngs);
-  for(size_t ix = 0; ix < num_prngs; ix++){
-    m_prngs[ix].seed_rand(seeds[ix]);
+void BetterYao5::seed_m_prngs(size_t num_circuit_prngs, std::vector<Bytes> seeds){
+  assert(seeds.size() == num_circuit_prngs); // this actually not really necessary if assertion is programmatically true. We could just use the size of the seeds, but it is a useful assertion
+  m_circuit_prngs.resize(num_circuit_prngs);
+  for(size_t ix = 0; ix < num_circuit_prngs; ix++){
+    m_circuit_prngs[ix].seed_rand(seeds[ix]);
   }
   std::cout << "prngs seeded " << std::endl;
 }
@@ -941,7 +934,7 @@ void BetterYao5::seed_m_prngs(size_t num_prngs, std::vector<Bytes> seeds){
 // the last part runs through Gen's inputs (and input decommitments)
 // and is a source of crashing
 // it seems that this (badly) needs to be rewritten
-// Outputs: m_rnd_seeds[], m_gen_inp_masks[], m_gcs[].m_gen_inp_decom
+// Outputs: m_circuit_seeds[], m_gen_inp_masks[], m_gcs[].m_gen_inp_decom
 //
 
 extern "C" {
@@ -960,12 +953,12 @@ void BetterYao5::cut_and_choose2_precomputation()
     {
       
       // straight from static circuit implementation
-      m_rnd_seeds[ix] = m_prng.rand_bits(Env::k());
+      m_circuit_seeds[ix] = m_prng.rand_bits(Env::k());
 
       // input masks are the length of the input
       m_gen_inp_masks[ix] = m_prng.rand_bits(m_gen_inp_cnt);
       
-      m_gcs[ix].initialize_gen_circuit(m_ot_keys[ix], m_gen_inp_masks[ix], m_rnd_seeds[ix]);
+      m_gcs[ix].initialize_gen_circuit(m_ot_keys[ix], m_gen_inp_masks[ix], m_circuit_seeds[ix]);
 
       m_gcs[ix].m_st = 
         load_pcf_file(Env::pcf_file(), m_gcs[ix].m_const_wire, m_gcs[ix].m_const_wire+1, copy_key);
@@ -1017,8 +1010,8 @@ void BetterYao5::cut_and_choose2_precomputation()
 // he also sends Eval the keys that will be used for constants 1 and 0
 // (they should not need to be transmitted every time with the gates)
 // finally, he sends the decommitments to his own input keys (why now?)
-// note: Gen's even-indexed m_prngs are for evaluation circuits,
-//       and   odd-indexed  m_prngs are for check circuits
+// note: Gen's even-indexed m_circuit_prngs are for evaluation circuits,
+//       and   odd-indexed  m_circuit_prngs are for check circuits
 // question: why does Gen need to send Evl his masked input?
 //           shouldn't he just send his input keys?
 void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
@@ -1046,7 +1039,7 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
   // which makes this kind of ridiculous:
   // Gen send's Evl masked input which is also masked by a prng
   // (seed for which was exchanged in OT)
-  bufr ^= m_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
+  bufr ^= m_circuit_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
   
   debug_evl_fprintf("Gen send inp mask xor input ", bufr.to_hex());
 
@@ -1072,7 +1065,7 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
   // and she gets Gen's masked input
   if (!m_chks[ix]) // evaluation circuit
     {
-      bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
+      bufr ^= m_circuit_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
       m_gen_inp_masks[ix] = bufr;
       // fprintf(stderr,"step 1\t rank %i\n",Env::group_rank());
     }
@@ -1092,7 +1085,7 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
   bufr = m_gcs[ix].get_const_key(0, 0) + m_gcs[ix].get_const_key(1, 1);
   // debug_evl_fprintf("Gen const keys", bufr.to_hex());
 
-  bufr ^= m_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
+  bufr ^= m_circuit_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
   // debug_evl_fprintf("Gen encrypted const keys", bufr.to_hex());
   
   m_timer_gen += MPI_Wtime() - start;
@@ -1112,7 +1105,7 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
   start = MPI_Wtime();
   if (!m_chks[ix]) // evaluation circuit
     {
-      bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
+      bufr ^= m_circuit_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
       //debug_evl_fprintf("Evl const keys", bufr.to_hex());
       
       std::vector<Bytes> bufr_chunks = bufr.split(Env::key_size_in_bytes());
@@ -1155,11 +1148,11 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
         
         bufr = m_gcs[ix].get_gen_decommitments()[2*jx+bit];
         //debug_evl_fprintf("Gen ith input decommitment", bufr.to_hex());
-        bufr ^= m_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
+        bufr ^= m_circuit_prngs[2*ix+0].rand_bits(bufr.size()*8); // encrypt message
         // debug_evl_fprintf("Gen ith input decommitment encrypted", bufr.to_hex());
         
-        // remember, even m_prngs are for evaluation circuits
-        // and odd m_prngs are for check circuits
+        // remember, even m_circuit_prngs are for evaluation circuits
+        // and odd m_circuit_prngs are for check circuits
         m_timer_gen += MPI_Wtime() - start;
         
         start = MPI_Wtime();
@@ -1181,7 +1174,7 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
             //!! BUG HERE
             // eval receives decommitment and decrypts it
             // she now has the decommitments to Gen's input keys
-            bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
+            bufr ^= m_circuit_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
             //debug_evl_fprintf("Evl ith input decommitment", bufr.to_hex());
            //fprintf(stderr,"step 4 mid\t rank: %i\n",Env::group_rank());
             //m_gcs[ix].m_gen_inp_decom[jx] = bufr;
@@ -1207,8 +1200,8 @@ void BetterYao5::cut_and_choose2_evl_circuit(size_t ix)
 // and all of his own input decommitments
 // Gen always sends these, but Eval can only decrypt if 
 // her prng was properly seeded by the OT result
-// note: Gen's even-indexed m_prngs are for evaluation circuits,
-//       and   odd-indexed  m_prngs are for check circuits
+// note: Gen's even-indexed m_circuit_prngs are for evaluation circuits,
+//       and   odd-indexed  m_circuit_prngs are for check circuits
 void BetterYao5::cut_and_choose2_chk_circuit(size_t ix)
 {
   double start;
@@ -1227,7 +1220,7 @@ void BetterYao5::cut_and_choose2_chk_circuit(size_t ix)
   
   // encrypt the input mask with some randomness
   // use the 2*ix+1 prng for check circuits (checks get odd values)
-  bufr ^= m_prngs[2*ix+1].rand_bits(bufr.size()*8);
+  bufr ^= m_circuit_prngs[2*ix+1].rand_bits(bufr.size()*8);
   m_timer_gen += MPI_Wtime() - start;
   
   // and send encrypted input mask to Evl
@@ -1249,7 +1242,7 @@ void BetterYao5::cut_and_choose2_chk_circuit(size_t ix)
   start = MPI_Wtime();
   if (m_chks[ix]) // check circuit
     {
-      bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
+      bufr ^= m_circuit_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
       m_gen_inp_masks[ix] = bufr;
     }
   m_timer_evl += MPI_Wtime() - start;
@@ -1260,11 +1253,11 @@ void BetterYao5::cut_and_choose2_chk_circuit(size_t ix)
 
   // next, Gen sends random seeds to Eval
   
-  // send m_rnd_seeds[ix]
+  // send m_circuit_seeds[ix]
   GEN_BEGIN
     start = MPI_Wtime();
-  bufr = m_rnd_seeds[ix];
-  bufr ^= m_prngs[2*ix+1].rand_bits(bufr.size()*8); // encrypt message
+  bufr = m_circuit_seeds[ix];
+  bufr ^= m_circuit_prngs[2*ix+1].rand_bits(bufr.size()*8); // encrypt message
   m_timer_gen += MPI_Wtime() - start;
   
   start = MPI_Wtime();
@@ -1280,8 +1273,8 @@ void BetterYao5::cut_and_choose2_chk_circuit(size_t ix)
   start = MPI_Wtime();
   if (m_chks[ix]) // check circuit
     {
-      bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
-      m_rnd_seeds[ix] = bufr;
+      bufr ^= m_circuit_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
+      m_circuit_seeds[ix] = bufr;
     }
   m_timer_evl += MPI_Wtime() - start;
   EVL_END
@@ -1304,7 +1297,7 @@ void BetterYao5::cut_and_choose2_chk_circuit(size_t ix)
         GEN_BEGIN
           start = MPI_Wtime();
         bufr = m_ot_keys[ix][jx];
-        bufr ^= m_prngs[2*ix+1].rand_bits(bufr.size()*8); // encrypt message
+        bufr ^= m_circuit_prngs[2*ix+1].rand_bits(bufr.size()*8); // encrypt message
         m_timer_gen += MPI_Wtime() - start;
 
         start = MPI_Wtime();
@@ -1320,7 +1313,7 @@ void BetterYao5::cut_and_choose2_chk_circuit(size_t ix)
         start = MPI_Wtime();
         if (m_chks[ix]) // check circuit
           {
-            bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
+            bufr ^= m_circuit_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
             m_ot_keys[ix][jx] = bufr;
           }
         m_timer_evl += MPI_Wtime() - start;
@@ -1346,7 +1339,7 @@ void BetterYao5::cut_and_choose2_chk_circuit(size_t ix)
           start = MPI_Wtime();
         bufr = m_gcs[ix].get_gen_decommitments()[jx]; //m_gen_inp_decom[jx];
         // why use 2*ix+1?
-        bufr ^= m_prngs[2*ix+1].rand_bits(bufr.size()*8); // encrypt message
+        bufr ^= m_circuit_prngs[2*ix+1].rand_bits(bufr.size()*8); // encrypt message
         m_timer_gen += MPI_Wtime() - start;
 
         start = MPI_Wtime();
@@ -1362,7 +1355,7 @@ void BetterYao5::cut_and_choose2_chk_circuit(size_t ix)
         start = MPI_Wtime();
         if (m_chks[ix]) // check circuit
           {
-            bufr ^= m_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
+            bufr ^= m_circuit_prngs[ix].rand_bits(bufr.size()*8); // decrypt message
             m_gen_inp_decom[ix][jx] = bufr;
           }
         m_timer_evl += MPI_Wtime() - start;
@@ -1486,7 +1479,7 @@ void BetterYao5::circuit_evaluate()
           GEN_BEGIN
             start = MPI_Wtime();
 
-          m_gcs[ix].gen_init_circuit(m_ot_keys[ix], m_gen_inp_masks[ix], m_rnd_seeds[ix]);   
+          m_gcs[ix].gen_init_circuit(m_ot_keys[ix], m_gen_inp_masks[ix], m_circuit_seeds[ix]);   
             /*
             std::cout << ix << " gen const 0: " << get_const_key(m_gcs[ix], 0, 0).to_hex() << std::endl;
             std::cout << ix << " gen const 1: " << get_const_key(m_gcs[ix], 1, 1).to_hex() << std::endl;
@@ -1502,7 +1495,7 @@ void BetterYao5::circuit_evaluate()
             start = MPI_Wtime();
             if (m_chks[ix]) // check-circuits
               {
-                m_gcs[ix].gen_init_circuit(m_ot_keys[ix], m_gen_inp_masks[ix], m_rnd_seeds[ix]);
+                m_gcs[ix].gen_init_circuit(m_ot_keys[ix], m_gen_inp_masks[ix], m_circuit_seeds[ix]);
               }
             else // evaluation-circuits
               {
