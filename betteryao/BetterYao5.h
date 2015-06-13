@@ -232,21 +232,40 @@ protected:
         // Gen's input decommitments
         std::vector<std::vector<Bytes> >      m_gen_inp_decom;
 
-        // m_rnd_seeds holds the seeds that Gen uses for his circuit Prngs
-        // these are the "randomness" that Gen uses to construct his circuits
-        // and are very important to the protocol
-        std::vector<Bytes>                   m_rnd_seeds;
         
-        // m_prngs are used to "extend the OTs",
-        // using the random seeds sent in the OTs to compute
-        // masks (or one-time pads) over the information
-        // that Gen must obliviously send to Eval;
-        // Eval must only have access to 1/2 of the information
-        // (depending on check or evaluation circuit)
-        std::vector<Prng>		     m_prngs;
+        // *********************************************************
+        // this protocol implementation requires THREE sets of PRNGS
+        // 1) random generators that create Gen's input keys
+        //    and are used for Gen's I/O label commitments
+        //    (Gen's input labels and Eval's input labels)
+        //    these information will be checked in the cut-and-choose
+        // 2) random generators to construct Gen's input commitments
+        //    (in step 3)
+        //    which will be decommitted as the choose in cut-and-choose
+        // 3) random generators used to mask the information
+        //    sent in the special OT that we use for cut-and-choose
+        //    Eval receives 1-of-2 of these seeds,
+        //    and uses the seeded generator to then decrypt the information
+        //    she chose for each circuit, whether check information
+        //   or evaluation information
+        // *********************************************************
 
+        // we maintain the random seeds for each set of PRNGs
+        // because we will need to access them
+        // (technically, we can do without them,
+        // but I think it makes the code cleaner to store and differentiate) 
+        // TODO: come up with better names than "1,2,3"
+        std::vector<Bytes>                   m_rnd_seeds;
+        std::vector<Bytes>                   m_rnd_seeds2;
+        std::vector<Bytes>                   m_rnd_seeds3;
+        
+        std::vector<Prng>		     m_prngs;
+        std::vector<Prng>                    m_prngs2;
+        std::vector<Prng>                    m_prngs3;
+
+        
         // variables for Gen's input check
-        // this is the vector of Gen's input hashes, which must all be consistent
+        // this contains Gen's input hashes, which must all be consistent
         std::vector<Bytes>                   m_gen_inp_hash;
         
         // this matrix defines the 2-UHF that is used to enforce
@@ -255,7 +274,6 @@ protected:
         std::vector<Bytes>                   m_2UHF_matrix;
         
         // this vector tracks Gen's permutation bits
-        // 
         std::vector<Bytes>     m_gen_inp_permutation_bits;
 
         /**

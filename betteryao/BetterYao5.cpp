@@ -352,7 +352,10 @@ void BetterYao5::commit_to_gen_input_keys(){
   GEN_BEGIN
     
   for(j=0;j<Env::node_load();j++){
-    generate_commitments(m_prngs[j],m_gen_inp_keys[j],m_gen_inp_commitments[j]);
+    // this time, Gen uses m_prng rather than one of m_prngs
+    // since this randomness has to be independent of the randomness
+    // used to generate the the keys and hte wire labels
+    generate_commitments(m_prng,m_gen_inp_keys[j],m_gen_inp_commitments[j]);
   }
   
   GEN_END
@@ -367,44 +370,6 @@ void BetterYao5::commit_to_gen_input_keys(){
       evl_receive_gen_commitments(m_gen_committed_inputs[j],get_gen_full_input_size()*2);
     EVL_END
   }
-
-  /*
-
-  for(j=0;j<Env::node_load();j++){
-    
-    
-    for(i=0;i<get_gen_full_input_size()*2;i++){
-      // in this loop,
-      // gen creates a commitment for each input key
-      // and then sends the commitment to Evl
-      
-      GEN_BEGIN
-        
-        // this m_prng will probably need to be replaced with a prng that has
-        // been seeded specifically for the circuit
-        // which will use the keys that the commitments protect
-        // since Evl may need to regenerate them later
-        //commitment = make_commitment(m_prng.rand_bits(Env::k()),m_gen_inp_keys[j][i]);
-      commitment = make_commitment(m_prng ,m_gen_inp_keys[j][i]);
-      
-      committed = commit(commitment);
-      GEN_SEND(committed); 
-      m_gen_inp_commitments[j].push_back(commitment);
-      std::cout << "r,msg: " << decommit(commitment).to_hex() << "\t commitment: " << committed.to_hex() << "\t rank: " << Env::group_rank() << std::endl;
-      
-      GEN_END
-        
-      EVL_BEGIN
-      committed = EVL_RECV();
-      m_gen_committed_inputs[j].push_back(committed);
-      std::cout << "receive commitment: " << committed.to_hex() << "\t rank: " << Env::group_rank() << std::endl;
-      
-      EVL_END
-
-    }
-
-  }
-  */
 
 }
 
@@ -571,9 +536,10 @@ void BetterYao5::gen_commit_to_io_labels(){
 
   GEN_END
 
-    //commit_to_gen_input_labels();
-    //commit_to_eval_input_labels();
-
+    // now, Gen commits to his and Eval's input labels
+    // first, his own labels, and then hers
+  commit_to_gen_input_labels();
+  commit_to_eval_input_labels();
 
 }
 
@@ -581,26 +547,13 @@ void BetterYao5::gen_commit_to_io_labels(){
 void BetterYao5::generate_eval_input_keys(){
     
   uint32_t i,j;
-  // G rand;
+
   m_evl_inp_keys.resize(Env::node_load());
   
   for(j=0; j < Env::node_load(); j++){
 
     generate_input_keys(m_prngs[j],m_evl_inp_keys[j],get_evl_inp_count()*2);
-    /*
-    // generate all input keys here
-    for(i=0;i < get_evl_inp_count() *2;i++){
-      rand.random();
 
-      // and save them for later.
-      // we will send the key during OTs
-      // and this format (still a group element)
-      // will be convenient
-      m_evl_inp_keys[j].push_back(rand.to_bytes());
-      
-    }
-
-    */
   }
 
 }
@@ -608,60 +561,56 @@ void BetterYao5::generate_eval_input_keys(){
 
 
 void BetterYao5::generate_gen_input_commitments(){
+  
   m_gen_inp_commitments.resize(Env::node_load());
-
+  m_gen_committed_inputs.resize(Env::node_load());
+  
   int i,j;
   commitment_t commitment;
   Bytes committed;
 
   for(j=0;j<Env::node_load();j++){
-    
+    m_gen_inp_commitments.clear();
     
   }
+  
 }
 
 void BetterYao5::generate_eval_input_commitments(){
-  
+  m_evl_inp_commitments.resize(Env::node_load());
+  m_evl_committed_inputs.resize(Env::node_load());
+
 }
 
 void BetterYao5::commit_to_gen_input_labels(){
-  // Gen commits to his input labels
-  // Theta^{(j)} = { com(W_{i,0 ^ pi_{i}}; Theta_{i}^{(j)}),
-  //                 com(W_{i,1 ^ pi_{i}}; Theta_{i}^{(j)}) }
-  // where com() is the commitment to the wire label
-  // and Theta is the randomness
-  // these should have separate randomnesses
+  int j;
+  for(j=0;j<Env::node_load();j++){
 
-
-  m_gen_inp_commitments.resize(Env::node_load());
-  
-  int i,j;
-  commitment_t commitment;
-  Bytes committed;
-
-  Prng rng = Prng(); // to be replaced with the right one
-
-  for(j=0; j< Env::node_load(); j++){
-    for(i=0;i< m_gen_inp_cnt*2;i++){
-    
-      GEN_BEGIN
-      
-        commitment = make_commitment(rng.rand_bits(Env::k()), 0);
+  GEN_BEGIN
+    assert(m_gen_inp_commitments[j].size() == 2*get_gen_full_input_size());
+    // gen_send_evl_commitments(m_gen_inp_commitments[j]);
+  GEN_END
         
-        
-      GEN_END
-        
-      EVL_BEGIN
-        
-      EVL_END
-      
+  EVL_BEGIN
+    // evl_receive_gen_commitments(m_gen_committed_inputs[j],2*get_gen_full_input_size());
+  EVL_END
     }
-    
-  }
 }
 
 void BetterYao5::commit_to_eval_input_labels(){
-  
+
+  int j;
+  for(j=0;j<Env::node_load();j++){
+    GEN_BEGIN
+      assert(m_evl_inp_commitments[j].size() == 2*get_evl_inp_count());
+    // gen_send_evl_commitments(m_evl_inp_commitments[j]);
+    GEN_END
+
+    EVL_BEGIN
+      // evl_receive_gen_commitments(m_evl_committed_inputs[j],2*get_evl_inp_count());
+    EVL_END
+
+    }
 }
 
 /**
