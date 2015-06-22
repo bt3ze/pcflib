@@ -131,8 +131,7 @@ protected:
            STEP 5: EVAL'S INPUT OTS
          */
 
-        // unimplemented
-        //eval_input_ot delared above
+        // Eval uses ot methods here, declared below in auxiliary functions
         
         /**
            STEP 6: CUT AND CHOOSE
@@ -141,13 +140,19 @@ protected:
         // Cut and Choose
         void evl_select_cut_and_choose_circuits();
         void special_circuit_ot();
-        void evl_seed_otp_prngs();
-        void send_evaluation_circuit_info();
-        void send_check_circuit_info();
+        void transfer_evaluation_circuit_info();
+        void transfer_check_circuit_info();
 
-        void gen_send_masked_info(Prng & mask_generator, Bytes & info, uint32_t chunk_size);
-        void evl_receive_masked_info(Prng & mask_generator, uint32_t chunk_size);
+        
+        void gen_decommit_and_send_masked_vector(Prng & mask_generator, std::vector<commitment_t> & vec);// , uint32_t chunk_size);
+        void gen_send_masked_info(Prng & mask_generator, Bytes info, uint32_t chunk_size);
+        void evl_receive_masked_vector(Prng & mask_generator, std::vector<Bytes> & destination, uint32_t chunk_size, uint32_t len);
+        Bytes evl_receive_masked_info(Prng & mask_generator, uint32_t chunk_size);
         void evl_ignore_masked_info(uint32_t len);
+
+
+        
+        
 
         // the following are legacy functions
         // will need new ones that perform the special OT
@@ -162,7 +167,8 @@ protected:
 	void cut_and_choose2_precomputation();
 	void cut_and_choose2_evl_circuit(size_t ix);
 	void cut_and_choose2_chk_circuit(size_t ix);
-
+        
+        
 
         /**
            STEP 7: GARBLE CIRCUITS

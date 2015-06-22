@@ -15,6 +15,8 @@ Bytes commit(commitment_t com);
 
 Bytes decommit(commitment_t com);
 
+std::vector<Bytes> decommit_to_vector(std::vector<commitment_t> & vec);
+
 commitment_t make_commitment(Prng & rnd, Bytes msg);
 
 commitment_t make_commitment(Bytes r,Bytes msg);
