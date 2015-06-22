@@ -22,7 +22,6 @@ BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
     {
       m_gcs[ix] = GarbledMal();
   }
-  
 
   m_gen_inp_hash.resize(Env::node_load());
   m_gen_inp_masks.resize(Env::node_load());
@@ -76,7 +75,7 @@ void BetterYao5::SS13(){
 
 void BetterYao5::modify_inputs(){
 // Gen appends an output mask and extra randomness to his inputs
-// Evl tranforms her input in order to hide it from Gen
+// Evl transforms her input in order to hide it from Gen
   gen_generate_output_mask(m_prng);
   gen_generate_input_randomness(m_prng);
   choose_k_probe_resistant_matrix();
@@ -118,9 +117,9 @@ void BetterYao5::gen_generate_input_randomness(Prng & input_prng){
   // in order to make the output of the 2-UHF appear random
   // to protect Gen's input privacy while enforcing
   // Gen's input consistency
+
   GEN_BEGIN
   
-    //  Prng input_prng = Prng();
   Bytes aux_input;
   
   uint32_t lg_k = ceil_log_base_2(Env::k());
@@ -196,12 +195,17 @@ void BetterYao5::evl_generate_new_input(){
 void BetterYao5::gen_generate_and_commit_to_inputs(){
 
   GEN_BEGIN
-  generate_random_seeds();
   
-  //MPI_Barrier(m_mpi_comm);
+  std::cout << "generate random circuit seeds" << std::endl;
+  generate_random_seeds(m_circuit_seeds, Env::node_load());
+  
+  
+  // MPI_Barrier(m_mpi_comm);
   
   m_circuit_prngs.resize(Env::node_load());
   seed_prngs(m_circuit_prngs,m_circuit_seeds);
+  
+  std::cout << "m_circuit_prngs seeded\t rank: " << Env::group_rank() << std::endl;
   
   generate_gen_input_keys();
   
@@ -215,23 +219,24 @@ void BetterYao5::gen_generate_and_commit_to_inputs(){
 // it does the equivalent of calling random() on a Group element type (G)
 // since we use those in OT
 // 
-void BetterYao5::generate_random_seeds(){
+void BetterYao5::generate_random_seeds(std::vector<Bytes> & seeds,uint32_t num_seeds){
  
   G rand_elem;
   Bytes rand;
   uint32_t i;
  
-  m_circuit_seeds.clear();
+  seeds.clear();
 
-  for(i=0;i<Env::node_load();i++){
+  for(i=0;i<num_seeds;i++){
     //rand = prng.rand_bits(element_length_in_bytes(element_t)*8);
     //rand = prng.rand_bits(128);
     rand_elem.random();
+    
     //std::cout << "random seed: " << rand_elem.to_bytes().to_hex() << "\t rank: " << Env::group_rank() << std::endl;
-    m_circuit_seeds.push_back(rand_elem.to_bytes());
+    seeds.push_back(rand_elem.to_bytes());
   }
 
-  MPI_Barrier(m_mpi_comm);
+  // MPI_Barrier(m_mpi_comm);
 }
 
 void BetterYao5::seed_prngs(std::vector<Prng> & prngs, std::vector<Bytes> & seeds){
@@ -243,30 +248,28 @@ void BetterYao5::seed_prngs(std::vector<Prng> & prngs, std::vector<Bytes> & seed
 
 }
 
-// this function takes a reference 
+// this function should take a reference 
 // to a specific prng
 // with a known seed, corresponding to a particular circuit
 // for repeatability
 void BetterYao5::generate_gen_input_keys(){
   // this function should be executed in parallel by all processors
 
+  std::cout << "generate gen input keys\trank: " << Env::group_rank() << std::endl;
+
   int i,j;
-  // G rand;
   Bytes rand;
   
   m_gen_inp_keys.resize(Env::node_load());
   
-  
   // first, generate all of the input keys for Gen
   // (K_{0},K_{1}) <-$ {0,1}^{2k}
   for(j=0; j < Env::node_load(); j++){
-
     generate_input_keys(m_circuit_prngs[j],m_gen_inp_keys[j], get_gen_full_input_size()*2);
- 
   }
   
   // next generate permutation bits for Gen's input keys
-  // { pi_{i} } <-$ {0,1} for i in (0, (gen_inputs) ]
+  // { pi_{i} } <-$ {0,1} for i in (0, gen_inputs ]
   
   m_gen_inp_permutation_bits.resize(Env::node_load());
   for(j=0;j < Env::node_load();j++){
@@ -275,7 +278,10 @@ void BetterYao5::generate_gen_input_keys(){
 
 }
 
-
+/**
+   inputs: reference to Prng, location where keys will be stores, number of keys
+   consider adding another parameter for length of key
+ */
 void BetterYao5::generate_input_keys(Prng & rng, std::vector<Bytes> & keys, uint32_t num_keys){
   // use a seeded prng for repeatable results (so that Eval can get the same thing)
   // and save to the given vector
@@ -285,6 +291,9 @@ void BetterYao5::generate_input_keys(Prng & rng, std::vector<Bytes> & keys, uint
   }
 }
 
+/**
+   inputs: reference to Prng, set of keys that will be committed to, location where commitments will be stored
+ */
 void BetterYao5::generate_commitments(Prng & rng, std::vector<Bytes> & keys, std::vector<commitment_t> & commitments){
   
   int i;
@@ -303,7 +312,7 @@ void BetterYao5::gen_send_evl_commitments(std::vector<commitment_t> & commits){
   Bytes committed;
   uint32_t j;
 
-  std::cout << "send Gen's input commitments" << std::endl;
+  // std::cout << "send Gen's input commitments" << std::endl;
 
   GEN_BEGIN
     assert(commits.size() == get_gen_full_input_size()*2);
@@ -312,31 +321,43 @@ void BetterYao5::gen_send_evl_commitments(std::vector<commitment_t> & commits){
       committed = commit(commits[j]);
       GEN_SEND(committed); 
       
-      std::cout << "r,msg: " << decommit(commits[j]).to_hex() << "\t commitment: " << committed.to_hex() << "\t rank: " << Env::group_rank() << std::endl;
+      // std::cout << "r,msg: " << decommit(commits[j]).to_hex() << "\t commitment: " << committed.to_hex() << "\t rank: " << Env::group_rank() << std::endl;
     }
-
     
   GEN_END
 
 }
 
+/**
+   inputs: location where commitments will be stored, number of commitments
+ */
 void BetterYao5::evl_receive_gen_commitments(std::vector<Bytes> & commits,uint32_t num_commitments){
 
   Bytes committed;
   uint32_t j;
-  std::cout << "Eval Receive Commitments\t rank: " << Env::group_rank() << std::endl;
+  
+  // std::cout << "Eval Receive Commitments\t rank: " << Env::group_rank() << std::endl;
  
   for(j=0;j< num_commitments;j++){
     committed = EVL_RECV();
     commits.push_back(committed);
   
-    std::cout << "receive commitment: " << committed.to_hex() << "\t rank: " << Env::group_rank() << std::endl;
+    // std::cout << "receive commitment: " << committed.to_hex() << "\t rank: " << Env::group_rank() << std::endl;
   
   }
 
 }
 
+
+/**
+   in this function, Gen commits to his input keys
+   if this is step 3 of the protocol, Gen must use a different prng
+   to commit to his inputs, namely m_commitment_prngs
+ */
 void BetterYao5::commit_to_gen_input_keys(){
+  // Gen uses m_commitment_prngs rather than one of m_circuit_prngs
+  // since this randomness has to be independent of the randomness
+  // used to generate the the keys and the wire labels
   
   int i,j;
   m_gen_inp_commitments.resize(Env::node_load());
@@ -344,11 +365,14 @@ void BetterYao5::commit_to_gen_input_keys(){
 
   GEN_BEGIN
     
+  m_commitment_prngs.resize(Env::node_load());
+  generate_random_seeds(m_commitment_seeds, Env::node_load());
+  seed_prngs(m_commitment_prngs,m_commitment_seeds);
+
+  std::cout << "commit to gen input keys with m_commitment_prngs\trank: " << Env::group_rank() << std::endl;
+  
   for(j=0;j<Env::node_load();j++){
-    // this time, Gen uses m_prng rather than one of m_circuit_prngs
-    // since this randomness has to be independent of the randomness
-    // used to generate the the keys and hte wire labels
-    generate_commitments(m_prng,m_gen_inp_keys[j],m_gen_inp_commitments[j]);
+    generate_commitments(m_commitment_prngs[j],m_gen_inp_keys[j],m_gen_inp_commitments[j]);
   }
   
   GEN_END
@@ -372,7 +396,7 @@ void BetterYao5::commit_to_gen_input_keys(){
  */
 
 void BetterYao5::agree_on_objective_circuit(){
-  std::cout << "Eval Annoucnes K-Probe Matrix" << std::endl;
+  std::cout << "Eval Announces K-Probe Matrix" << std::endl;
   eval_announce_k_probe_matrix();
  
   std::cout << "Collaboratively Choose 2-UHF" << std::endl;
@@ -516,22 +540,28 @@ void BetterYao5::gen_commit_to_io_labels(){
   // gate indices (encrypt a nonce concatenated with the gate index).
   // This logic is embedded
   // TODO: fill out how we choose to do it.
+
+  std::cout << "Gen Commits to Input/Output Labels" << std::endl;
+
   GEN_BEGIN
 
     std::cout << "generate Eval Input Keys" << std::endl;
   generate_eval_input_keys();
 
-  std::cout << "generate Gen's Input Commitments" << std::endl;
-  generate_gen_input_commitments();
+  std::cout << "generate Gen's Input Label Commitments" << std::endl;
+  generate_gen_input_label_commitments();
 
-  std::cout << "generate Eval's input commitments" << std::endl;
-  generate_eval_input_commitments();
+  std::cout << "generate Eval's Input Label commitments" << std::endl;
+  generate_eval_input_label_commitments();
 
   GEN_END
 
     // now, Gen commits to his and Eval's input labels
     // first, his own labels, and then hers
+
+    std:: cout << "commit to Gen input labels" << std::endl;
   commit_to_gen_input_labels();
+      std:: cout << "commit to Eval input labels" << std::endl;
   commit_to_eval_input_labels();
 
 }
@@ -553,39 +583,56 @@ void BetterYao5::generate_eval_input_keys(){
 
 
 
-void BetterYao5::generate_gen_input_commitments(){
+void BetterYao5::generate_gen_input_label_commitments(){
   
-  m_gen_inp_commitments.resize(Env::node_load());
-  m_gen_committed_inputs.resize(Env::node_load());
+  // make sure these vectors are big enough to store what we're going to generate
+  m_gen_inp_label_commitments.resize(Env::node_load());
+  m_gen_committed_labels.resize(Env::node_load());
   
-  int i,j;
+  int j;
   commitment_t commitment;
   Bytes committed;
 
+  std::cout << "Generating Gen Input labels";
   for(j=0;j<Env::node_load();j++){
-    m_gen_inp_commitments.clear();
-    
+    //m_gen_inp_commitments.clear();
+    std::cout << "\t"<< j;
+    generate_commitments(m_circuit_prngs[j],m_gen_inp_keys[j],m_gen_inp_label_commitments[j]);
   }
+  std::cout << std::endl;
   
 }
 
-void BetterYao5::generate_eval_input_commitments(){
-  m_evl_inp_commitments.resize(Env::node_load());
-  m_evl_committed_inputs.resize(Env::node_load());
+void BetterYao5::generate_eval_input_label_commitments(){
+  // we're about to generate commitments for each circuit on the processor,
+  // so these need to be resized correctly
+  m_evl_inp_label_commitments.resize(Env::node_load());
+  m_evl_committed_labels.resize(Env::node_load());
+
+  // now generate the input commitments
+  for(int i =0; i < Env::node_load();i++){
+    generate_commitments(m_circuit_prngs[i],m_evl_inp_keys[i],m_evl_inp_label_commitments[i]);
+  }
+  
 
 }
 
 void BetterYao5::commit_to_gen_input_labels(){
   int j;
+
+  EVL_BEGIN
+  m_gen_committed_labels.resize(Env::node_load());
+  EVL_END
+
   for(j=0;j<Env::node_load();j++){
 
   GEN_BEGIN
-    assert(m_gen_inp_commitments[j].size() == 2*get_gen_full_input_size());
-    // gen_send_evl_commitments(m_gen_inp_commitments[j]);
+    assert(m_gen_inp_label_commitments[j].size() == 2*get_gen_full_input_size());
+    gen_send_evl_commitments(m_gen_inp_label_commitments[j]);
   GEN_END
         
   EVL_BEGIN
-    // evl_receive_gen_commitments(m_gen_committed_inputs[j],2*get_gen_full_input_size());
+    evl_receive_gen_commitments(m_gen_committed_labels[j],2*get_gen_full_input_size());
   EVL_END
     }
 }
@@ -595,12 +642,13 @@ void BetterYao5::commit_to_eval_input_labels(){
   int j;
   for(j=0;j<Env::node_load();j++){
     GEN_BEGIN
-      assert(m_evl_inp_commitments[j].size() == 2*get_evl_inp_count());
-    // gen_send_evl_commitments(m_evl_inp_commitments[j]);
+      assert(m_evl_inp_label_commitments[j].size() == 2*get_evl_inp_count());
+    //gen_send_evl_commitments(m_evl_inp_label_commitments[j]);
     GEN_END
 
     EVL_BEGIN
-      // evl_receive_gen_commitments(m_evl_committed_inputs[j],2*get_evl_inp_count());
+      //evl_receive_gen_commitments(m_evl_committed_labels[j],2*get_evl_inp_count());
+    //assert(m_evl_committed_labels[j].size() == 2*get_evl_inp_count());
     EVL_END
 
     }
@@ -611,13 +659,34 @@ void BetterYao5::commit_to_eval_input_labels(){
  */
 
 void BetterYao5::eval_input_OT(){
-  // the OT used in the old version is good for this OT
-  // but it must be updated to use the keys
-  // that Gen already committed to
-  // at simplest, this requires changing the lines
-  // Y[0].random(); Y[1].random();
-  // to selecting the keys from list of pre-committed keys
-  oblivious_transfer();
+  std::cout << "Eval Input OT" << std::endl;
+
+  GEN_BEGIN
+  assert(m_evl_inp_keys.size() == Env::node_load());
+  
+  for(int i = 0; i < m_evl_inp_keys.size(); i++){
+    std::cout << "eval input OT: " << m_evl_inp_keys[i].size() << "\trank: " << Env::group_rank() << std::endl;
+  }
+  ot_send_batch(m_evl_inp_keys);
+
+  GEN_END
+
+  EVL_BEGIN
+    // TODO: make sure Eval asks for
+    // her modified input keys
+    // not just her original private input
+    // (since at this point, Gen probably doesn't know
+    // her real input keys)
+    assert(m_evl_inp_keys.size() == 0);
+    m_evl_inp_keys.resize(Env::node_load());
+
+    std::cout << "eval input OT: " << explode_vector(m_private_input,m_private_input.size()*8).size() << "\trank: " << Env::group_rank() << std::endl;
+      
+    // remember we require that the private input length be a multiple of 8
+    ot_receive_batch(explode_vector(m_private_input, m_private_input.size()*8),m_evl_inp_keys);
+    
+  EVL_END
+
 }
 
 
@@ -626,14 +695,32 @@ void BetterYao5::eval_input_OT(){
  */
 // Gen doesn't know which are check and which are evaluation circuits
 void BetterYao5::SS13_cut_and_choose(){
+
+  std::cout << "Cut and Choose" << std::endl;
+
+  EVL_BEGIN
   evl_select_cut_and_choose_circuits();
+  EVL_END
+  
+  std::cout << "Special Circuit OT" << std::endl;
+  special_circuit_ot();
+  
+  EVL_BEGIN
+  std::cout << "Eval seed prngs with special circuit OT output" << std::endl;
+  evl_seed_otp_prngs();
+  EVL_END
+  
+  std::cout << "Transfer Masked Info W/ Prngs" << std::endl;
+  send_eval_circuit_info();
+  send_check_circuit_info();
+  
+
 }
 
 
 void BetterYao5::evl_select_cut_and_choose_circuits(){
-  EVL_BEGIN
 
-    Bytes coins;
+  Bytes coins;
   double start;
   
   // should be enough random bits to select choose or cut for every circuit
@@ -702,17 +789,170 @@ void BetterYao5::evl_select_cut_and_choose_circuits(){
   
   m_timer_mpi += MPI_Wtime() - start;
   
-  step_report("cut-&-check");
+  // step_report("cut-&-check");
+  
+
+}
+
+/**
+   In this function, we perform "circuit OTs" where
+   Eval selects whether a circuit is a check circuit or an evaluation circuit
+   If evaluation circuit, Eval will receive the de-commitments to Gen's input keys
+   and she can evaluate the circuit
+   If check circuit, Eval will receive the random seeds that Gen used to generate
+   the input keys (and subsequently the circuit itself). Eval will then use this
+   information to generate the circuit in lockstep with evaluating the other gates.
+   To perform this circuit OT, we actually perform an OT over random seeds
+   used to construct PRNGs that Gen uses to mask the information that he sends
+   to Gen. If Eval has chosen the correct seed, she can decrypt the information
+   Gen sends and retrieve the keys or seeds.
+*/
+
+void BetterYao5::special_circuit_ot(){
+  // in this function, Gen and Evl perform a bunch of OTs in parallel,
+  // so Evl uses m_chks
+  // and each Gen processor generates m_otp_seeds for 
+  // 2*Env::s()/Env::node_load()
+  
+  m_otp_seeds.resize(Env::node_load());
+
+  GEN_BEGIN
+    generate_random_seeds(m_otp_seeds,2*Env::node_load());//*Env::s()/Env::node_load());
+    seed_prngs(m_otp_prngs, m_otp_seeds);
+
+    std::cout << "circuit OT: " << m_otp_seeds.size() << "\trank: " << Env::group_rank() << std::endl;
+    ot_send(m_otp_seeds);
+
+  GEN_END
+
+    EVL_BEGIN
+    std::cout << "circuit OT: " << m_chks.size() << "\trank: " << Env::group_rank() << std::endl;
+  ot_receive(m_chks, m_otp_seeds);
   
   EVL_END
 
+    // now that Gen and Evl have done OTs on the pseudorandom masks, they can send and receive the circuit/check info
+    
+    
+  EVL_BEGIN
+  evl_seed_otp_prngs();
+  EVL_END
+
+  send_evaluation_circuit_info();
+  send_check_circuit_info();
+
+}
+
+// Eval should have received m_otp_seeds
+// as output from the special circuit OT
+void BetterYao5::evl_seed_otp_prngs(){
+  seed_prngs(m_otp_prngs,m_otp_seeds);
+}
+
+void BetterYao5::send_evaluation_circuit_info(){
+  GEN_BEGIN
+
+    //  assert(m_otp_prngs.size()/2 == m_gen_inp_commitments.size());
+  
+  for(i=0;i < m_otp_prngs.size()/2; i++){
+    //gen_send_masked_info(m_otp_prngs[2*i],m_gen_inp_commitments[i])
+  }
+  
+  GEN_END
+
+  EVL_BEGIN
+  for(i=0;i<m_chks.size();i++){
+    if(m_chks[i]){
+      
+    }
+  }
+  EVL_END
+}
+
+void BetterYao5::send_check_circuit_info(){
+  GEN_BEGIN
+  for(i=0;i<m_otp_prngs.size()/2;i++){
+    gen_send_masked_info(m_otp_prngs[2*i+1],m_circuit_seeds[i],Env::element_size_in_bytes*8);
+  }
+  GEN_END
+
+  EVL_BEGIN
+    for(i=0;i<m_chks.size();i++){
+      if(m_chks[i]){ // check circuit
+        m_circuit_seeds[i] = evl_receive_masked_info(m_otp_prngs[i], Env::element_size_in_bytes*8); // TODO: verify this is the right size
+      } else{
+        evl_ignore_masked_info(1); // one Bytes segment sent
+      }
+    }
+  EVL_END
+
+}
+
+void BetterYao5::send_evaluation_circuit_info(){
+  GEN_BEGIN 
+  for(i=0; i < m_otp_prngs.size()/2; i++){
+    // TODO: fix chunk size
+    gen_send_masked_vector(m_otp_prngs[2*i],decommit_to_vector(m_gen_inp_commitments),Env::k());
+    gen_send_masked_vector(m_otp_prngs[2*i],decommit_to_vector(m_gen_inp_label_commitments),Env::k());
+  }
+
+  GEN_END
+
+  EVL_BEGIN
+    for(int i = 0; i < m_chks.size();i++){
+      if(!m_chks[i]){ // evaluation circuit
+        //        evl_receive_masked_vector(m_otp_prng[i],m_gen_committed_inputs
+      }
+    }
+  EVL_END
+   
+
+}
+
+
+void BetterYao5::gen_send_masked_vector(Prng & mask_generator, std::vector<Bytes> & vec, uint32_t chunk_size){
+  for(int i = 0; i < vec.size();i++){
+    gen_send_masked_info(mask_generator,vec[i],chunk_size);
+  }
+}
+
+void BetterYao5::gen_send_masked_info(Prng & mask_generator, Bytes & info, uint32_t chunk_size){
+  assert(chunk_size == info.size()*8);
+
+  Bytes send;
+
+  send = info ^ mask_generator.random_bits(chunk_size);
+  GEN_SEND(send);
+
+}
+
+void BetterYao5::evl_receive_masked_vector(Prng & mask_generator, std::vector<Bytes> & destination, uint32_t chunk_size, uint32_t len){
+  for(int i = 0; i < len; i++){
+    destination.push_back(evl_receive_masked_info(mask_generator, chunk_size));
+  }
+}
+
+Bytes BetterYao5::evl_receive_masked_info(Prng & mask_generator, uint32_t chunk_size){
+  Bytes recv;
+  recv = EVL_RECV();
+  return recv ^ mask_generator.random_bits(chunk_size);
+}
+
+void BetterYao5::evl_ignore_masked_info(uint32_t len){
+  Bytes recv;
+  for(int i = 0; i < len; i++){
+    recv = EVL_RECV();
+  }
+  // and then do nothing because Eval can't decrypt this information anyway
 }
 
 /**
    STEP 7: GARBLE AND CHECK
  */
 
-void BetterYao5::garble_and_check_circuits(){}
+void BetterYao5::garble_and_check_circuits(){
+  std::cout << "garble and check circuits" << std::endl;
+}
 
 /**
    STEP 8: RETRIEVE OUTPUTS
@@ -738,12 +978,287 @@ uint32_t ceil_log_base_2(uint32_t k){
   return lg_k;
 }
 
+
+void BetterYao5::ot_send(std::vector<Bytes> & sender_inputs){
+  ot_send_init();
+  ot_send_random(sender_inputs);
+}
+
+void BetterYao5::ot_receive(Bytes selection_bits, std::vector<Bytes> & results_container){
+  ot_receive_init();
+  ot_receive_random(selection_bits, results_container);
+}
+
+
+void BetterYao5::ot_send_batch(std::vector<std::vector<Bytes> > & sender_inputs){
+  ot_send_init();
+  for(int j = 0; j < sender_inputs.size(); j++){
+    ot_send_random(sender_inputs[j]);
+  }
+}
+
+void BetterYao5::ot_receive_batch(Bytes selection_bits, std::vector<std::vector<Bytes> > & results_container){
+  ot_receive_init();
+  for(int j = 0; j < results_container.size();j++){
+    ot_receive_random(selection_bits, results_container[j]);
+  }
+}
+
+void BetterYao5::ot_send_init(){
+  double start;
+  
+  start = MPI_Wtime();
+  std::vector<Bytes> bufr_chunks;
+  Bytes bufr(Env::elm_size_in_bytes()*4);
+  
+  Z y, a;
+
+  // step 1: ZKPoK of the CRS: g[0], h[0], g[1], h[1]
+  if (Env::is_root())
+    {
+      
+      //start = MPI_Wtime();
+      GEN_BEGIN
+      bufr = GEN_RECV();
+      GEN_END
+      EVL_BEGIN
+      bufr = EVL_RECV();
+      EVL_END
+      // m_timer_com += MPI_Wtime() - start;
+      
+      // m_comm_sz += bufr.size();
+    }
+  
+  // send g[0], g[1], h[0], h[1] to slave processes
+  MPI_Bcast(&bufr[0], bufr.size(), MPI_BYTE, 0, m_mpi_comm);
+  
+  bufr_chunks = bufr.split(Env::elm_size_in_bytes());
+  
+  m_ot_g[0].from_bytes(bufr_chunks[0]);
+  m_ot_g[1].from_bytes(bufr_chunks[1]);
+  m_ot_h[0].from_bytes(bufr_chunks[2]);
+  m_ot_h[1].from_bytes(bufr_chunks[3]);
+        
+  // group element pre-processing
+  m_ot_g[0].fast_exp();
+  m_ot_g[1].fast_exp();
+  m_ot_h[0].fast_exp();
+  m_ot_h[1].fast_exp();
+  
+}
+
+void BetterYao5::ot_receive_init(){
+  double start;
+
+  start = MPI_Wtime();
+  std::vector<Bytes> bufr_chunks;
+  Bytes bufr(Env::elm_size_in_bytes()*4);
+
+  Z y, a;
+  // m_timer_gen += MPI_Wtime() - start;
+  // m_timer_evl += MPI_Wtime() - start;
+
+  // step 1: ZKPoK of the CRS: g[0], h[0], g[1], h[1]
+
+  if(Env::is_root()){
+    y.random();
+    a.random();
+    
+    m_ot_g[0].random();
+    m_ot_g[1] = m_ot_g[0]^y;          // g[1] = g[0]^y
+    
+    m_ot_h[0] = m_ot_g[0]^a;          // h[0] = g[0]^a
+    m_ot_h[1] = m_ot_g[1]^(a + Z(1)); // h[1] = g[1]^(a+1)
+    
+    bufr.clear();
+    bufr += m_ot_g[0].to_bytes();
+    bufr += m_ot_g[1].to_bytes();
+    bufr += m_ot_h[0].to_bytes();
+    bufr += m_ot_h[1].to_bytes();
+    // m_timer_evl += MPI_Wtime() - start;
+  
+
+    GEN_BEGIN
+    GEN_SEND(bufr);
+    GEN_END
+    EVL_BEGIN
+    EVL_SEND(bufr);
+    EVL_END
+  }
+
+  // send g[0], g[1], h[0], h[1] to slave processes
+  MPI_Bcast(&bufr[0], bufr.size(), MPI_BYTE, 0, m_mpi_comm);
+
+  bufr_chunks = bufr.split(Env::elm_size_in_bytes());
+
+  m_ot_g[0].from_bytes(bufr_chunks[0]);
+  m_ot_g[1].from_bytes(bufr_chunks[1]);
+  m_ot_h[0].from_bytes(bufr_chunks[2]);
+  m_ot_h[1].from_bytes(bufr_chunks[3]);
+
+  // group element pre-processing
+  m_ot_g[0].fast_exp();
+  m_ot_g[1].fast_exp();
+  m_ot_h[0].fast_exp();
+  m_ot_h[1].fast_exp();
+
+}
+
+void BetterYao5::ot_send_random(std::vector<Bytes> & send_inputs){
+  double start;
+  
+  Bytes send, recv;
+  std::vector<Bytes> recv_chunks;
+  
+  Z r, s[2], t[2];
+  G gr, hr, X[2], Y[2];
+  
+  //  m_ot_out.clear();
+  //  m_ot_out.reserve(2*m_ot_bit_cnt); // the receiver only uses half of it
+
+  
+  //  GEN_BEGIN // generator (OT sender)
+  for (size_t bix = 0; bix < send_inputs.size()/2; bix++)
+    {
+      // Step 1: gr=g[b]^r, hr=h[b]^r, where b is the receiver's bit
+      start = MPI_Wtime();
+      recv.clear();
+      
+      // depending on who's calling,
+      // receive
+      GEN_BEGIN
+        recv += GEN_RECV(); // receive gr, hr
+      GEN_END
+      EVL_BEGIN
+        recv += EVL_RECV();
+      EVL_END
+        
+        //      m_timer_com += MPI_Wtime() - start;
+      
+        //  m_comm_sz += recv.size();
+        
+      // Step 2: the evaluator computes X[0], Y[0], X[1], Y[1]
+      start = MPI_Wtime();
+      recv_chunks = recv.split(Env::elm_size_in_bytes());
+      
+      gr.from_bytes(recv_chunks[0]);
+      hr.from_bytes(recv_chunks[1]);
+      
+       // retrieve keys from the supplied send_inputs vector
+      Y[0] = send_inputs[bix*2]; // K[0]
+      Y[1] = send_inputs[bix*2+1]; // K[1]
+
+      s[0].random(); s[1].random();
+      t[0].random(); t[1].random();
+      
+      // X[b] = ( g[b]^s[b] ) * ( h[b]^t[b] ) for b = 0, 1
+      X[0] = m_ot_g[0]^s[0]; X[0] *= m_ot_h[0]^t[0];
+      X[1] = m_ot_g[1]^s[1]; X[1] *= m_ot_h[1]^t[1];
+      
+      // Y[b] = ( gr^s[b] ) * ( hr^t[b] ) * K[b] for b = 0, 1
+      Y[0] *= gr^s[0]; Y[0] *= hr^t[0];
+      Y[1] *= gr^s[1]; Y[1] *= hr^t[1];
+      
+      send.clear();
+      send += X[0].to_bytes();
+      send += X[1].to_bytes();
+      send += Y[0].to_bytes();
+      send += Y[1].to_bytes();
+      
+      // depending on who's calling it,
+      // send the buffer
+      GEN_BEGIN
+        GEN_SEND(send);
+      GEN_END
+      EVL_BEGIN
+        EVL_SEND(send);
+      EVL_END
+    }
+  
+}
+
+void BetterYao5::ot_receive_random(Bytes selection_bits, std::vector<Bytes> & results_container){
+  double start;
+
+  start = MPI_Wtime();
+  Bytes send, recv;
+  std::vector<Bytes> recv_chunks;
+
+  Z r, s[2], t[2];
+  G gr, hr, X[2], Y[2];
+
+  //  m_ot_out.clear();
+  // m_ot_out.reserve(2*m_ot_bit_cnt); // the receiver only uses half of it
+  // m_timer_gen += MPI_Wtime() - start;
+  // m_timer_evl += MPI_Wtime() - start;
+
+  //assert(m_ot_recv_bits.size() >= fit_to_byte_containers(m_ot_bit_cnt));
+  //assert(m_chks.size() == Env::node_load());
+  
+  for (size_t bix = 0; bix < selection_bits.size(); bix++)
+    {
+      // Step 1: gr=g[b]^r, hr=h[b]^r, where b is the receiver's bit
+      start = MPI_Wtime();
+      
+      //int bit_value = m_ot_recv_bits.get_ith_bit(bix);
+      //int bit_value = m_chks[bix];
+      int bit_value = selection_bits[bix];
+
+      r.random();
+      
+      gr = m_ot_g[bit_value]^r;
+      hr = m_ot_h[bit_value]^r;
+            
+      send.clear();
+      send += gr.to_bytes();
+      send += hr.to_bytes();
+      m_timer_evl += MPI_Wtime() - start;
+            
+      start = MPI_Wtime();
+      
+      GEN_BEGIN
+      GEN_SEND(send);
+      GEN_END
+      EVL_BEGIN
+      EVL_SEND(send);
+      EVL_END
+      
+
+      // Step 2: the evaluator computes X[0], Y[0], X[1], Y[1]
+      recv.clear();
+
+      GEN_BEGIN
+        recv += GEN_RECV();
+      GEN_END
+      EVL_BEGIN
+        recv += EVL_RECV(); // receive X[0], Y[0], X[1], Y[1]
+      EVL_END
+      
+      m_timer_com += MPI_Wtime() - start;
+            
+      m_comm_sz += send.size() + recv.size();
+            
+      // Step 3: the evaluator computes K = Y[b]/X[b]^r
+      start = MPI_Wtime();
+      recv_chunks = recv.split(Env::elm_size_in_bytes());
+            
+      X[bit_value].from_bytes(recv_chunks[    bit_value]); // X[b]
+      Y[bit_value].from_bytes(recv_chunks[2 + bit_value]); // Y[b]
+            
+      // K = Y[b]/(X[b]^r)
+      Y[bit_value] /= X[bit_value]^r;
+      //      m_ot_out.push_back(Y[bit_value].to_bytes().hash(Env::k()));
+      results_container.push_back(Y[bit_value].to_bytes());
+      m_timer_evl += MPI_Wtime() - start;
+    }
+ 
+  // assert(results_container.size() = selection_bits.size()*8);
+  // not quite the right assertion because number of bits need not be
+  // an even multiple of 8.
+}
+
+
 //TODO: IMPLEMENT PROPERLY!!!
-/*
-Bytes make_commitment(Bytes commit_value){
-  return commit_value.hash();
-};
-*/
 
 
 /**

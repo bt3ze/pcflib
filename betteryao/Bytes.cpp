@@ -9,6 +9,25 @@ Bytes Bytes::hash(size_t bits) const
 	return Hash(*this).sig(bits);
 }
 
+Bytes condense_vector(Bytes vec){
+  std::cout << "condense vector of size: " << vec.size() << std::endl;
+  Bytes ret = Bytes(vec.size()/8) + (vec.size() % 8 == 0 ? 0 : 1);
+  std::cout << "ret size: " << ret.size() << std::endl;
+  for(int i = 0; i < vec.size(); i++){
+    ret.set_ith_bit(i,vec[i]);
+  }
+  return ret;
+}
+
+Bytes explode_vector(Bytes vec, int len){
+  std::cout << "explode vector len: " << len << std::endl;
+  Bytes ret = Bytes(0);
+  for(int i = 0; i < len; i++){
+    ret.push_back(vec.get_ith_bit(i));
+  }
+  return ret;
+}
+
 namespace
 {
 const char HEX_TABLE[16] =

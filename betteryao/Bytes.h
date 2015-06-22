@@ -200,6 +200,7 @@ public:
 	Bytes hash(size_t bits) const;
 	std::vector<Bytes> split(const size_t chunk_len) const;
 
+
 private:
 	void merge(const std::vector<Bytes> &chunks);
 
@@ -262,4 +263,11 @@ inline Bytes operator+ (const Bytes &lhs, const Bytes &rhs)
 	ret += rhs;
 	return ret;
 }
+
+// only use this for vectors with size a multiple
+// of the byte size (8 bits)
+Bytes condense_vector(Bytes vec);
+Bytes explode_vector(Bytes vec, int len);
+
+
 #endif /* BYTES_H_ */

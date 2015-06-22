@@ -40,6 +40,12 @@ Bytes decommit(commitment_t comm){
   return comm.r + comm.msg;
 }
 
+std::vector<Bytes> decommit_to_vector(std::vector<commitment_t> & vec){
+  std::vector<Bytes> ret;
+  for(int i = 0; i < vec.size();i++){
+    ret.push_back(decommit(vec[i]));
+  }
+}
 
 bool verify_commitment(commitment_t com, Bytes decom){
   return decommit(com).hash(Env::k()) == decom;

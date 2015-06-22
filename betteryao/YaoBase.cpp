@@ -558,6 +558,7 @@ void YaoBase::oblivious_transfer()
         
         start = MPI_Wtime();
         bufr_chunks = bufr.split(Env::exp_size_in_bytes());
+        // bufr_chunks now holds each value of r
         m_timer_evl += MPI_Wtime() - start;
 	EVL_END
 
@@ -572,6 +573,7 @@ void YaoBase::oblivious_transfer()
         
         start = MPI_Wtime();
         bufr_chunks = bufr.split(Env::elm_size_in_bytes());
+        // bufr_chunks now hold all the rs for Gen
         m_timer_gen += MPI_Wtime() - start;
 	GEN_END
           

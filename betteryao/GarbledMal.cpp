@@ -221,7 +221,7 @@ void GarbledMal::gen_next_gen_inp_com(const Bytes &row, size_t kx){
   
   __m128i in_key[2], aes_plaintext, aes_ciphertext;
   Bytes tmp2;
-
+  
   //aes_plaintext = _mm_set1_epi64x((uint64_t)kx+10);
   aes_plaintext = _mm_set1_epi64x((uint64_t)kx);
   tmp2.resize(16,0);
@@ -266,7 +266,6 @@ void * gen_next_malicious_gate(PCFState *st, PCFGate *current_gate){
   //  *reinterpret_cast<garbled_circuit_m_t*>(get_external_circuit(st));
   GarbledMal &cct =
     *reinterpret_cast<GarbledMal*>(get_external_circuit(st));
-  
   
   static __m128i current_zero_key;
   

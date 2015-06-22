@@ -2,6 +2,7 @@
 #define BETTERYAO5_H_
 
 #include "YaoBase.h"
+#include "Bytes.h"
 //#include "garbled_circuit_m.h"
 #include "GarbledBase.h"
 #include "GarbledMal.h"
@@ -87,7 +88,7 @@ protected:
            STEP 2: GEN INPUT COMMITMENTS
          */
         
-        void generate_random_seeds();
+        void generate_random_seeds(std::vector<Bytes> & seeds, uint32_t num_seeds);
         void seed_prngs(std::vector<Prng> & prngs, std::vector<Bytes> & seeds);
 
         // Gen 
@@ -120,8 +121,8 @@ protected:
         void generate_eval_input_keys();
         
 
-        void generate_gen_input_commitments();
-        void generate_eval_input_commitments();
+        void generate_gen_input_label_commitments();
+        void generate_eval_input_label_commitments();
 
         void commit_to_gen_input_labels();
         void commit_to_eval_input_labels();
@@ -139,6 +140,14 @@ protected:
 
         // Cut and Choose
         void evl_select_cut_and_choose_circuits();
+        void special_circuit_ot();
+        void evl_seed_otp_prngs();
+        void send_evaluation_circuit_info();
+        void send_check_circuit_info();
+
+        void gen_send_masked_info(Prng & mask_generator, Bytes & info, uint32_t chunk_size);
+        void evl_receive_masked_info(Prng & mask_generator, uint32_t chunk_size);
+        void evl_ignore_masked_info(uint32_t len);
 
         // the following are legacy functions
         // will need new ones that perform the special OT
@@ -170,6 +179,27 @@ protected:
         // Eval proves Gen's output authenticity
         void gen_output_auth_proof();
         
+        /**
+           AUXILIARY FUNCTIONS
+         */
+
+        // note: selection_bits will be accessed as
+        // selection_bits[idx] / selection_bits.get_ith_bit
+        // so ensure that this input array is properly formatted
+        void ot_send(std::vector<Bytes> & sender_inputs);
+        void ot_receive(Bytes selection_bits, std::vector<Bytes> & results_container);
+
+        // these two functions are for sending groups of keys
+        void ot_send_batch(std::vector<std::vector<Bytes> > & sender_inputs);
+        void ot_receive_batch(Bytes selection_bits, std::vector<std::vector<Bytes> > & results_container);
+
+
+        void ot_send_init();
+        void ot_receive_init();
+        void ot_send_random(std::vector<Bytes> & send_inputs);
+        void ot_receive_random(Bytes selection_bits, std::vector<Bytes> & results_container);
+        
+
         // these are legacy functions for this 
 	void proc_gen_out();
 	void proc_evl_out();
@@ -206,15 +236,25 @@ protected:
         std::vector<std::vector<Bytes> > m_gen_inp_keys;
         std::vector<std::vector<Bytes> > m_evl_inp_keys;
 
-        // list of Gen's input commitments
+        // these input commitments are used in step 3
         std::vector<std::vector<commitment_t> >   m_gen_inp_commitments;
         std::vector<std::vector<Bytes> >          m_gen_committed_inputs;
         
-        std::vector<std::vector<commitment_t> >   m_evl_inp_commitments;
-        std::vector<std::vector<Bytes> >          m_evl_committed_inputs;
-        
+
+        // these input label commitments are used in
+        // Step 5: Gen's I/O Commitments
+        // right before Eval's input OTs
+        std::vector<std::vector<commitment_t> >          m_gen_inp_label_commitments;
+        std::vector<std::vector<commitment_t> >          m_evl_inp_label_commitments;
+    
+        std::vector<std::vector<Bytes> >          m_gen_committed_labels;
+        std::vector<std::vector<Bytes> >          m_evl_committed_labels;
         
 
+        // Gen input label decommitments
+        // replaces m_gen_inp_decom
+        std::vector<std::vector<Bytes> >          m_gen_inp_label_decommitments;
+        
         // placeholder for the k-probe-resistant matrix we'll need
         std::vector<Bytes>                   m_k_probe_resistant_matrix;
         
@@ -232,6 +272,7 @@ protected:
         // Gen's input decommitments
         std::vector<std::vector<Bytes> >      m_gen_inp_decom;
 
+        
         
         // *********************************************************
         // this protocol implementation requires THREE sets of PRNGS
@@ -254,7 +295,6 @@ protected:
         // because we will need to access them
         // (technically, we can do without them,
         // but I think it makes the code cleaner to store and differentiate) 
-        // TODO: come up with better names than "1,2,3"
         std::vector<Bytes>                   m_circuit_seeds;
         std::vector<Prng>		     m_circuit_prngs;
         
@@ -265,10 +305,11 @@ protected:
         // is #3 above, and is used in our "special OT"
         // that we use to transmit information after the cut-and-choose
         // is selected
+        // on Gen's side, each circuit will have 2 prngs (and 2 seeds)
+        // Eval will get one of the seeds to decrypt as chooses
         std::vector<Bytes>                   m_otp_seeds;
-        std::vector<Prng>                    m_otp_prng;
+        std::vector<Prng>                    m_otp_prngs;
 
-        
         
         // variables for Gen's input check
         // this contains Gen's input hashes, which must all be consistent
@@ -278,6 +319,7 @@ protected:
         // Gen's input consistency
         // each entry in the array is a row (or column?)
         std::vector<Bytes>                   m_2UHF_matrix;
+        
         
         // this vector tracks Gen's permutation bits
         std::vector<Bytes>     m_gen_inp_permutation_bits;
