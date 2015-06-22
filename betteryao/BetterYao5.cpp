@@ -317,7 +317,7 @@ void BetterYao5::gen_send_evl_commitments(std::vector<commitment_t> & commits){
   // std::cout << "send Gen's input commitments" << std::endl;
 
   GEN_BEGIN
-    assert(commits.size() == get_gen_full_input_size()*2);
+    //    assert(commits.size() == get_gen_full_input_size()*2);
     
     for(j=0;j<commits.size();j++){
       committed = commit(commits[j]);
@@ -559,11 +559,11 @@ void BetterYao5::gen_commit_to_io_labels(){
   GEN_END
 
     // now, Gen commits to his and Eval's input labels
-    // first, his own labels, and then hers
+    // first his own labels, and then hers
 
-    std:: cout << "commit to Gen input labels" << std::endl;
+  std:: cout << "commit to Gen input labels" << std::endl;
   commit_to_gen_input_labels();
-      std:: cout << "commit to Eval input labels" << std::endl;
+  std:: cout << "commit to Eval input labels" << std::endl;
   commit_to_eval_input_labels();
 
 }
@@ -589,7 +589,6 @@ void BetterYao5::generate_gen_input_label_commitments(){
   
   // make sure these vectors are big enough to store what we're going to generate
   m_gen_inp_label_commitments.resize(Env::node_load());
-  m_gen_committed_labels.resize(Env::node_load());
   
   int j;
   commitment_t commitment;
@@ -609,7 +608,6 @@ void BetterYao5::generate_eval_input_label_commitments(){
   // we're about to generate commitments for each circuit on the processor,
   // so these need to be resized correctly
   m_evl_inp_label_commitments.resize(Env::node_load());
-  m_evl_committed_labels.resize(Env::node_load());
 
   // now generate the input commitments
   for(int i =0; i < Env::node_load();i++){
@@ -642,15 +640,21 @@ void BetterYao5::commit_to_gen_input_labels(){
 void BetterYao5::commit_to_eval_input_labels(){
 
   int j;
+
+  EVL_BEGIN
+  m_evl_committed_labels.resize(Env::node_load());
+  EVL_END
+
   for(j=0;j<Env::node_load();j++){
     GEN_BEGIN
       assert(m_evl_inp_label_commitments[j].size() == 2*get_evl_inp_count());
-    //gen_send_evl_commitments(m_evl_inp_label_commitments[j]);
+    gen_send_evl_commitments(m_evl_inp_label_commitments[j]);
     GEN_END
 
     EVL_BEGIN
-      //evl_receive_gen_commitments(m_evl_committed_labels[j],2*get_evl_inp_count());
-    //assert(m_evl_committed_labels[j].size() == 2*get_evl_inp_count());
+      
+      evl_receive_gen_commitments(m_evl_committed_labels[j],2*get_evl_inp_count());
+    assert(m_evl_committed_labels[j].size() == 2*get_evl_inp_count());
     EVL_END
 
     }
