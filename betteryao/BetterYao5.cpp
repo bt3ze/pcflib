@@ -877,6 +877,8 @@ void BetterYao5::transfer_check_circuit_info(){
 }
 
 void BetterYao5::transfer_evaluation_circuit_info(){
+  std::cout << "transfer evaluation circuit info" << std::endl;
+
   GEN_BEGIN 
 
   assert(m_otp_prngs.size() == 2*Env::node_load());
@@ -893,16 +895,27 @@ void BetterYao5::transfer_evaluation_circuit_info(){
     
   assert(m_chks.size() == Env::node_load());
   assert(m_chks.size() == m_gen_committed_inputs.size());
-    
+  std::vector<Bytes> receive_inputs;
+  std::vector<Bytes> receive_labels;
+  receive_inputs.resize(Env::node_load());
+  receive_labels.resize(Env::node_load());
+  
   for(int i = 0; i < Env::node_load();i++){
     if(!m_chks[i]){ // evaluation circuit
-      //evl_receive_masked_vector(m_otp_prng[i],m_gen_committed_inputs[i]);
-      //evl_receive_masked_vector(m_otp_prng[i],m_gen_committed_labels[i]);
+      evl_receive_masked_vector(m_otp_prngs[i],receive_inputs,2*Env::k(),m_gen_committed_inputs.size());
+      evl_receive_masked_vector(m_otp_prngs[i],receive_labels,2*Env::k(),m_gen_committed_labels.size());
+
+      for(int j = 0; j < receive_inputs.size();j++){
+        std::cout << "receive gen committed input: " << receive_inputs[j].to_hex();
+        std::cout << "receive gen committed label" << receive_labels[j].to_hex();
+      }
     } else {
       evl_ignore_masked_info(m_gen_committed_inputs[i].size()); // decommitted inputs
       evl_ignore_masked_info(m_gen_committed_labels[i].size()); // decommitted labels
     }
   }
+
+
   EVL_END
    
 
@@ -911,6 +924,7 @@ void BetterYao5::transfer_evaluation_circuit_info(){
 
 void BetterYao5::gen_decommit_and_send_masked_vector(Prng & mask_generator, std::vector<commitment_t> & vec){ //, uint32_t chunk_size){
   for(int i = 0; i < vec.size();i++){
+    assert(decommit(vec[i]).size() > 0);
     gen_send_masked_info(mask_generator,decommit(vec[i]),decommit(vec[i]).size()*8);
   }
 }
@@ -926,6 +940,10 @@ void BetterYao5::gen_send_masked_info(Prng & mask_generator, Bytes info, uint32_
 void BetterYao5::evl_receive_masked_vector(Prng & mask_generator, std::vector<Bytes> & destination, uint32_t chunk_size, uint32_t len){
   for(int i = 0; i < len; i++){
     destination.push_back(evl_receive_masked_info(mask_generator, chunk_size));
+  }
+  std::cout << "received vector: " << std::endl;
+  for(int i = 0; i < len; i++){
+    std::cout << destination[i].to_hex() << std::endl;
   }
 }
 
