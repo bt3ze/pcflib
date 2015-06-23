@@ -92,7 +92,7 @@ protected:
         void seed_prngs(std::vector<Prng> & prngs, std::vector<Bytes> & seeds);
 
         // Gen 
-        void generate_gen_input_keys();
+        void generate_gen_input_keys(uint32_t circuit_num);
 
         void generate_commitments(Prng & rng, std::vector<Bytes> & keys, std::vector<commitment_t> & commitments);
         
@@ -118,11 +118,11 @@ protected:
          */
 
         // gen_commit_to_io_labels declared above
-        void generate_eval_input_keys();
+        void generate_eval_input_keys(uint32_t circuit_num);
         
 
-        void generate_gen_input_label_commitments();
-        void generate_eval_input_label_commitments();
+        void generate_gen_input_label_commitments(uint32_t circuit_num);
+        void generate_eval_input_label_commitments(uint32_t circuit_num);
 
         void commit_to_gen_input_labels();
         void commit_to_eval_input_labels();
@@ -147,7 +147,7 @@ protected:
         void gen_decommit_and_send_masked_vector(Prng & mask_generator, std::vector<commitment_t> & vec);// , uint32_t chunk_size);
         void gen_send_masked_info(Prng & mask_generator, Bytes info, uint32_t chunk_size);
         void evl_receive_masked_vector(Prng & mask_generator, std::vector<Bytes> & destination, uint32_t chunk_size, uint32_t len);
-        Bytes evl_receive_masked_info(Prng & mask_generator, uint32_t chunk_size);
+        void evl_receive_masked_info(Prng & mask_generator, Bytes & destinatuion, uint32_t chunk_size);
         void evl_ignore_masked_info(uint32_t len);
 
 
@@ -175,7 +175,10 @@ protected:
            AND CHECK CIRCUIT CONSISTENCY
 
         */
-        // unimplemented
+        void evl_regenerate_circuits(uint32_t circuit_num);
+        void evl_check_garbled_circuit_commitments();
+        void evl_check_commitment_regeneration(uint32_t circuit_num);
+        bool check_received_commitments_vs_generated(std::vector<Bytes> & received, std::vector<commitment_t> & generated);
 
         /**
            STEP 8: RETRIEVE OUTPUTS
@@ -242,9 +245,11 @@ protected:
         std::vector<std::vector<Bytes> > m_gen_inp_keys;
         std::vector<std::vector<Bytes> > m_evl_inp_keys;
 
+        std::vector<std::vector<Bytes> > m_evl_received_keys;
+
         // these input commitments are used in step 3
         std::vector<std::vector<commitment_t> >   m_gen_inp_commitments;
-        std::vector<std::vector<Bytes> >          m_gen_committed_inputs;
+        std::vector<std::vector<Bytes> >          m_gen_received_input_commitments;
         
 
         // these input label commitments are used in
@@ -252,18 +257,22 @@ protected:
         // right before Eval's input OTs
         std::vector<std::vector<commitment_t> >          m_gen_inp_label_commitments;
         std::vector<std::vector<commitment_t> >          m_evl_inp_label_commitments;
-    
-        std::vector<std::vector<Bytes> >          m_gen_committed_labels;
-        std::vector<std::vector<Bytes> >          m_evl_committed_labels;
+
+        
+        std::vector<std::vector<Bytes> >          m_gen_received_label_commitments;
+        std::vector<std::vector<Bytes> >          m_evl_received_label_commitments;
         
 
         // Gen input label decommitments
         // replaces m_gen_inp_decom
-        std::vector<std::vector<Bytes> >          m_gen_inp_label_decommitments;
+        //        std::vector<std::vector<Bytes> >          m_gen_inp_label_decommitments;
         
         // placeholder for the k-probe-resistant matrix we'll need
         std::vector<Bytes>                   m_k_probe_resistant_matrix;
         
+        std::vector<Bytes>                   m_recv_gen_inp_commitments; 
+        std::vector<Bytes>                   m_recv_gen_inp_label_commitments; 
+
         /**
            new and old variables
         */

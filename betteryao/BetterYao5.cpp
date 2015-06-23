@@ -206,8 +206,12 @@ void BetterYao5::gen_generate_and_commit_to_inputs(){
   seed_prngs(m_circuit_prngs,m_circuit_seeds);
   
   std::cout << "m_circuit_prngs seeded\t rank: " << Env::group_rank() << std::endl;
-  
-  generate_gen_input_keys();
+ 
+  m_gen_inp_keys.resize(Env::node_load());
+  m_gen_inp_permutation_bits.resize(Env::node_load());
+  for(int j = 0; j < Env::node_load();j++){
+    generate_gen_input_keys(j);
+  }
   
   GEN_END
 
@@ -254,29 +258,24 @@ void BetterYao5::seed_prngs(std::vector<Prng> & prngs, std::vector<Bytes> & seed
 // to a specific prng
 // with a known seed, corresponding to a particular circuit
 // for repeatability
-void BetterYao5::generate_gen_input_keys(){
+void BetterYao5::generate_gen_input_keys(uint32_t circuit_num){
   // this function should be executed in parallel by all processors
 
   std::cout << "generate gen input keys\trank: " << Env::group_rank() << std::endl;
 
-  int i,j;
-  Bytes rand;
-  
-  m_gen_inp_keys.resize(Env::node_load());
-  
+  int j;
+    
+ 
   // first, generate all of the input keys for Gen
   // (K_{0},K_{1}) <-$ {0,1}^{2k}
-  for(j=0; j < Env::node_load(); j++){
-    generate_input_keys(m_circuit_prngs[j],m_gen_inp_keys[j], get_gen_full_input_size()*2);
-  }
+  generate_input_keys(m_circuit_prngs[circuit_num],
+                      m_gen_inp_keys[circuit_num],
+                      get_gen_full_input_size()*2);
   
   // next generate permutation bits for Gen's input keys
   // { pi_{i} } <-$ {0,1} for i in (0, gen_inputs ]
   
-  m_gen_inp_permutation_bits.resize(Env::node_load());
-  for(j=0;j < Env::node_load();j++){
-    m_gen_inp_permutation_bits[j] = m_circuit_prngs[j].rand_bits(get_gen_full_input_size());
-  }
+  m_gen_inp_permutation_bits[circuit_num] = m_circuit_prngs[circuit_num].rand_bits(get_gen_full_input_size());
 
 }
 
@@ -363,7 +362,7 @@ void BetterYao5::commit_to_gen_input_keys(){
   
   int i,j;
   m_gen_inp_commitments.resize(Env::node_load());
-  m_gen_committed_inputs.resize(Env::node_load());
+  m_gen_received_input_commitments.resize(Env::node_load());
 
   GEN_BEGIN
     
@@ -386,7 +385,7 @@ void BetterYao5::commit_to_gen_input_keys(){
     GEN_END
 
     EVL_BEGIN
-      evl_receive_gen_commitments(m_gen_committed_inputs[j],get_gen_full_input_size()*2);
+      evl_receive_gen_commitments(m_gen_received_input_commitments[j],get_gen_full_input_size()*2);
     EVL_END
   }
 
@@ -546,15 +545,27 @@ void BetterYao5::gen_commit_to_io_labels(){
   std::cout << "Gen Commits to Input/Output Labels" << std::endl;
 
   GEN_BEGIN
+    
+  m_evl_inp_keys.resize(Env::node_load());
+  m_gen_inp_label_commitments.resize(Env::node_load());
+  m_evl_inp_label_commitments.resize(Env::node_load());
+  
+  for(int i = 0; i < Env::node_load();i++){
+    std::cout << "generate Eval Input Keys "<< i << std::endl;
+    generate_eval_input_keys(i);
+    
+    std::cout << "generate Gen's Input Label Commitments "<< i << std::endl;
+    generate_gen_input_label_commitments(i);
+    
+    std::cout << "generate Eval's Input Label commitments "<< i << std::endl;
+    generate_eval_input_label_commitments(i);
 
-    std::cout << "generate Eval Input Keys" << std::endl;
-  generate_eval_input_keys();
-
-  std::cout << "generate Gen's Input Label Commitments" << std::endl;
-  generate_gen_input_label_commitments();
-
-  std::cout << "generate Eval's Input Label commitments" << std::endl;
-  generate_eval_input_label_commitments();
+  }
+ 
+  // order:
+  // generate eval input keys
+  // generate gen input label commitments
+  // generate eval input label commitments
 
   GEN_END
 
@@ -569,50 +580,56 @@ void BetterYao5::gen_commit_to_io_labels(){
 }
 
 
-void BetterYao5::generate_eval_input_keys(){
+void BetterYao5::generate_eval_input_keys(uint32_t circuit_num){
     
-  uint32_t i,j;
+  //  uint32_t i,j;
 
-  m_evl_inp_keys.resize(Env::node_load());
+  //  m_evl_inp_keys.resize(Env::node_load());
   
-  for(j=0; j < Env::node_load(); j++){
+  //  for(j=0; j < Env::node_load(); j++){
 
-    generate_input_keys(m_circuit_prngs[j],m_evl_inp_keys[j],get_evl_inp_count()*2);
+  generate_input_keys(m_circuit_prngs[circuit_num],m_evl_inp_keys[circuit_num],get_evl_inp_count()*2);
 
-  }
+    //  }
 
 }
 
 
 
-void BetterYao5::generate_gen_input_label_commitments(){
+void BetterYao5::generate_gen_input_label_commitments(uint32_t circuit_num){
   
   // make sure these vectors are big enough to store what we're going to generate
-  m_gen_inp_label_commitments.resize(Env::node_load());
+  //  m_gen_inp_label_commitments.resize(Env::node_load());
   
-  int j;
-  commitment_t commitment;
-  Bytes committed;
+  // int j;
+  //commitment_t commitment;
+  //  Bytes committed;
 
   std::cout << "Generating Gen Input labels";
-  for(j=0;j<Env::node_load();j++){
+  //for(j=0;j<Env::node_load();j++){
     //m_gen_inp_commitments.clear();
-    std::cout << "\t"<< j;
-    generate_commitments(m_circuit_prngs[j],m_gen_inp_keys[j],m_gen_inp_label_commitments[j]);
-  }
-  std::cout << std::endl;
+    //std::cout << "\t"<< j;
+  std::cout << "m_gen_inp_keys size: " << m_gen_inp_keys[circuit_num].size()
+            << std::endl;
+  assert(m_gen_inp_keys[circuit_num].size() == 2* get_gen_full_input_size());
+  generate_commitments(m_circuit_prngs[circuit_num],m_gen_inp_keys[circuit_num],m_gen_inp_label_commitments[circuit_num]);
+    //  }
+    //std::cout << std::endl;
   
 }
 
-void BetterYao5::generate_eval_input_label_commitments(){
+void BetterYao5::generate_eval_input_label_commitments(uint32_t circuit_num){
   // we're about to generate commitments for each circuit on the processor,
   // so these need to be resized correctly
-  m_evl_inp_label_commitments.resize(Env::node_load());
+  // m_evl_inp_label_commitments.resize(Env::node_load());
 
   // now generate the input commitments
-  for(int i =0; i < Env::node_load();i++){
-    generate_commitments(m_circuit_prngs[i],m_evl_inp_keys[i],m_evl_inp_label_commitments[i]);
-  }
+  //for(int i =0; i < Env::node_load();i++){
+  std::cout << "m_evl_inp_keys size: " << m_evl_inp_keys[circuit_num].size() 
+            << std::endl;
+  assert(m_evl_inp_keys[circuit_num].size() == 2*get_evl_inp_count());
+  generate_commitments(m_circuit_prngs[circuit_num],m_evl_inp_keys[circuit_num],m_evl_inp_label_commitments[circuit_num]);
+    // }
   
 
 }
@@ -621,7 +638,7 @@ void BetterYao5::commit_to_gen_input_labels(){
   int j;
 
   EVL_BEGIN
-  m_gen_committed_labels.resize(Env::node_load());
+  m_gen_received_label_commitments.resize(Env::node_load());
   EVL_END
 
   for(j=0;j<Env::node_load();j++){
@@ -632,7 +649,7 @@ void BetterYao5::commit_to_gen_input_labels(){
   GEN_END
         
   EVL_BEGIN
-    evl_receive_gen_commitments(m_gen_committed_labels[j],2*get_gen_full_input_size());
+    evl_receive_gen_commitments(m_gen_received_label_commitments[j],2*get_gen_full_input_size());
   EVL_END
     }
 }
@@ -642,7 +659,7 @@ void BetterYao5::commit_to_eval_input_labels(){
   int j;
 
   EVL_BEGIN
-  m_evl_committed_labels.resize(Env::node_load());
+  m_evl_received_label_commitments.resize(Env::node_load());
   EVL_END
 
   for(j=0;j<Env::node_load();j++){
@@ -653,8 +670,8 @@ void BetterYao5::commit_to_eval_input_labels(){
 
     EVL_BEGIN
       
-      evl_receive_gen_commitments(m_evl_committed_labels[j],2*get_evl_inp_count());
-    assert(m_evl_committed_labels[j].size() == 2*get_evl_inp_count());
+      evl_receive_gen_commitments(m_evl_received_label_commitments[j],2*get_evl_inp_count());
+    assert(m_evl_received_label_commitments[j].size() == 2*get_evl_inp_count());
     EVL_END
 
     }
@@ -683,13 +700,13 @@ void BetterYao5::eval_input_OT(){
     // not just her original private input
     // (since at this point, Gen probably doesn't know
     // her real input keys)
-    assert(m_evl_inp_keys.size() == 0);
-    m_evl_inp_keys.resize(Env::node_load());
+    assert(m_evl_received_keys.size() == 0);
+    m_evl_received_keys.resize(Env::node_load());
 
     std::cout << "eval input OT: " << explode_vector(m_private_input,m_private_input.size()*8).size() << "\trank: " << Env::group_rank() << std::endl;
       
     // remember we require that the private input length be a multiple of 8
-    ot_receive_batch(explode_vector(m_private_input, m_private_input.size()*8),m_evl_inp_keys);
+    ot_receive_batch(explode_vector(m_private_input, m_private_input.size()*8),m_evl_received_keys);
     
   EVL_END
 
@@ -862,16 +879,18 @@ void BetterYao5::transfer_check_circuit_info(){
 
   EVL_BEGIN
 
-    std::cout << "m_circuit_seeds size: " << m_circuit_seeds.size() << std::endl;
-    for(int i=0;i<m_chks.size();i++){
-      if(m_chks[i]){ // check circuit
-        m_circuit_seeds.push_back( evl_receive_masked_info(m_otp_prngs[i],Env::elm_size_in_bytes()*8) );
-        std::cout << "m_circuit_seeds " << m_circuit_seeds[i].to_hex()
-                  << "\trank: " << Env::group_rank() << std::endl;
-      } else{
-        evl_ignore_masked_info(1); // one Bytes segment sent
-      }
+    // std::cout << "m_circuit_seeds size: " << m_circuit_seeds.size() << std::endl;
+  m_circuit_seeds.resize(m_chks.size());
+  for(int i=0;i<m_chks.size();i++){
+    if(m_chks[i]){ // check circuit
+      evl_receive_masked_info(m_otp_prngs[i],m_circuit_seeds[i],Env::elm_size_in_bytes()*8);
+      
+      std::cout << "m_circuit_seeds " << m_circuit_seeds[i].to_hex()
+                << "\trank: " << Env::group_rank() << std::endl;
+    } else{
+      evl_ignore_masked_info(1); // one Bytes segment sent
     }
+  }
   EVL_END
 
 }
@@ -894,27 +913,27 @@ void BetterYao5::transfer_evaluation_circuit_info(){
   EVL_BEGIN
     
   assert(m_chks.size() == Env::node_load());
-  assert(m_chks.size() == m_gen_committed_inputs.size());
-  std::vector<Bytes> receive_inputs;
-  std::vector<Bytes> receive_labels;
-  receive_inputs.resize(Env::node_load());
-  receive_labels.resize(Env::node_load());
+  assert(m_chks.size() == m_gen_received_input_commitments.size());
+  //  std::vector<Bytes> receive_inputs;
+  // std::vector<Bytes> receive_labels;
+  // receive_inputs.resize(Env::node_load());
+  //receive_labels.resize(Env::node_load());
   
   for(int i = 0; i < Env::node_load();i++){
     if(!m_chks[i]){ // evaluation circuit
-      evl_receive_masked_vector(m_otp_prngs[i],receive_inputs,2*Env::k(),m_gen_committed_inputs.size());
-      evl_receive_masked_vector(m_otp_prngs[i],receive_labels,2*Env::k(),m_gen_committed_labels.size());
+      evl_receive_masked_vector(m_otp_prngs[i],m_recv_gen_inp_commitments,2*Env::k(),m_gen_received_input_commitments[i].size());
+      evl_receive_masked_vector(m_otp_prngs[i],m_recv_gen_inp_label_commitments,2*Env::k(),m_gen_received_label_commitments[i].size());
 
-      for(int j = 0; j < receive_inputs.size();j++){
-        std::cout << "receive gen committed input: " << receive_inputs[j].to_hex();
-        std::cout << "receive gen committed label" << receive_labels[j].to_hex();
-      }
+      //for(int j = 0; j < receive_inputs.size();j++){
+      //  std::cout << "receive gen committed input: " << receive_inputs[j].to_hex() << std::endl;
+      //std::cout << "receive gen committed label" << receive_labels[j].to_hex() << std::endl;
+      //}
     } else {
-      evl_ignore_masked_info(m_gen_committed_inputs[i].size()); // decommitted inputs
-      evl_ignore_masked_info(m_gen_committed_labels[i].size()); // decommitted labels
+      evl_ignore_masked_info(m_gen_received_input_commitments[i].size()); // decommitted inputs
+      evl_ignore_masked_info(m_gen_received_label_commitments[i].size()); // decommitted labels
     }
   }
-
+  
 
   EVL_END
    
@@ -927,6 +946,10 @@ void BetterYao5::gen_decommit_and_send_masked_vector(Prng & mask_generator, std:
     assert(decommit(vec[i]).size() > 0);
     gen_send_masked_info(mask_generator,decommit(vec[i]),decommit(vec[i]).size()*8);
   }
+  //std::cout << "Gen decommit and send masked vector: " << std::endl;
+  //for(int j = 0; j < vec.size(); j++){
+  //  std::cout << decommit(vec[j]).to_hex() <<  "\trank: "<< Env::group_rank() << std::endl;
+  //}
 }
 
 void BetterYao5::gen_send_masked_info(Prng & mask_generator, Bytes info, uint32_t chunk_size){
@@ -938,21 +961,24 @@ void BetterYao5::gen_send_masked_info(Prng & mask_generator, Bytes info, uint32_
 }
 
 void BetterYao5::evl_receive_masked_vector(Prng & mask_generator, std::vector<Bytes> & destination, uint32_t chunk_size, uint32_t len){
+  destination.resize(len);
   for(int i = 0; i < len; i++){
-    destination.push_back(evl_receive_masked_info(mask_generator, chunk_size));
+    evl_receive_masked_info(mask_generator, destination[i], chunk_size);
   }
-  std::cout << "received vector: " << std::endl;
-  for(int i = 0; i < len; i++){
-    std::cout << destination[i].to_hex() << std::endl;
-  }
+  //std::cout << "received vector: " << "\trank: "<< Env::group_rank() << std::endl;
+  //for(int i = 0; i < len; i++){
+  //  std::cout << destination[i].to_hex() <<  "\trank: "<< Env::group_rank() << std::endl;
+  //}
 }
 
-Bytes BetterYao5::evl_receive_masked_info(Prng & mask_generator, uint32_t chunk_size){
-  Bytes recv;
-  recv = EVL_RECV();
-  recv ^= mask_generator.rand_bits(chunk_size);
-  assert(recv.size()*8 == chunk_size);
-  return recv;
+void BetterYao5::evl_receive_masked_info(Prng & mask_generator, Bytes & destination, uint32_t chunk_size){
+  //  Bytes recv;
+  destination = EVL_RECV();
+  //std::cout << "Destination: " << destination.to_hex() << std::endl;
+  destination ^= mask_generator.rand_bits(chunk_size);
+  //std::cout << "eval received: " << destination.to_hex() << std::endl;
+  assert(destination.size()*8 == chunk_size);
+  //  return recv;
   // return recv ^ mask_generator.rand_bits(chunk_size);
 }
 
@@ -966,17 +992,119 @@ void BetterYao5::evl_ignore_masked_info(uint32_t len){
 
 /**
    STEP 7: GARBLE AND CHECK
- */
+*/
 
 void BetterYao5::garble_and_check_circuits(){
   std::cout << "garble and check circuits" << std::endl;
+  
+  m_gen_inp_keys.resize(Env::node_load());
+  m_evl_inp_keys.resize(Env::node_load());
+  m_gen_inp_label_commitments.resize(Env::node_load());
+  m_evl_inp_label_commitments.resize(Env::node_load());
+  m_gen_inp_permutation_bits.resize(Env::node_load());
+
+  MPI_Barrier(m_mpi_comm);
+
+  EVL_BEGIN
+    for(int i = 0; i < Env::node_load();i++){
+      if(m_chks[i]){ // this is a check circuit
+        m_circuit_prngs.resize(Env::node_load());
+        evl_regenerate_circuits(i);
+        evl_check_commitment_regeneration(i);
+      } else{
+        evl_check_garbled_circuit_commitments();
+      }
+    }
+  
+  EVL_END
+}
+
+// this function only called on check circuits
+// (circuit_num is the index of a check circuit
+void BetterYao5::evl_regenerate_circuits(uint32_t circuit_num){
+  // first, Evl seeds the circuit prngs for which she has received seeds
+  
+  m_circuit_prngs[circuit_num].seed_rand(m_circuit_seeds[circuit_num]);
+
+  // next, Evl must regenerate the commitments that Gen sent her
+  
+  // order: of generating things with circuit seed rho:
+  // 1. generate Gen input keys and permutation bits
+  // 2. generate eval input keys
+  // 3. generate gen input label commitments
+  // 4. generate eval input label commitments
+
+  std::cout << "generate Gen Input Keys" << std::endl;
+  generate_gen_input_keys(circuit_num);
+  
+  std::cout << "generate Eval Input Keys" << std::endl;
+  generate_eval_input_keys(circuit_num);
+
+  std::cout << "generate Gen's Input Label Commitments" << std::endl;
+  generate_gen_input_label_commitments(circuit_num);
+
+  std::cout << "generate Eval's Input Label commitments" << std::endl;
+  generate_eval_input_label_commitments(circuit_num);
+  
+}
+
+
+
+void BetterYao5::evl_check_commitment_regeneration(uint32_t circuit_num){
+  bool verify = true;
+
+  // check consistency of the gen input label commitments
+  assert(m_gen_received_label_commitments[circuit_num].size() == m_gen_inp_label_commitments[circuit_num].size());
+  verify &= check_received_commitments_vs_generated(m_gen_received_label_commitments[circuit_num],m_gen_inp_label_commitments[circuit_num]);
+      
+  // check consistency of the eval input label commitments
+  std::cout << "number of evl label commitments: "
+            << m_evl_received_label_commitments[circuit_num].size()
+            << "\t number of generated evl input labels: " 
+            << m_evl_inp_label_commitments[circuit_num].size()
+            << "\trank: " << Env::group_rank()
+            << std::endl;
+
+  assert(m_evl_received_label_commitments[circuit_num].size() == m_evl_inp_label_commitments[circuit_num].size());
+  verify &= check_received_commitments_vs_generated(m_evl_received_label_commitments[circuit_num], m_evl_inp_label_commitments[circuit_num]);
+  
+  if(!verify){
+    std::cout << "no verify" << std::endl;
+    LOG4CXX_FATAL(logger, "Eval's Check of Gen's Check Circuits Failed");
+    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+  } else{
+    std::cout << "verified" << std::endl;
+  }
+  
+}
+
+void BetterYao5::evl_check_garbled_circuit_commitments(){}
+
+bool BetterYao5::check_received_commitments_vs_generated(std::vector<Bytes> & received, std::vector<commitment_t> & generated){
+  assert(received.size() == generated.size());
+
+  bool verify = true;
+  for(int i = 0; i < received.size();i++){
+    //verify &= verify_commitment(generated[i],received[i]);
+    
+    std::cout << "received commitment: "
+              << received[i].to_hex()
+              << "\tregenerated commitment: "
+              << decommit(generated[i]).to_hex()
+              << "\thashed decommitment: "
+              << decommit(generated[i]).hash(Env::k()).to_hex()
+              << "\trank: " << Env::group_rank()
+              << std::endl;
+  }
+  return verify;
 }
 
 /**
    STEP 8: RETRIEVE OUTPUTS
  */
 
-void BetterYao5::retrieve_outputs(){}
+void BetterYao5::retrieve_outputs(){
+}
 
 
 
