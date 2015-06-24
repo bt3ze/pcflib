@@ -24,17 +24,17 @@ public:
         // old protocol:
 	void start();
         //void oblivious_transfer();
-        void cut_and_choose();
-	void cut_and_choose2();
-	void consistency_check();
-	void circuit_evaluate();
+        //void cut_and_choose();
+	//void cut_and_choose2();
+	//void consistency_check();
+	//void circuit_evaluate();
 
         // new protocol:
         void SS13();
 	
 protected:
         /**
-           new protocol functions
+           HIGH LEVEL PROTOCOL FUNCTIONS
          */
 
         // highest level functions
@@ -47,12 +47,58 @@ protected:
         void SS13_cut_and_choose();
         void garble_and_check_circuits();
         void retrieve_outputs();
+
+        /**
+           GENERAL-PURPOSE RANDOMNESS GENERATION FUNCTIONS
+           generate random seeds, keys, seed prngs, etc.
+         */
+        void generate_random_seeds(std::vector<Bytes> & seeds, uint32_t num_seeds);
+        void seed_prngs(std::vector<Prng> & prngs, std::vector<Bytes> & seeds);
+        void generate_input_keys(Prng & rng, std::vector<Bytes> & keys, uint32_t num_keys);
+
+
+
+        /**
+         *
+         COMMITMENTS: GENERATION AND TRANSFER
+         *
+         */
+        void gen_send_evl_commitments(std::vector<commitment_t> &commits);
+        void evl_receive_gen_commitments(std::vector<Bytes> &commits, uint32_t num_commitments);
+        void generate_commitments(Prng & rng, std::vector<Bytes> & keys, std::vector<commitment_t> & commitments);
+        
+
+
+        /**
+         *
+         OBLIVIOUS TRANSFER
+         *
+         */
+
+        // these two high-level functions 
+        // submit and select a vector for OT
+        void ot_send(std::vector<Bytes> & sender_inputs);
+        void ot_receive(Bytes selection_bits, std::vector<Bytes> & results_container);
+
+        // these two functions are for sending groups of keys
+        // they perform multiple parallel OTs
+        void ot_send_batch(std::vector<std::vector<Bytes> > & sender_inputs);
+        void ot_receive_batch(Bytes selection_bits, std::vector<std::vector<Bytes> > & results_container);
+
+
+        // core OT functions
+        void ot_send_init();
+        void ot_receive_init();
+        void ot_send_random(std::vector<Bytes> & send_inputs);
+        void ot_receive_random(Bytes selection_bits, std::vector<Bytes> & results_container);
+
+
         
         /**
            STEP 1: MODIFY INPUT KEYS
            gen must generate two auxiliary inputs:
-          a mask for his output and extra randomness
-          that is necessary for the 2-UHF
+           a mask for his output and extra randomness
+           that is necessary for the 2-UHF
         */
 
         // generates Gen's output mask (referred to as e)
@@ -69,6 +115,7 @@ protected:
         // her private input and the matrix
         void evl_generate_new_input();
         
+        
         /**
            Gen has a couple of inputs segments, and therefore gets
            extra input accessors
@@ -84,31 +131,27 @@ protected:
 
         uint32_t get_gen_full_input_size();
 
+
+        
         /**
            STEP 2: GEN INPUT COMMITMENTS
          */
         
-        void generate_random_seeds(std::vector<Bytes> & seeds, uint32_t num_seeds);
-        void seed_prngs(std::vector<Prng> & prngs, std::vector<Bytes> & seeds);
-
-        // Gen 
         void generate_gen_input_keys(uint32_t circuit_num);
-
-        void generate_commitments(Prng & rng, std::vector<Bytes> & keys, std::vector<commitment_t> & commitments);
-        
         void commit_to_gen_input_keys();
 
-        void generate_input_keys(Prng & rng, std::vector<Bytes> & keys, uint32_t num_keys);
 
-        void gen_send_evl_commitments(std::vector<commitment_t> &commits);
-        void evl_receive_gen_commitments(std::vector<Bytes> &commits, uint32_t num_commitments);
         /**
            STEP 3: AGREE ON OBJECTIVE CIRCUIT
          */
 
         // Objective Circuit Agreement
         void eval_announce_k_probe_matrix();
+
         void collaboratively_choose_2UHF();
+
+        // interactive coin flipping protocol
+        Bytes flip_coins(size_t len);
 
 
         /**
@@ -119,19 +162,21 @@ protected:
 
         // gen_commit_to_io_labels declared above
         void generate_eval_input_keys(uint32_t circuit_num);
-        
-
         void generate_gen_input_label_commitments(uint32_t circuit_num);
         void generate_eval_input_label_commitments(uint32_t circuit_num);
 
         void commit_to_gen_input_labels();
         void commit_to_eval_input_labels();
 
+
+
         /**
            STEP 5: EVAL'S INPUT OTS
          */
 
-        // Eval uses ot methods here, declared below in auxiliary functions
+        // Eval uses ot methods here, declared above in auxiliary functions
+                
+
         
         /**
            STEP 6: CUT AND CHOOSE
@@ -142,34 +187,16 @@ protected:
         void special_circuit_ot();
         void transfer_evaluation_circuit_info();
         void transfer_check_circuit_info();
-
         
         void gen_decommit_and_send_masked_vector(Prng & mask_generator, std::vector<commitment_t> & vec);// , uint32_t chunk_size);
         void gen_send_masked_info(Prng & mask_generator, Bytes info, uint32_t chunk_size);
         void evl_receive_masked_vector(Prng & mask_generator, std::vector<Bytes> & destination, uint32_t chunk_size, uint32_t len);
         void evl_receive_masked_info(Prng & mask_generator, Bytes & destinatuion, uint32_t chunk_size);
         void evl_ignore_masked_info(uint32_t len);
-
-
         
         
 
-        // the following are legacy functions
-        // will need new ones that perform the special OT
-        // where Eval gets seeds for check circuits
-        // and inputs for evaluation circuits
-        void ot_init();
-        void ot_random(); // sender has m pairs of l-bit strings, and receiver has m bits
-        Bytes flip_coins(size_t len);
-        void seed_m_prngs(size_t num_prngs, std::vector<Bytes> seeds);
-
-        void cut_and_choose2_ot();
-	void cut_and_choose2_precomputation();
-	void cut_and_choose2_evl_circuit(size_t ix);
-	void cut_and_choose2_chk_circuit(size_t ix);
-        
-        
-
+      
         /**
            STEP 7: GARBLE CIRCUITS
            AND CHECK CIRCUIT CONSISTENCY
@@ -188,32 +215,29 @@ protected:
         // Eval proves Gen's output authenticity
         void gen_output_auth_proof();
         
-        /**
-           AUXILIARY FUNCTIONS
-         */
 
-        // note: selection_bits will be accessed as
-        // selection_bits[idx] / selection_bits.get_ith_bit
-        // so ensure that this input array is properly formatted
-        void ot_send(std::vector<Bytes> & sender_inputs);
-        void ot_receive(Bytes selection_bits, std::vector<Bytes> & results_container);
-
-        // these two functions are for sending groups of keys
-        void ot_send_batch(std::vector<std::vector<Bytes> > & sender_inputs);
-        void ot_receive_batch(Bytes selection_bits, std::vector<std::vector<Bytes> > & results_container);
-
-
-        void ot_send_init();
-        void ot_receive_init();
-        void ot_send_random(std::vector<Bytes> & send_inputs);
-        void ot_receive_random(Bytes selection_bits, std::vector<Bytes> & results_container);
         
 
         // these are legacy functions for this 
 	void proc_gen_out();
 	void proc_evl_out();
         
+      
+        // the following are legacy functions
+        // will need new ones that perform the special OT
+        // where Eval gets seeds for check circuits
+        // and inputs for evaluation circuits
+        //void ot_init();
+        //        void ot_random(); // sender has m pairs of l-bit strings, and receiver has m bits
+        //void seed_m_prngs(size_t num_prngs, std::vector<Bytes> seeds);
+
+        //void cut_and_choose2_ot();
+	//void cut_and_choose2_precomputation();
+	//void cut_and_choose2_evl_circuit(size_t ix);
+	//void cut_and_choose2_chk_circuit(size_t ix);
         
+        
+  
 
         /**
  
@@ -251,17 +275,19 @@ protected:
         std::vector<std::vector<commitment_t> >   m_gen_inp_commitments;
         std::vector<std::vector<Bytes> >          m_gen_received_input_commitments;
         
-
         // these input label commitments are used in
         // Step 5: Gen's I/O Commitments
         // right before Eval's input OTs
         std::vector<std::vector<commitment_t> >          m_gen_inp_label_commitments;
         std::vector<std::vector<commitment_t> >          m_evl_inp_label_commitments;
 
-        
+        // when Gen sends his input label commitments in Step 4/5,
+        // Evl puts them in here
         std::vector<std::vector<Bytes> >          m_gen_received_label_commitments;
         std::vector<std::vector<Bytes> >          m_evl_received_label_commitments;
-        
+        // Gen also commits to a way of generating output labels
+        // but that's embedded in the logic of the code
+
 
         // Gen input label decommitments
         // replaces m_gen_inp_decom
@@ -270,7 +296,11 @@ protected:
         // placeholder for the k-probe-resistant matrix we'll need
         std::vector<Bytes>                   m_k_probe_resistant_matrix;
         
-        // 
+        
+        // Eval puts the decommitments that she receives during the Cut and Choose
+        // in these containers
+        // the first, gen_inp_commitments, corresponds to what she received in Step 2 (Step 3 in SS13)
+        // the second, gen_inp_label_commitments, corresponds to step 4 (step 5 in SS13)
         std::vector<std::vector<Bytes> >                   m_cc_recv_gen_inp_commitments; 
         std::vector<std::vector<Bytes> >                   m_cc_recv_gen_inp_label_commitments; 
 
