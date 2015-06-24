@@ -176,7 +176,7 @@ protected:
 
         */
         void evl_regenerate_circuits(uint32_t circuit_num);
-        void evl_check_garbled_circuit_commitments();
+        void evl_check_garbled_circuit_commitments(uint32_t circuit_num);
         void evl_check_commitment_regeneration(uint32_t circuit_num);
         bool check_received_commitments_vs_generated(std::vector<Bytes> & received, std::vector<commitment_t> & generated);
 
@@ -270,8 +270,9 @@ protected:
         // placeholder for the k-probe-resistant matrix we'll need
         std::vector<Bytes>                   m_k_probe_resistant_matrix;
         
-        std::vector<Bytes>                   m_recv_gen_inp_commitments; 
-        std::vector<Bytes>                   m_recv_gen_inp_label_commitments; 
+        // 
+        std::vector<std::vector<Bytes> >                   m_cc_recv_gen_inp_commitments; 
+        std::vector<std::vector<Bytes> >                   m_cc_recv_gen_inp_label_commitments; 
 
         /**
            new and old variables

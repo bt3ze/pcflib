@@ -47,8 +47,8 @@ std::vector<Bytes> decommit_to_vector(std::vector<commitment_t> & vec){
   }
 }
 
-bool verify_commitment(commitment_t com, Bytes decom){
-  return decommit(com).hash(Env::k()) == decom;
+bool verify_commitment(commitment_t & com, Bytes & decom){
+  return decom == decommit(com).hash(Env::k());
 }
 
 
