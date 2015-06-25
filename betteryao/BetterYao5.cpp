@@ -327,8 +327,9 @@ void BetterYao5::generate_gen_input_keys(uint32_t circuit_num){
 
 /**
    in this function, Gen commits to his input keys
-   if this is step 3 of the protocol, Gen must use a different prng
+   In Step 3 of the protocol, Gen must use a different prng
    to commit to his inputs, namely m_commitment_prngs
+   rather than m_circuit_prngs
  */
 void BetterYao5::commit_to_gen_input_keys(){
   // Gen uses m_commitment_prngs rather than one of m_circuit_prngs
@@ -359,6 +360,7 @@ void BetterYao5::commit_to_gen_input_keys(){
     GEN_END
 
     EVL_BEGIN
+      // eval stores them in received_input_commitments
       evl_receive_gen_commitments(m_gen_received_input_commitments[j],get_gen_full_input_size()*2);
     EVL_END
   }
@@ -402,20 +404,20 @@ void BetterYao5::collaboratively_choose_2UHF(){
   // must resize buffer for all the subprocesses before sending it
   start = MPI_Wtime();
   bufr.resize(Env::k()*((get_gen_full_input_size()+7)/8));
-  m_timer_evl += MPI_Wtime() - start;
-  m_timer_gen += MPI_Wtime() - start;
+  //  m_timer_evl += MPI_Wtime() - start;
+  // m_timer_gen += MPI_Wtime() - start;
   
-  start = MPI_Wtime();
+  //  start = MPI_Wtime();
   MPI_Bcast(&bufr[0], bufr.size(), MPI_BYTE, 0, m_mpi_comm);
-  m_timer_mpi += MPI_Wtime() - start;
-
-  start = MPI_Wtime();
+  // m_timer_mpi += MPI_Wtime() - start;
+ 
+  //  start = MPI_Wtime();
         
   // create m rows of length k
   m_2UHF_matrix = bufr.split(bufr.size()/Env::k());
   
-  m_timer_evl += MPI_Wtime() - start;
-  m_timer_gen += MPI_Wtime() - start;
+  // m_timer_evl += MPI_Wtime() - start;
+  // m_timer_gen += MPI_Wtime() - start;
 
   /*
   if(Env::is_root()){
@@ -446,32 +448,32 @@ Bytes BetterYao5::flip_coins(size_t len_in_bytes)
     {
       Bytes remote_coins, commitment, commit_value;
       
-      start = MPI_Wtime();
+      //start = MPI_Wtime();
       Bytes coins = m_prng.rand_bits(len_in_bytes*8);	// Step 0: flip coins
-      m_timer_gen += MPI_Wtime() - start;
-      m_timer_evl += MPI_Wtime() - start;
+      //m_timer_gen += MPI_Wtime() - start;
+      //m_timer_evl += MPI_Wtime() - start;
       
       
       GEN_BEGIN
-      start = MPI_Wtime();
+        //start = MPI_Wtime();
       commit_value = m_prng.rand_bits(Env::k()) + coins;	// Step 1: commit to coins
       commitment = commit_value.hash(Env::k());
-      m_timer_gen += MPI_Wtime() - start;
+      //m_timer_gen += MPI_Wtime() - start;
       
-      start = MPI_Wtime();
+      //start = MPI_Wtime();
       GEN_SEND(commitment);
       remote_coins = GEN_RECV();     	// Step 2: receive alice's coins
       // Gen can decommit to coins only after receiving Alice's
       GEN_SEND(commit_value);		// Step 3: decommit to the coins
-      m_timer_com += MPI_Wtime() - start;
+      //m_timer_com += MPI_Wtime() - start;
       GEN_END
         
       EVL_BEGIN
-      start = MPI_Wtime();
+        //start = MPI_Wtime();
       commitment = EVL_RECV();	    	// Step 1: receive bob's commitment
       EVL_SEND(coins);	     	// Step 2: send coins to bob
       commit_value = EVL_RECV();
-      m_timer_com += MPI_Wtime() - start;
+      //m_timer_com += MPI_Wtime() - start;
       
       start = MPI_Wtime();
       if (!(commit_value.hash(Env::k()) == commitment))		// Step 3: check bob's decommitment
@@ -480,12 +482,12 @@ Bytes BetterYao5::flip_coins(size_t len_in_bytes)
           MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
         }
       remote_coins = Bytes(commit_value.begin()+Env::k()/8, commit_value.end());
-      m_timer_evl += MPI_Wtime() - start;
+      //m_timer_evl += MPI_Wtime() - start;
       EVL_END
         
-        m_comm_sz = commitment.size() + remote_coins.size() + commit_value.size();
+        // m_comm_sz = commitment.size() + remote_coins.size() + commit_value.size();
       
-      start = MPI_Wtime();
+        //start = MPI_Wtime();
       
       coins ^= remote_coins;
       // combine randomnesses from both players
@@ -493,8 +495,8 @@ Bytes BetterYao5::flip_coins(size_t len_in_bytes)
       bufr.swap(coins);
       //bufr = coins;
       
-      m_timer_evl += MPI_Wtime() - start;
-      m_timer_gen += MPI_Wtime() - start;
+      //m_timer_evl += MPI_Wtime() - start;
+      //m_timer_gen += MPI_Wtime() - start;
     }
   
   return bufr;
@@ -526,6 +528,11 @@ void BetterYao5::gen_commit_to_io_labels(){
   m_gen_inp_label_commitments.resize(Env::node_load());
   m_evl_inp_label_commitments.resize(Env::node_load());
   
+  // order:
+  // generate eval input keys
+  // generate gen input label commitments
+  // generate eval input label commitments
+
   for(int i = 0; i < Env::node_load();i++){
     std::cout << "generate Eval Input Keys "<< i << std::endl;
     generate_eval_input_keys(i);
@@ -537,23 +544,18 @@ void BetterYao5::gen_commit_to_io_labels(){
     generate_eval_input_label_commitments(i);
 
   }
- 
-  // order:
-  // generate eval input keys
-  // generate gen input label commitments
-  // generate eval input label commitments
 
   GEN_END
     
-    // now, Gen commits to his and Eval's input labels
-    // first his own labels, and then hers
-
+  // now, Gen commits to his and Eval's input labels
+  // first his own labels, and then hers
   std:: cout << "commit to Gen input labels" << std::endl;
   commit_to_gen_input_labels();
   std:: cout << "commit to Eval input labels" << std::endl;
   commit_to_eval_input_labels();
 
 }
+
 
 /*
   Gen (or Eval) generates Gen's input keys for the ith circuit
