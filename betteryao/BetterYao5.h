@@ -186,7 +186,7 @@ protected:
         // Cut and Choose
         void evl_select_cut_and_choose_circuits();
         void special_circuit_ot();
-        void select_input_decommitments(std::vector<commitment_t>& source, std::vector<commitment_t>& dest, Bytes & perm_bits, Bytes input_bits);
+        void select_input_decommitments(std::vector<commitment_t>& source, std::vector<commitment_t>& dest, Bytes & perm_bits, Bytes & input_bits);
         void transfer_evaluation_circuit_info();
         void transfer_check_circuit_info();
         
