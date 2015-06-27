@@ -1196,15 +1196,23 @@ void BetterYao5::evl_check_garbled_circuit_commitments(uint32_t circuit_num){
     
     std::cout << "received decomitment 1: " << m_cc_recv_gen_inp_commitments[circuit_num][i].to_hex()
               << "\thashed decommitment 1: " << m_cc_recv_gen_inp_commitments[circuit_num][i].hash(Env::k()).to_hex() 
-              << "\treceived decomitment 2: " << m_cc_recv_gen_inp_label_commitments[circuit_num][i].to_hex()
-              << "\thashed decommitment 2: " << m_cc_recv_gen_inp_label_commitments[circuit_num][i].hash(Env::k()).to_hex()
-              << std::endl
               << "\tgen wire 1: " << m_gen_received_input_commitments[circuit_num][2*i].to_hex()
               << "\tgen wire 2: " << m_gen_received_input_commitments[circuit_num][2*i+1].to_hex() 
+              << std::endl
+              << "received decomitment 2: " << m_cc_recv_gen_inp_label_commitments[circuit_num][i].to_hex()
+              << "\thashed decommitment 2: " << m_cc_recv_gen_inp_label_commitments[circuit_num][i].hash(Env::k()).to_hex()
+              << "\tgen wire 1: " << m_gen_received_label_commitments[circuit_num][2*i].to_hex()
+              << "\tgen wire 2: " << m_gen_received_label_commitments[circuit_num][2*i+1].to_hex() 
               << "\trank: " << Env::group_rank() << std::endl;
     
               
-    verify &= (m_cc_recv_gen_inp_label_commitments[circuit_num][i].hash(Env::k()) == m_gen_received_input_commitments[circuit_num][2*i] || m_cc_recv_gen_inp_label_commitments[circuit_num][i].hash(Env::k()) == m_gen_received_input_commitments[circuit_num][2*i+1]);
+    // verify &= (m_cc_recv_gen_inp_label_commitments[circuit_num][i].hash(Env::k()) == m_gen_received_input_commitments[circuit_num][2*i] || m_cc_recv_gen_inp_label_commitments[circuit_num][i].hash(Env::k()) == m_gen_received_input_commitments[circuit_num][2*i+1]);
+
+    verify &= (m_cc_recv_gen_inp_commitments[circuit_num][i].hash(Env::k()) == m_gen_received_input_commitments[circuit_num][2*i] || m_cc_recv_gen_inp_commitments[circuit_num][i].hash(Env::k()) == m_gen_received_input_commitments[circuit_num][2*i+1]);
+
+    verify &= (m_cc_recv_gen_inp_label_commitments[circuit_num][i].hash(Env::k()) == m_gen_received_label_commitments[circuit_num][2*i] || m_cc_recv_gen_inp_label_commitments[circuit_num][i].hash(Env::k()) == m_gen_received_label_commitments[circuit_num][2*i+1]);
+    
+    verify &= (reconstruct_commitment(m_cc_recv_gen_inp_commitments[circuit_num][i]).msg == reconstruct_commitment(m_cc_recv_gen_inp_label_commitments[circuit_num][i]).msg);
     
     if(!verify){
       std::cout << "no verify!" << std::endl;
