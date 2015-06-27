@@ -988,8 +988,8 @@ void BetterYao5::transfer_evaluation_circuit_info(){
 
     } else {
       // these sizes should be get_gen_full_input_size()
-      evl_ignore_masked_info(m_gen_received_input_commitments[i].size()); // decommitted inputs
-      evl_ignore_masked_info(m_gen_received_label_commitments[i].size()); // decommitted labels
+      evl_ignore_masked_info(m_gen_received_input_commitments[i].size()/2); // decommitted inputs
+      evl_ignore_masked_info(m_gen_received_label_commitments[i].size()/2); // decommitted labels
     }
   }
 
