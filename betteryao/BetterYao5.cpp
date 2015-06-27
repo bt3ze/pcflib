@@ -51,7 +51,7 @@ void BetterYao5::SS13(){
   SS13_cut_and_choose();
   garble_and_check_circuits();
   retrieve_outputs();
-
+  std::cout << "done protocol" << std::endl;
 }
 
 /**
@@ -1076,8 +1076,6 @@ void BetterYao5::garble_and_check_circuits(){
   m_evl_inp_label_commitments.resize(Env::node_load());
   m_gen_inp_permutation_bits.resize(Env::node_load());
 
-
-
   for(int i = 0; i < Env::node_load();i++){
     if(m_chks[i]){ // this is a check circuit
       evl_regenerate_circuits(i);
@@ -1166,18 +1164,22 @@ void BetterYao5::evl_check_garbled_circuit_commitments(uint32_t circuit_num){
   std::cout << "checking garbled circuit commitments" << std::endl;
   
   bool verify = true;
+  std::cout << "gen inp commitment size: " << m_cc_recv_gen_inp_commitments[circuit_num].size() << std::endl;
   for(int i = 0; i < m_cc_recv_gen_inp_commitments[circuit_num].size(); i++){
     //verify &= (m_cc_recv_gen_inp_commitments[circuit_num][i].hash(Env::k()) == m_gen_received_input_commitments[circuit_num][2*i] || m_cc_recv_gen_inp_commitments[circuit_num][i].hash(Env::k()) == m_gen_received_input_commitments[circuit_num][2*i+1]);
-    //    verify &= (m_cc_recv_gen_inp_label_commitments[circuit_num][i].hash(Env::k()) == m_gen_received_label_commitments[circuit_num][i] || m_cc_recv_gen_inp_label_commitments[circuit_num][i].hash(Env::k()) == m_gen_received_label_commitments[circuit_num][2*i+1]);
+    //verify &= (m_cc_recv_gen_inp_label_commitments[circuit_num][i].hash(Env::k()) == m_gen_received_label_commitments[circuit_num][i] || m_cc_recv_gen_inp_label_commitments[circuit_num][i].hash(Env::k()) == m_gen_received_label_commitments[circuit_num][2*i+1]);
     //    verify &= (m_cc_recv_gen_inp_label_commitments[circuit_num][i].hash(Env::k()) == m_cc_recv_gen_inp_commitments[circuit_num][i].hash(Env::k()));
   }
+
+
   
   if(!verify){
     std::cout << "no verify" << std::endl;
     LOG4CXX_FATAL(logger, "Eval's Check of Gen's Evaluation Circuits Failed");
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
   }
-  
+
+  std::cout << "done verify" << std::endl;
 }
 
 bool BetterYao5::check_received_commitments_vs_generated(std::vector<Bytes> & received, std::vector<commitment_t> & generated){
