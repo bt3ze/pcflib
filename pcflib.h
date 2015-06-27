@@ -65,13 +65,15 @@ typedef struct wire {
   void setWireKey(struct wire *, void *);
 
 
-  // the activation record is used as one would expect an activation record to be used
-  // it's a linked list that contains return addresses and base pointers of all the function calls performed by the circuit
+  // the activation record is used as one would expect
+  // it's a linked list that contains return addresses and base pointers
+  // of all the function calls performed by the circuit
 struct activation_record {
   uint32_t ret_pc;
   uint32_t base;
   struct activation_record * rest;
 };
+
 
   // check_alloc is used frequently to ensure that memory has been allocated properly from the heap. if not, the program quits
   void check_alloc(void * ptr);
@@ -103,11 +105,7 @@ typedef struct PCFState {
   // input size counters
   uint32_t alice_in_size;
   uint32_t bob_in_size;
-  // and pointers to the input and output wires
-  wire * alice_inputs;
-  wire * bob_inputs;
-  wire * alice_outputs;
-  wire * bob_outputs;
+
   // these two are indices that deal with how inputs are collected
   int32_t inp_i; // not sure specific purpose
   uint32_t inp_idx; // not sure specific purpose

@@ -7,7 +7,7 @@ HEADERS    = Algebra.h Aes.h Bytes.h Env.h garbled_circuit.h garbled_circuit_hbc
 	GarbledBase.h GarbledHBC.h GarbledMal.h Commitment.h # Circuit.h 
 OBJS       = Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o \
 	garbled_circuit.o garbled_circuit_hbc.o garbled_circuit_m.o Commitment.o  # Circuit.o GarbledCct3.o
-GARBLES    = GarbledBase.o GarbledHBC.o GarbledMal.o
+GARBLES    = GarbledBase.o GarbledHBC.o GarbledMal.o GarbledCircuit.o
 MAINS      = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp
 SPLITMAINS = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp splityao/BetterYao5.cpp splityao/BetterYaoEvl.cpp splityao/BetterYaoGen.cpp 
 MAINS5   = main.cpp YaoBase.cpp Yao.cpp BetterYao5.cpp
@@ -75,6 +75,9 @@ GarbledHBC.o : Algebra.o Aes.h Bytes.h Env.h Prng.h GarbledBase.h GarbledHBC.h G
 
 GarbledMal.o : Algebra.o Aes.h Bytes.h Env.h Prng.h GarbledBase.h GarbledMal.h GarbledMal.cpp
 	$(CXX) -msse2 $(CXX_CFLAGS) -c GarbledMal.cpp
+
+GarbledCircuit.o: Algebra.o Aes.h Bytes.h Env.h Prng.h GarbledCircuit.h GarbledCircuit.cpp
+	$(CXX) -msse2 $(CXX_CFLAGS) -c GarbledCircuit.cpp
 
 Env.o : Algebra.h Bytes.h ClawFree.h NetIO.h Env.h Env.cpp #Circuit.h 
 	$(CXX) $(CXX_CFLAGS) -c Env.cpp

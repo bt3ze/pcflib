@@ -4,8 +4,9 @@
 #include "YaoBase.h"
 #include "Bytes.h"
 //#include "garbled_circuit_m.h"
-#include "GarbledBase.h"
-#include "GarbledMal.h"
+//#include "GarbledBase.h"
+//#include "GarbledMal.h"
+#include "GarbledCircuit.h"
 
 #include <vector>
 
@@ -185,6 +186,7 @@ protected:
         // Cut and Choose
         void evl_select_cut_and_choose_circuits();
         void special_circuit_ot();
+        void select_input_decommitments(std::vector<commitment_t>& source, std::vector<commitment_t>& dest, Bytes & perm_bits, Bytes input_bits);
         void transfer_evaluation_circuit_info();
         void transfer_check_circuit_info();
         
@@ -206,6 +208,8 @@ protected:
         void evl_check_garbled_circuit_commitments(uint32_t circuit_num);
         void evl_check_commitment_regeneration(uint32_t circuit_num);
         bool check_received_commitments_vs_generated(std::vector<Bytes> & received, std::vector<commitment_t> & generated);
+
+
 
         /**
            STEP 8: RETRIEVE OUTPUTS
@@ -308,8 +312,8 @@ protected:
            new and old variables
         */
         // access to the garbled circuits (important!)
-        std::vector<GarbledMal>             m_gcs;
-        
+        //std::vector<GarbledMal>             m_gcs;
+        std::vector<GarbledCircuit>           m_gcs;
 
         // variables for cut-and-choose
 	Bytes                           m_chks;

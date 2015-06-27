@@ -38,11 +38,19 @@ public:
 
     GarbledCircuit();
     ~GarbledCircuit() {}
-    void init_Generation_Circuit();
-    void init_Evaluation_Circuit();
+    void init_Generation_Circuit(const std::vector<Bytes> * gen_keys,
+                                   const std::vector<Bytes> * evl_keys);
+    void init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys,
+                                   const std::vector<Bytes> * evl_keys);
 
-    void * gen_Next_Gate(PCFState *st, PCFGate *current_gate);
-    void * evl_Next_Gate(PCFState *st, PCFGate *current_gate);
+//    void * gen_Next_Gate(PCFState *st, PCFGate *current_gate);
+//  void * evl_Next_Gate(PCFState *st, PCFGate *current_gate);
+
+    bool gen_Next_Gate();
+    bool evl_Next_Gate();
+
+    void set_const_key(byte c, const Bytes &key);
+    const Bytes get_const_key(byte c, byte b);
 
 protected:
 
@@ -62,8 +70,8 @@ protected:
 
     // these give access to Gen and Eval's input keys
     // (useful for both evaluation and generation circuits)
-    const std::vector<Bytes>* gen_inputs;
-    const std::vector<Bytes>* evl_inputs;
+    const std::vector<Bytes> * gen_inputs;
+    const std::vector<Bytes> * evl_inputs;
 
     // remember where are are, and also this is passed to the garbling function
     // garbled gate = H_{key1} ( H_{key2} ( gate index) )

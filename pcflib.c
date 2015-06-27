@@ -878,8 +878,8 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void *(*c
   ret = (PCFState*)malloc(sizeof(struct PCFState));
   check_alloc(ret);
 
-  ret->alice_outputs = 0;
-  ret->bob_outputs = 0;
+  //ret->alice_outputs = 0;
+  //ret->bob_outputs = 0;
   ret->inp_i = 0;
   ret->inp_idx = 0; // should not be strictly necessary because will be set before first use
   ret->constant_keys[0] = copy_key(key0);
@@ -893,14 +893,18 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void *(*c
   ret->wires = (struct wire *)malloc(1000000 * sizeof(struct wire)); // !note here the limit on size of the wire table
   check_alloc(ret->wires);
 
-
+  
   // this loop is a little curious
+  // but i guess it's fine, because it sets all of the wire values to 0
+  // and claims they're known wires
+  // they can be changed later
   for(i = 0; i < 200000; i++)
     {
       ret->wires[i].flags = KNOWN_WIRE;
       ret->wires[i].value = 0;
       ret->wires[i].keydata = copy_key(key0);
     }
+  
 
   memset(ret->labels, 0, sizeof(struct hsearch_data));
 
