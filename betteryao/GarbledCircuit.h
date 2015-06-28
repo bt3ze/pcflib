@@ -38,10 +38,15 @@ public:
 
     GarbledCircuit();
     ~GarbledCircuit() {}
+    // should also include permutation bits in this one?
     void init_Generation_Circuit(const std::vector<Bytes> * gen_keys,
                                    const std::vector<Bytes> * evl_keys);
     void init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys,
                                    const std::vector<Bytes> * evl_keys);
+
+// functions to:
+// - transform Eval's input w/ k-probe matrix?
+// - evaluate Gen's input consistency?
 
 //    void * gen_Next_Gate(PCFState *st, PCFGate *current_gate);
 //  void * evl_Next_Gate(PCFState *st, PCFGate *current_gate);
@@ -54,9 +59,14 @@ public:
 
 protected:
 
+
+
     // high-level call to garble a gate 
     void garble_Gate();
+
+
     // lower-level call to compute the KDF on a couple keys
+    // should also include the wire index
     void garble_On_Keys();
 
 
