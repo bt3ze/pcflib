@@ -21,6 +21,8 @@ void delete_key(void *);
 void *gen_next_gate(struct PCFState *st, struct PCFGate *gate);
 void *evl_next_gate(struct PCFState *st, struct PCFGate *gate);
 
+
+
 #ifdef __CPLUSPLUS
 }
 #endif
@@ -44,6 +46,8 @@ public:
     void init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys,
                                    const std::vector<Bytes> * evl_keys);
 
+    void evaluate_Circuit();
+
 // functions to:
 // - transform Eval's input w/ k-probe matrix?
 // - evaluate Gen's input consistency?
@@ -51,8 +55,8 @@ public:
 //    void * gen_Next_Gate(PCFState *st, PCFGate *current_gate);
 //  void * evl_Next_Gate(PCFState *st, PCFGate *current_gate);
 
-    bool gen_Next_Gate();
-    bool evl_Next_Gate();
+    void * gen_Next_Gate(PCFGate *current_gate);
+    void * evl_Next_Gate(PCFGate *current_gate);
 
     void set_const_key(byte c, const Bytes &key);
     const Bytes get_const_key(byte c, byte b);
@@ -67,7 +71,17 @@ protected:
 
     // lower-level call to compute the KDF on a couple keys
     // should also include the wire index
-    void garble_On_Keys();
+    void * garble_On_Keys(void * x, void * y);
+
+    // Input Key Accessor Functions
+    // get-Input intended for Eval
+    // get-Key intended for Gen
+    Bytes get_Gen_Input(uint32_t idx);
+    Bytes get_Evl_Input(uint32_t idx);
+    Bytes get_Gen_Key(uint32_t idx, uint32_t parity);
+    Bytes get_Evl_Key(uint32_t idx, uint32_t parity);
+    // Access to current wire table
+    Bytes get_Wire_Value(uint32_t idx);
 
 
     // circuit's free-XOR value
@@ -80,8 +94,8 @@ protected:
 
     // these give access to Gen and Eval's input keys
     // (useful for both evaluation and generation circuits)
-    const std::vector<Bytes> * gen_inputs;
-    const std::vector<Bytes> * evl_inputs;
+    const std::vector<Bytes> * m_gen_inputs;
+    const std::vector<Bytes> * m_evl_inputs;
 
     // remember where are are, and also this is passed to the garbling function
     // garbled gate = H_{key1} ( H_{key2} ( gate index) )

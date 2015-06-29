@@ -160,7 +160,7 @@ void bits_op(struct PCFState * st, struct PCFOP * op)
 void call_op (struct PCFState * st, struct PCFOP * op)
 {
   struct call_op_data * data = (struct call_op_data*)op->data;
-
+  
   ENTRY * ent = data->target;
   ENTRY * r = 0;
 
@@ -187,7 +187,7 @@ void call_op (struct PCFState * st, struct PCFOP * op)
 
               // each wire holding the address must have a wire value (0,1)
               assert(st->wires[st->base + data->newbase - i].value < 2);
-               // index of an input MUST be a known wire.
+               // an input MUST be a known wire.
               assert(st->wires[st->base + data->newbase - i].flags == KNOWN_WIRE);
 
               // gather bit into index accumulator
@@ -197,12 +197,13 @@ void call_op (struct PCFState * st, struct PCFOP * op)
           // store this index to identify which input to grab
           st->inp_idx = idx;
         }
-  //      // idx (similarly, st->idx) now has the argument that was passed to alice()
+      // idx (similarly, st->idx) now has the argument that was passed to alice()
     
 
       if(st->inp_i < 32)
         { // why this if/else branch when i is between 0 and 32?
-          //fprintf(stderr,"inp_i < 32\n");
+          // is this even possible?
+          fprintf(stderr,"inp_i < 32\n");
           i = st->inp_i;
           st->inp_i++;
           st->input_g.wire1 = st->inp_idx + i;
