@@ -311,7 +311,7 @@ void * gen_next_malicious_gate(PCFState *st, PCFGate *current_gate){
       cct.m_gen_inp_ix++; // after PCF compiler, this isn't really necessary
       
       
-      __m128i onev = _mm_xor_si128(cct.m_R, current_zero_key);
+      // __m128i onev = _mm_xor_si128(cct.m_R, current_zero_key);
       
       /*
         if(Env::is_root())

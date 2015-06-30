@@ -209,6 +209,7 @@ protected:
         void evl_check_commitment_regeneration(uint32_t circuit_num);
         bool check_received_commitments_vs_generated(std::vector<Bytes> & received, std::vector<commitment_t> & generated);
 
+        void evaluate_circuit();
 
 
         /**
@@ -319,9 +320,8 @@ protected:
 	Bytes                           m_chks;
 	Bytes                           m_all_chks;
 
-        // Gen's input decommitments
-        std::vector<std::vector<Bytes> >      m_gen_inp_decom;
-
+        // Gen's input decommitments (obsolete)
+        // std::vector<std::vector<Bytes> >      m_gen_inp_decom;
         
         
         // *********************************************************
@@ -359,8 +359,17 @@ protected:
         // Eval will get one of the seeds to decrypt as chooses
         std::vector<Bytes>                   m_otp_seeds;
         std::vector<Prng>                    m_otp_prngs;
-
         
+        /**
+           The next set of seeds is for generation circuits
+           the (randomly generated) seed is used to seed the circuit
+           object's PRNG to generate new wire keys.
+           For lack of a better place to put it, these are generated
+           during circuit information transfer
+         */
+        std::vector<Bytes>                   m_key_generation_seeds;
+
+
         // variables for Gen's input check
         // this contains Gen's input hashes, which must all be consistent
         std::vector<Bytes>                   m_gen_inp_hash;

@@ -782,8 +782,9 @@ void BetterYao5::evl_select_cut_and_choose_circuits(){
    If evaluation circuit, Eval will receive the de-commitments to Gen's input keys
    and she can evaluate the circuit
    If check circuit, Eval will receive the random seeds that Gen used to generate
-   the input keys (and subsequently the circuit itself). Eval will then use this
-   information to generate the circuit in lockstep with evaluating the other gates.
+   the input keys (and subsequently the circuit itself) AND a nonce to seed the
+   circuit's key-generating PRNG. Eval will then use this information to
+   generate the circuit in lockstep with evaluating the other gates.
    To perform this circuit OT, we actually perform an OT over random seeds
    used to construct PRNGs that Gen uses to mask the information that he sends
    to Gen. If Eval has chosen the correct seed, she can decrypt the information
@@ -830,8 +831,11 @@ void BetterYao5::special_circuit_ot(){
  */
 
 void BetterYao5::transfer_check_circuit_info(){
-  GEN_BEGIN
-  for(int i=0;i<m_otp_prngs.size()/2;i++){
+  
+  // send the circuit generation seed used to create the input keys and permutation bits
+ GEN_BEGIN
+   assert(m_otp_prngs.size()/2 == Env::node_load());
+   for(int i=0;i<m_otp_prngs.size()/2;i++){
     gen_send_masked_info(m_otp_prngs[2*i+1],m_circuit_seeds[i],(int)(Env::elm_size_in_bytes()*8UL));
   }
   GEN_END
@@ -846,6 +850,29 @@ void BetterYao5::transfer_check_circuit_info(){
       evl_ignore_masked_info(1); // one Bytes segment sent
     }
   }
+  EVL_END
+
+
+    // also send a random seed for generating keys by the circuit
+    // must generate it first
+  GEN_BEGIN
+  generate_random_seeds(m_key_generation_seeds, Env::node_load());
+  for(int i = 0; i < m_otp_prngs.size()/2;i++){
+    gen_send_masked_info(m_otp_prngs[2*i+1],m_key_generation_seeds[i],(int)Env::elm_size_in_bytes()*8);
+  }
+    
+  GEN_END
+
+  EVL_BEGIN
+    m_key_generation_seeds.resize(Env::node_load());
+  for(int i = 0; i < m_chks.size();i++){
+    if(m_chks[i]){
+      evl_receive_masked_info(m_otp_prngs[i],m_key_generation_seeds[i],Env::elm_size_in_bytes()*8);
+    } else{
+      evl_ignore_masked_info(1); // one Bytes segment
+    }
+  }
+
   EVL_END
 
 }
@@ -1038,8 +1065,11 @@ void BetterYao5::garble_and_check_circuits(){
   EVL_END
     // now that checks are done, we can garble!
     
+    evaluate_circuit();
+  
 
 }
+
 
 // this function only called on check circuits
 // (circuit_num is the index of a check circuit
@@ -1148,6 +1178,65 @@ bool BetterYao5::check_received_commitments_vs_generated(std::vector<Bytes> & re
   }
   //  verify = false;
   return verify;
+}
+
+
+void BetterYao5::evaluate_circuit(){
+  
+  MPI_Barrier(m_mpi_comm);
+  GEN_BEGIN
+    if(Env::group_rank() == 0){
+      // begin with one, just to make debugging easier
+      for(int ix = 0; ix < m_gcs.size();ix++){
+        m_gcs[ix].m_st = 
+          load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
+        m_gcs[ix].m_st->alice_in_size = get_gen_full_input_size();
+        m_gcs[ix].m_st->bob_in_size = get_evl_inp_count();
+        
+        set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
+
+        m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix],m_key_generation_seeds[ix],&m_gen_inp_permutation_bits[ix]);
+        
+        m_gcs[ix].generate_Circuit();
+      }
+    }
+    GEN_END
+
+    EVL_BEGIN
+    
+      if(Env::group_rank() == 0){
+      // begin with one, just to make debugging easier
+        for(int ix = 0; ix < m_gcs.size();ix++){
+          if(m_chks[i]){
+            m_gcs[ix].m_st = 
+              load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
+            m_gcs[ix].m_st->alice_in_size = get_gen_full_input_size();
+            m_gcs[ix].m_st->bob_in_size = get_evl_inp_count();
+            
+            set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
+        
+            m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix],m_key_generation_seeds[ix],&m_gen_inp_permutation_bits[ix]);
+        
+            
+            m_gcs[ix].generate_Circuit();
+          }
+        } else{
+          if(m_chks[i]){
+            m_gcs[ix].m_st = 
+              load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
+            m_gcs[ix].m_st->alice_in_size = get_gen_full_input_size();
+            m_gcs[ix].m_st->bob_in_size = get_evl_inp_count();
+            
+            set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
+            
+            m_gcs[ix].init_Evaluation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix],m_key_generation_seeds[ix],&m_gen_inp_permutation_bits[ix]);
+            
+            m_gcs[ix].evaluate_Circuit();
+        }
+    }
+
+      
+    EVL_END
 }
 
 /**

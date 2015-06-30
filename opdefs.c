@@ -135,6 +135,7 @@ void join_op(struct PCFState * st, struct PCFOP * op)
 
 void bits_op(struct PCFState * st, struct PCFOP * op)
 {
+  fprintf(stderr,"Bits\n");
   struct bits_op_data * data = op->data;
   uint32_t s_idx = data->source + st->base;
   uint32_t i = 0, cval;
@@ -169,15 +170,13 @@ void call_op (struct PCFState * st, struct PCFOP * op)
 
       uint32_t i = 0, idx = 0;
 
-      //fprintf(stderr,"alice pre ::\tPC: %x\tbase: %x\tinp_i: %x\tinp_idx: %x\n",st->PC,st->base,st->inp_i, st->inp_idx);     
-
       // Get the argument to this function.
       // the inputs will be included in the 32 wires preceding the "call" op's newbase,
       // since they are passed as the only argument to alice().
       // so step backwards through them, shifting the accumulator.
       // remember that the LSB is the lowest wire
       
-      if(st->inp_i == 0) // not sure why the check for inp_i must be 0 for this.
+      if(st->inp_i == 0)
         {
           for(i = 1; i <= 32; i++)
             {
@@ -189,7 +188,6 @@ void call_op (struct PCFState * st, struct PCFOP * op)
               assert(st->wires[st->base + data->newbase - i].value < 2);
                // an input MUST be a known wire.
               assert(st->wires[st->base + data->newbase - i].flags == KNOWN_WIRE);
-
               // gather bit into index accumulator
               idx += st->wires[st->base + data->newbase - i].value;
             }
@@ -198,12 +196,16 @@ void call_op (struct PCFState * st, struct PCFOP * op)
           st->inp_idx = idx;
         }
       // idx (similarly, st->idx) now has the argument that was passed to alice()
-    
 
+      fprintf(stderr,"alice call: %u, (newbase: %u)\n ",idx, data->newbase);
+
+      // this loop with inp_i ensures that we call the function 
+      // to retrieve outputs 32 times (for a whole word)
+      // it iterates this once for each bit in the word
+      // and then resets the input index (inp_i) for the next input
       if(st->inp_i < 32)
-        { // why this if/else branch when i is between 0 and 32?
-          // is this even possible?
-          fprintf(stderr,"inp_i < 32\n");
+        { 
+          fprintf(stderr,"inp_i < 32 \t inp_i=%x\n",st->inp_i);
           i = st->inp_i;
           st->inp_i++;
           st->input_g.wire1 = st->inp_idx + i;
@@ -218,35 +220,37 @@ void call_op (struct PCFState * st, struct PCFOP * op)
 
           if(st->inp_idx + i < st->alice_in_size)
             { // if alice provided a value for this wire, then get it
+              fprintf(stderr,"A\t");
+              
               st->wires[st->input_g.reswire].keydata = st->copy_key(st->callback(st, &st->input_g));
               st->curgate = &st->input_g;
             }
           else 
             { // otherwise, fill with zeros
-              // fprintf(stderr,"filling zeros for uninitialized wire");
+              fprintf(stderr,"filling zeros for uninitialized wire");
               st->wires[st->input_g.reswire].keydata = st->copy_key(st->constant_keys[0]);
             }
           
           st->wires[st->input_g.reswire].flags = UNKNOWN_WIRE;
           // Not yet done with function call
+          // so decrement the program counter to go through again
           st->PC--;
+          fprintf(stderr,"End Loop\n");
         }
       else
-        { // what is the point of this? reset inp_i so that it can go back to the top?
-          // doesn't this miss good inputs?
-          // fprintf(stderr, "st->inp_i over 32\n");
+        { // now we have iterated 32 times for an input
+          // so we reset inp_i for the next time
           st->inp_i = 0;
         } 
       
-      //fprintf(stderr,"alice post::\tPC: %x\tbase: %x\tinp_i: %x\tinp_idx: %x\n",st->PC,st->base,st->inp_i, st->inp_idx);     
-
+      fprintf(stderr,"End Alice Call\n");
     }
   else if(strcmp(data->target->key, "bob") == 0)
     {
-      //fprintf(stderr,"bob pre ::\tPC: %x\tbase: %x\tinp_i: %x\tinp_idx: %x\n",st->PC,st->base,st->inp_i, st->inp_idx);     
 
       uint32_t i = 0, idx = 0;
-// Get the argument to this function
+      // Get the argument to this function
+      // we only need to do the check and input retrieval once
       if(st->inp_i == 0)
         {
           for(i = 1; i <= 32; i++)
@@ -258,9 +262,12 @@ void call_op (struct PCFState * st, struct PCFOP * op)
             }
           st->inp_idx = idx;
         }
+ 
+      fprintf(stderr,"bob call: %x\n",idx);
 
       if(st->inp_i < 32)
         {
+          fprintf(stderr,"inp_i < 32 \t inp_i=%x\n",st->inp_i);
           i = st->inp_i;
           st->inp_i++;
           st->input_g.wire1 = st->inp_idx+i;
@@ -288,7 +295,6 @@ void call_op (struct PCFState * st, struct PCFOP * op)
         {
           st->inp_i = 0;
         }
-      //fprintf(stderr,"bob post::\tPC: %x\tbase: %x\tinp_i: %x\tinp_idx: %x\n",st->PC,st->base,st->inp_i, st->inp_idx);     
 
 
     }
@@ -377,6 +383,7 @@ void branch_op(struct PCFState * st, struct PCFOP * op)
 
 void gate_op(struct PCFState * st, struct PCFOP * op)
 {
+  // fprintf(stderr,"gate op\n");
   struct PCFGate * data = (struct PCFGate*)op->data;
   uint32_t op1idx = data->wire1 + st->base;
   uint32_t op2idx = data->wire2 + st->base;
@@ -385,6 +392,9 @@ void gate_op(struct PCFState * st, struct PCFOP * op)
   int8_t i = 0;
   uint8_t tab = data->truth_table;
   void * tmp = st->wires[destidx].keydata;
+
+  // fprintf(stderr,"wire1: %u, wire2: %u\tabsolute1: %u, absolute2: %u\n",
+  //        data->wire1, data->wire2, op1idx, op2idx);
 
   for(i = 0; i < 4; i++)
     {
