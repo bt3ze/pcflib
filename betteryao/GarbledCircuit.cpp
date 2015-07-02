@@ -42,11 +42,11 @@ GarbledCircuit::GarbledCircuit(): m_gate_index(0) {
 // and runs the circuit till the end.
 void GarbledCircuit::generate_Circuit(){
   // gen and eval versions
-  
   set_key_copy_function(m_st, copy_key);
   set_key_delete_function(m_st, delete_key);
-  set_callback(m_st,get_next_gate);
-
+  set_callback(m_st,gen_next_gate);
+  
+  
   while(get_next_gate(m_st)){
     // do things
     
@@ -59,12 +59,13 @@ void GarbledCircuit::generate_Circuit(){
 // and runs the circuit till the end.
 void GarbledCircuit::evaluate_Circuit(){
   // gen and eval versions
-  
   set_key_copy_function(m_st, copy_key);
   set_key_delete_function(m_st, delete_key);
+
   set_callback(m_st,evl_next_gate);
 
-  while(evl_next_gate(m_st)){
+  
+  while(get_next_gate(m_st)){
     // do things
     
   }
@@ -135,6 +136,8 @@ void GarbledCircuit::set_Input_Keys(const std::vector<Bytes> * gen_keys, const s
 
 void GarbledCircuit::init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys, const std::vector<Bytes> * evl_keys){
   set_Input_Keys(gen_keys, evl_keys);
+
+  //std::cout << "Gen first input key: " << (*gen_keys)[0].to_hex() << std::endl;
 }
 
 
@@ -213,6 +216,13 @@ void GarbledCircuit::generate_Random_Key(__m128i & destination){
   destination = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 }
 
+void print128_num(__m128i var)
+{
+    uint16_t *val = (uint16_t*) &var;
+    fprintf(stderr,"Numerical: %x %x %x %x %x %x %x %x \n", 
+           val[0], val[1], val[2], val[3], val[4], val[5], 
+           val[6], val[7]);
+}
 
 void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
   // somehow the PCFState should be available through the m_st pointer
@@ -233,8 +243,10 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
     uint32_t gen_input_idx = current_gate->wire1; // wire1 holds the input index
     
     fprintf(stderr,"Next Wire Index: %u\n", gen_input_idx);
+    
+    //    Bytes gen_input = get_Gen_Key(gen_input_idx, get_Input_Parity(gen_input_idx));
+    Bytes gen_input = get_Gen_Input(2*gen_input_idx + get_Input_Parity(gen_input_idx));
 
-    Bytes gen_input = get_Gen_Key(gen_input_idx, get_Input_Parity(gen_input_idx));
     fprintf(stderr,"Save to 128 Bit\n");
     save_Key_to_128bit(gen_input,current_key);
     
@@ -247,10 +259,12 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
     // which to use. So he will generate a new key, encrypt it
     // using both of Eval's inputs, and send the key to her.
     // She will decrypt the proper one and use it 
-    
+    Bytes tmp;
     generate_Random_Key(current_key);
     
-    
+    fprintf(stderr,"Eval Key: ");
+    print128_num(current_key);
+    fprintf(stderr,"\n");
     fprintf(stderr,"Bob/Evl Input Gate\n");
 
     return &current_key;
@@ -267,14 +281,40 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
 
 void * GarbledCircuit::evl_Next_Gate(PCFGate *current_gate){
   
-
+ static __m128i current_key; // must be static to return it
+ 
   if(current_gate->tag == TAG_INPUT_A){
     // here, Gen's input keys have been sent to Eval
     // she needs only to assign the input key to the wire
+    /*
+    uint32_t gen_input_idx = current_gate->wire1; // wire1 holds the input index
+    Bytes gen_input = get_Gen_Input(gen_input_idx);
+    save_Key_to_128bit(gen_input,current_key);
+    
+    return &current_key; // get_Gen_Key or create a random nonce
+    */
+    fprintf(stderr,"Alice/Gen Input Gate\n");
+
+    uint32_t gen_input_idx = current_gate->wire1; // wire1 holds the input index
+    
+    fprintf(stderr,"Next Wire Index: %u\n", gen_input_idx);
+
+    Bytes gen_input = get_Gen_Input(gen_input_idx);
+    fprintf(stderr,"Save to 128 Bit\n");
+    save_Key_to_128bit(gen_input,current_key);
+    
+    return &current_key; // get_Gen_Key or create a random nonce
+
     
   } else if (current_gate->tag == TAG_INPUT_B){
     // here, Eval already knows which input key she wants to use
     // she selects it and assigns it to her wire value
+
+    uint32_t gen_input_idx = current_gate->wire1; // wire1 holds the input index
+    Bytes evl_input = get_Evl_Input(gen_input_idx);
+    save_Key_to_128bit(evl_input,current_key);
+    
+    return &current_key; // get_Gen_Key or create a random nonce
     
   } else if (current_gate->tag == TAG_OUTPUT_A) {
 

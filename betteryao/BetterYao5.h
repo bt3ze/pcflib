@@ -116,6 +116,12 @@ protected:
         // her private input and the matrix
         void evl_generate_new_input();
         
+        // TODO: change this to account for eval's 
+        // new inpout generation
+        uint32_t get_evl_inp_count(){
+          return m_evl_inp_cnt; 
+        }
+
         
         /**
            Gen has a couple of inputs segments, and therefore gets
@@ -208,6 +214,7 @@ protected:
         void evl_check_garbled_circuit_commitments(uint32_t circuit_num);
         void evl_check_commitment_regeneration(uint32_t circuit_num);
         bool check_received_commitments_vs_generated(std::vector<Bytes> & received, std::vector<commitment_t> & generated);
+        void evl_set_inp_keys(uint32_t circuit_num);
 
         void evaluate_circuit();
 

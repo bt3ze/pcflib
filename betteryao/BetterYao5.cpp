@@ -727,7 +727,9 @@ void BetterYao5::evl_select_cut_and_choose_circuits(){
     for (size_t ix = 0; ix < indices.size(); ix++) { indices[ix] = ix; }
     
     // permute the indices
-    for (size_t ix = 0; ix < indices.size(); ix++)
+    // for debugging the garbling, set the 0th circuit to evaluation
+    //    for (size_t ix = 0; ix < indices.size(); ix++)
+    for(size_t ix=1; ix<indices.size();ix++)
       {
         int rand_ix = prng.rand_range(indices.size()-ix);
         std::swap(indices[ix], indices[ix+rand_ix]);
@@ -1059,6 +1061,7 @@ void BetterYao5::garble_and_check_circuits(){
       evl_check_commitment_regeneration(i);
     } else{
       evl_check_garbled_circuit_commitments(i);
+      evl_set_inp_keys(i);
     }
   }
   
@@ -1069,6 +1072,8 @@ void BetterYao5::garble_and_check_circuits(){
   
 
 }
+
+
 
 
 // this function only called on check circuits
@@ -1154,6 +1159,21 @@ void BetterYao5::evl_check_garbled_circuit_commitments(uint32_t circuit_num){
   std::cout << "done verify" << std::endl;
 }
 
+
+// set eval's input keys for use in circuit evaluation
+void BetterYao5::evl_set_inp_keys(uint32_t circuit_num){
+  for(int i = 0; i < get_gen_full_input_size();i++){
+    m_gen_inp_keys[circuit_num].push_back(reconstruct_commitment(m_cc_recv_gen_inp_commitments[circuit_num][i]).msg);
+  }
+  
+  // the following loop is not strictly necessary but makes the code cleaner
+  // we coud just use m_evl_received_keys
+  for(int i = 0; i < get_evl_inp_count();i++){
+    m_evl_inp_keys[circuit_num].push_back(m_evl_received_keys[circuit_num][i]);
+  }
+
+}
+
 bool BetterYao5::check_received_commitments_vs_generated(std::vector<Bytes> & received, std::vector<commitment_t> & generated){
   assert(received.size() == generated.size());
 
@@ -1188,13 +1208,14 @@ void BetterYao5::evaluate_circuit(){
     if(Env::group_rank() == 0){
       // begin with one, just to make debugging easier
       for(int ix = 0; ix < m_gcs.size();ix++){
+        
         m_gcs[ix].m_st = 
           load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
         m_gcs[ix].m_st->alice_in_size = get_gen_full_input_size();
         m_gcs[ix].m_st->bob_in_size = get_evl_inp_count();
         
         set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
-
+        
         m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix],m_key_generation_seeds[ix],&m_gen_inp_permutation_bits[ix]);
         
         m_gcs[ix].generate_Circuit();
@@ -1207,35 +1228,28 @@ void BetterYao5::evaluate_circuit(){
       if(Env::group_rank() == 0){
       // begin with one, just to make debugging easier
         for(int ix = 0; ix < m_gcs.size();ix++){
-          if(m_chks[i]){
-            m_gcs[ix].m_st = 
-              load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
-            m_gcs[ix].m_st->alice_in_size = get_gen_full_input_size();
-            m_gcs[ix].m_st->bob_in_size = get_evl_inp_count();
-            
-            set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
-        
-            m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix],m_key_generation_seeds[ix],&m_gen_inp_permutation_bits[ix]);
-        
-            
-            m_gcs[ix].generate_Circuit();
-          }
-        } else{
-          if(m_chks[i]){
-            m_gcs[ix].m_st = 
-              load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
-            m_gcs[ix].m_st->alice_in_size = get_gen_full_input_size();
-            m_gcs[ix].m_st->bob_in_size = get_evl_inp_count();
-            
-            set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
-            
-            m_gcs[ix].init_Evaluation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix],m_key_generation_seeds[ix],&m_gen_inp_permutation_bits[ix]);
-            
-            m_gcs[ix].evaluate_Circuit();
+          m_gcs[ix].m_st = 
+            load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
+          m_gcs[ix].m_st->alice_in_size = get_gen_full_input_size();
+          m_gcs[ix].m_st->bob_in_size = get_evl_inp_count();
+          set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
+  
+          
+         if(m_chks[ix]){
+           // if check circuit, then we will generate it
+           
+           m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix],m_key_generation_seeds[ix],&m_gen_inp_permutation_bits[ix]);
+          m_gcs[ix].generate_Circuit();
+         }
+         else if(!m_chks[ix]){
+           
+           // if evaluation circuit, we will evaluate it
+           std::cout << "gen first input key: " << m_cc_recv_gen_inp_commitments[0][0].to_hex() << std::endl;
+           m_gcs[ix].init_Evaluation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix]);
+           m_gcs[ix].evaluate_Circuit();
+          } 
         }
-    }
-
-      
+      }
     EVL_END
 }
 
