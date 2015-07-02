@@ -9,6 +9,8 @@
 // #include "Circuit.h"
 #include "NetIO.h"
 
+//#include "mpi.h"
+
 
 struct EnvParams
 {
@@ -203,6 +205,7 @@ public:
 
 	virtual ~Env() {}
 };
+
 
 
 #endif /* ENV_H_ */

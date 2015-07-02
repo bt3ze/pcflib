@@ -5,13 +5,13 @@ MPI_CXX    = mpicxx
 LIBS       = -lpbc -lgmp -lcrypto -llog4cxx -lpthread
 HEADERS    = Algebra.h Aes.h Bytes.h Env.h garbled_circuit.h garbled_circuit_hbc.h garbled_circuit_m.h NetIO.h Prng.h ClawFree.h \
 	GarbledBase.h GarbledHBC.h GarbledMal.h Commitment.h # Circuit.h 
-OBJS       = Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o Commitment.o 
+OBJS       = Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o Commitment.o
 OLDGARB	   = garbled_circuit.o garbled_circuit_hbc.o garbled_circuit_m.o  # Circuit.o GarbledCct3.o
 GARBLES    = GarbledCircuit.o #GarbledBase.o GarbledHBC.o GarbledMal.o 
 MAINS      = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp
 SPLITMAINS = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp splityao/BetterYao5.cpp splityao/BetterYaoEvl.cpp splityao/BetterYaoGen.cpp 
 MAINS5   = protocol.cpp YaoBase.cpp BetterYao5.cpp
-
+MACROS    = macros.cpp
 
 all : sim pcflib
 
@@ -19,7 +19,7 @@ betteryao: $(MAINS) $(OBJS) $(OLDGARB)
 	$(MPI_CXX) -o evl -DEVL_CODE $(CXX_CFLAGS) $^ $(LIBS)
 	$(MPI_CXX) -o gen -DGEN_CODE $(CXX_CFLAGS) $^ $(LIBS)
 
-betteryao5: $(MAINS5) $(OBJS) $(GARBLES)
+betteryao5: $(MAINS5) $(OBJS) $(GARBLES) $(MACROS)
 	$(MPI_CXX) -o evl5 -DEVL_CODE -DYAO5 $(CXX_CFLAGS) $^ $(LIBS)
 	$(MPI_CXX) -o gen5 -DGEN_CODE -DYAO5 $(CXX_CFLAGS) $^ $(LIBS)
 

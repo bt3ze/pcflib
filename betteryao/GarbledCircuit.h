@@ -27,6 +27,8 @@ void *evl_next_gate(struct PCFState *st, struct PCFGate *gate);
 }
 #endif
 
+#include "macros.h"
+
 #define  _mm_extract_epi8(x, imm) \
         ((((imm) & 0x1) == 0) ?   \
 	_mm_extract_epi16((x), (imm) >> 1) & 0xff : \
@@ -109,7 +111,7 @@ protected:
     __m128i  m_R;
     // enforces k-length keys
     __m128i  m_clear_mask;
-
+    
     // m_prng used for generating new wire keys
     Prng m_prng;
     // permutation bits important for generation circuits
@@ -127,6 +129,11 @@ protected:
     // remember where are are, and also this is passed to the garbling function
     // garbled gate = H_{key1} ( H_{key2} ( gate index) )
     uint64_t m_gate_index;
+
+    // this variable will be used by Gen to send messages to Eval
+    // and by Eval to receive Gen's messages
+    // it will contain garbling information for each gate sent
+    Bytes garbling_bufr;
     
 
 };

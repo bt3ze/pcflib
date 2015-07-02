@@ -311,7 +311,7 @@ void * gen_next_malicious_gate(PCFState *st, PCFGate *current_gate){
       cct.m_gen_inp_ix++; // after PCF compiler, this isn't really necessary
       
       
-      // __m128i onev = _mm_xor_si128(cct.m_R, current_zero_key);
+      __m128i onev = _mm_xor_si128(cct.m_R, current_zero_key);
       
       /*
         if(Env::is_root())
@@ -557,45 +557,45 @@ void * evl_next_malicious_gate(PCFState *st, PCFGate *current_gate){
       else
 #endif
         {
-          __m128i aes_key[2], aes_plaintext, aes_ciphertext;
-          
-          
-          aes_plaintext = _mm_set1_epi64x(cct.m_gate_ix);
-          
-          aes_key[0] = *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire1));
-          aes_key[1] = *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire2));
-          
-          const uint8_t perm_x = _mm_extract_epi8(aes_key[0], 0) & 0x01;
-          const uint8_t perm_y = _mm_extract_epi8(aes_key[1], 0) & 0x01;
-          
-          KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
-          aes_ciphertext = _mm_and_si128(aes_ciphertext, cct.m_clear_mask);
-          uint8_t garbled_ix = (perm_y<<1)|perm_x;
-          
+        __m128i aes_key[2], aes_plaintext, aes_ciphertext;
+    
+        
+        aes_plaintext = _mm_set1_epi64x(cct.m_gate_ix);
+        
+        aes_key[0] = *reinterpret_cast<__m128i*>(get_wire_key(st,current_gate->wire1));
+        aes_key[1] = *reinterpret_cast<__m128i*>(get_wire_key(st,current_gate->wire2));
+        
+        const uint8_t perm_x = _mm_extract_epi8(aes_key[0], 0) & 0x01;
+        const uint8_t perm_y = _mm_extract_epi8(aes_key[1], 0) & 0x01;
+        
+        KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
+        aes_ciphertext = _mm_and_si128(aes_ciphertext, cct.m_clear_mask);
+        uint8_t garbled_ix = (perm_y<<1)|perm_x;
+        
 #ifdef GRR
-          if (garbled_ix == 0)
-            {
-              current_key = _mm_load_si128(&aes_ciphertext);
-            }
-          else
-            {
-              Bytes::const_iterator it = cct.m_in_bufr_ix+(garbled_ix-1)*Env::key_size_in_bytes();
-              tmp.assign(it, it+Env::key_size_in_bytes());
-              tmp.resize(16, 0);
-              a = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
-              current_key = _mm_xor_si128(aes_ciphertext, a);
-            }
-          cct.m_in_bufr_ix += 3*Env::key_size_in_bytes();
+        if (garbled_ix == 0)
+          {
+            current_key = _mm_load_si128(&aes_ciphertext);
+          }
+        else
+          {
+            Bytes::const_iterator it = cct.m_in_bufr_ix+(garbled_ix-1)*Env::key_size_in_bytes();
+            tmp.assign(it, it+Env::key_size_in_bytes());
+            tmp.resize(16, 0);
+            a = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
+            current_key = _mm_xor_si128(aes_ciphertext, a);
+          }
+        cct.m_in_bufr_ix += 3*Env::key_size_in_bytes();
 #else
-          it = cct.m_in_bufr_ix + garbled_ix*Env::key_size_in_bytes();
-          tmp.assign(it, it+Env::key_size_in_bytes());
-          tmp.resize(16, 0);
-          current_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
-          current_key = _mm_xor_si128(current_key, aes_ciphertext);
-          
-          cct.m_in_bufr_ix += 4*Env::key_size_in_bytes();
+        it = cct.m_in_bufr_ix + garbled_ix*Env::key_size_in_bytes();
+        tmp.assign(it, it+Env::key_size_in_bytes());
+        tmp.resize(16, 0);
+        current_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
+        current_key = _mm_xor_si128(current_key, aes_ciphertext);
+        
+        cct.m_in_bufr_ix += 4*Env::key_size_in_bytes();
 #endif
-        }
+      }
       /*
       _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), *reinterpret_cast<__m128i*>(get_wire_key(st, current_gate->wire1)));
       std::cout << " " << current_gate->wire1 << " " << Bytes(tmp.begin(), tmp.begin()+Env::key_size_in_bytes()).to_hex();

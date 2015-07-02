@@ -6,7 +6,7 @@
 #include <iostream>
 #include <fstream>
 
-#include "mpi.h"
+//#include "mpi.h"
 
 #include "Env.h"
 #include "NetIO.h"
@@ -14,44 +14,7 @@
 
 #include "../pcflib.h"
 
-#ifdef GEN_CODE
-
-	// User mode (code for the generator)
-	#define GEN_BEGIN
-	#define GEN_END
-	#define EVL_BEGIN     if (0) {
-	#define EVL_END       }
-	#define GEN_SEND(d)   Env::remote()->write_bytes(d)
-	#define EVL_RECV()    Env::remote()->read_bytes()
-	#define EVL_SEND(d)   Env::remote()->write_bytes(d)
-	#define GEN_RECV()    Env::remote()->read_bytes()
-
-#elif defined EVL_CODE
-
-	// User mode (code for the evaluator)
-	#define GEN_BEGIN     if (0) {
-	#define GEN_END       }
-	#define EVL_BEGIN
-	#define EVL_END
-	#define GEN_SEND(d)   Env::remote()->write_bytes(d)
-	#define EVL_RECV()    Env::remote()->read_bytes()
-	#define EVL_SEND(d)   Env::remote()->write_bytes(d)
-	#define GEN_RECV()    Env::remote()->read_bytes()
-
-#else
-
-	// Simulation mode
-	#define GEN_BEGIN     if (!Env::is_evl()) {
-	#define GEN_END       }
-	#define GEN_SEND(d)   send_data(Env::world_rank()+1, (d))
-	#define GEN_RECV()    recv_data(Env::world_rank()+1)
-	#define EVL_BEGIN     if ( Env::is_evl()) {
-	#define EVL_END       }
-	#define EVL_SEND(d)   send_data(Env::world_rank()-1, (d))
-	#define EVL_RECV()    recv_data(Env::world_rank()-1)
-
-#endif
-
+#include "macros.h"
 
 class YaoBase {
 public:
@@ -69,8 +32,8 @@ private:
 
 protected:
 	// subroutines for the communication in the Simulation mode
-	Bytes recv_data(int src_node);
-	void send_data(int dst_node, const Bytes &data);
+        //	Bytes recv_data(int src_node);
+	// void send_data(int dst_node, const Bytes &data);
 
 	// subroutines for profiling
 	void reset_timers();
@@ -120,9 +83,6 @@ protected:
         // variables for input counts
 	uint32_t               m_gen_inp_cnt;
 	uint32_t               m_evl_inp_cnt;
-        inline uint32_t get_evl_inp_count(){
-             return m_evl_inp_cnt; 
-        }
 
 
 
