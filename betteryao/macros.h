@@ -8,7 +8,6 @@
 #include <stdint.h>
 #include <limits.h>
 
-//const int MY_INT32_MAX = std::numeric_limits<int32_t>::max();
 
 Bytes recv_data(int src_node);
 void send_data(int dst_node, const Bytes &data);

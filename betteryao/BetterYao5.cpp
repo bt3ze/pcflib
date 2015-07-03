@@ -298,6 +298,7 @@ void BetterYao5::gen_generate_and_commit_to_inputs(){
   // next, generate Gen's input keys
   m_gen_inp_keys.resize(Env::node_load());
   m_gen_inp_permutation_bits.resize(Env::node_load());
+  m_R.resize(Env::node_load());
   for(int j = 0; j < Env::node_load();j++){
     generate_gen_input_keys(j);
   }
@@ -319,13 +320,26 @@ void BetterYao5::generate_gen_input_keys(uint32_t circuit_num){
   // this function should be executed in parallel by all processors
 
   //std::cout << "generate gen input keys\trank: " << Env::group_rank() << std::endl;
-
+  
   // first, generate all of the input keys for Gen
   // (K_{0},K_{1}) <-$ {0,1}^{2k}
+  m_R[circuit_num] = m_circuit_prngs[circuit_num].rand_bits(Env::k());
+  m_R[circuit_num].set_ith_bit(0,1);
+ 
+  std::vector<Bytes> random_keys;
+
+  // generate enough input keys for Gen's entire input
+  // and then compute their XOR-offsets
   generate_input_keys(m_circuit_prngs[circuit_num],
-                      m_gen_inp_keys[circuit_num],
-                      get_gen_full_input_size()*2);
+                      random_keys, //m_gen_inp_keys[circuit_num],
+                      get_gen_full_input_size());
   
+  // the proper XOR-offsets get pushed alongside the input keys
+  for(int i = 0; i < get_gen_full_input_size();i++){
+    random_keys[i].set_ith_bit(0,0);
+    m_gen_inp_keys[circuit_num].push_back(random_keys[i]);
+    m_gen_inp_keys[circuit_num].push_back(random_keys[i] ^ m_R[circuit_num]);
+  }
   
   // next generate permutation bits for Gen's input keys
   // { pi_{i} } <-$ {0,1} for i in (0, gen_inputs ]  
@@ -574,7 +588,10 @@ void BetterYao5::gen_commit_to_io_labels(){
 /*
   Gen (or Eval) generates Gen's input keys for the ith circuit
   where i is given in circuit_num
- */
+  note that these keys do not need their permutation/selection bits set
+  (so that their semantics can be derived), since the key will be
+  used as a decryption key during an Eval input gate
+*/
 void BetterYao5::generate_eval_input_keys(uint32_t circuit_num){
     
   generate_input_keys(m_circuit_prngs[circuit_num],m_evl_inp_keys[circuit_num],get_evl_inp_count()*2);
@@ -680,6 +697,24 @@ void BetterYao5::eval_input_OT(){
     
   EVL_END
 
+    // after sending the OT keys, we need to hash them into keys of the proper size (k bits)
+    
+    GEN_BEGIN
+    for(int i = 0; i < Env::node_load(); i++){
+      for(int j = 0; j < m_evl_inp_keys[i].size(); j++){
+        m_evl_inp_keys[i][j] = m_evl_inp_keys[i][j].hash(Env::k());
+      }
+    }
+    GEN_END
+
+    EVL_BEGIN
+    for(int i = 0; i < Env::node_load(); i++){
+      for(int j = 0; j < m_evl_received_keys[i].size(); j++){
+        m_evl_received_keys[i][j] = m_evl_received_keys[i][j].hash(Env::k());
+      }
+    }
+    EVL_END
+    
 }
 
 
@@ -1054,6 +1089,7 @@ void BetterYao5::garble_and_check_circuits(){
   m_gen_inp_label_commitments.resize(Env::node_load());
   m_evl_inp_label_commitments.resize(Env::node_load());
   m_gen_inp_permutation_bits.resize(Env::node_load());
+  m_R.resize(Env::node_load());
 
   for(int i = 0; i < Env::node_load();i++){
     if(m_chks[i]){ // this is a check circuit
@@ -1216,9 +1252,17 @@ void BetterYao5::evaluate_circuit(){
         
         set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
         
-        m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix],m_key_generation_seeds[ix],&m_gen_inp_permutation_bits[ix]);
+        m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix],m_key_generation_seeds[ix],&m_gen_inp_permutation_bits[ix],m_R[ix]);
         
-        m_gcs[ix].generate_Circuit();
+        Bytes bufr;
+        while(get_next_gate(m_gcs[ix].m_st)){
+          bufr = m_gcs[ix].get_garbling_bufr();
+          // bufr = Bytes(5,1);
+          // fprintf(stderr,"send high level bufr: %s\n",bufr.to_hex().c_str());
+          GEN_SEND(bufr);
+          m_gcs[ix].clear_garbling_bufr();
+        }
+        // m_gcs[ix].generate_Circuit();
       }
     }
     GEN_END
@@ -1238,16 +1282,24 @@ void BetterYao5::evaluate_circuit(){
          if(m_chks[ix]){
            // if check circuit, then we will generate it
            
-           m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix],m_key_generation_seeds[ix],&m_gen_inp_permutation_bits[ix]);
-          m_gcs[ix].generate_Circuit();
+           m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix],m_key_generation_seeds[ix],&m_gen_inp_permutation_bits[ix],m_R[ix]);
+           m_gcs[ix].generate_Circuit();
          }
          else if(!m_chks[ix]){
            
            // if evaluation circuit, we will evaluate it
-           std::cout << "gen first input key: " << m_cc_recv_gen_inp_commitments[0][0].to_hex() << std::endl;
-           m_gcs[ix].init_Evaluation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix]);
-           m_gcs[ix].evaluate_Circuit();
-          } 
+           // std::cout << "gen first input key: " << m_cc_recv_gen_inp_commitments[0][0].to_hex() << std::endl;
+           m_gcs[ix].init_Evaluation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix],&m_private_input);
+           //m_gcs[ix].evaluate_Circuit();
+
+           Bytes bufr;
+           do {
+             bufr = EVL_RECV();
+             fprintf(stderr,"receive high level bufr: %s\n",bufr.to_hex().c_str());
+             m_gcs[ix].set_garbling_bufr(bufr);
+             
+           } while(get_next_gate(m_gcs[ix].m_st));
+         } 
         }
       }
     EVL_END

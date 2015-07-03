@@ -46,6 +46,7 @@ std::string Bytes::to_hex() const
 	{
 		out.push_back(HEX_TABLE[(*it) / 16]);
 		out.push_back(HEX_TABLE[(*it) % 16]);
+                // out.push_back(" ");
 	}
 	return out;
 }

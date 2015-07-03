@@ -300,6 +300,7 @@ protected:
         // Gen also commits to a way of generating output labels
         // but that's embedded in the logic of the code
 
+        std::vector<Bytes> m_R;
 
         // Gen input label decommitments
         // replaces m_gen_inp_decom

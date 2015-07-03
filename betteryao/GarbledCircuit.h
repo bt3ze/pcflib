@@ -21,13 +21,13 @@ void delete_key(void *);
 void *gen_next_gate(struct PCFState *st, struct PCFGate *gate);
 void *evl_next_gate(struct PCFState *st, struct PCFGate *gate);
 
-
+#include "macros.h"
 
 #ifdef __CPLUSPLUS
 }
 #endif
 
-#include "macros.h"
+// #include "macros.h"
 
 #define  _mm_extract_epi8(x, imm) \
         ((((imm) & 0x1) == 0) ?   \
@@ -46,9 +46,11 @@ public:
     void init_Generation_Circuit(const std::vector<Bytes> * gen_keys,
                                    const std::vector<Bytes> * evl_keys,
                                    Bytes & rand_seed,
-                                   const Bytes * permutation_bits);
+                                   const Bytes * permutation_bits,
+                                   const Bytes R);
     void init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys,
-                                   const std::vector<Bytes> * evl_keys);
+                                   const std::vector<Bytes> * evl_keys,
+                                   const Bytes * evl_input);
 
     void generate_Circuit();
     void evaluate_Circuit();
@@ -70,6 +72,10 @@ public:
     struct PCFState *m_st;
     // get the constant wires
     void * get_Const_Wire(uint32_t i);
+  
+    Bytes get_garbling_bufr();
+    void set_garbling_bufr(Bytes buf);
+    void clear_garbling_bufr();
 
 protected:
 
@@ -107,6 +113,19 @@ protected:
     // things to help with garbling
     void generate_Random_Key(__m128i & destination);
  
+void generate_Alice_Input(PCFGate* current_Gate, __m128i &current_key);
+void evaluate_Alice_Input(PCFGate* current_Gate, __m128i &current_key);
+void generate_Bob_Input(PCFGate* current_Gate, __m128i &current_key);
+void evaluate_Bob_Input(PCFGate* current_Gate, __m128i &current_key);
+void generate_Gate(PCFGate* current_Gate, __m128i &current_key);
+void evaluate_Gate(PCFGate* current_Gate, __m128i &current_key);
+void evaluate_Alice_Output(PCFGate* current_Gate, __m128i &current_key);
+void evaluate_Bob_Output(PCFGate* current_Gate, __m128i &current_key);
+void generate_Alice_Output(PCFGate* current_Gate, __m128i &current_key);
+void generate_Bob_Output(PCFGate* current_Gate, __m128i &current_key);
+
+
+
     // circuit's free-XOR value
     __m128i  m_R;
     // enforces k-length keys
@@ -116,7 +135,7 @@ protected:
     Prng m_prng;
     // permutation bits important for generation circuits
     // (they will be secret to evaluation circuits)
-    const Bytes * m_permutation_bits;
+    const Bytes * m_select_bits;
 
     // hold values of constant wires 1 and 0
     __m128i m_const_wire[2];
@@ -133,8 +152,7 @@ protected:
     // this variable will be used by Gen to send messages to Eval
     // and by Eval to receive Gen's messages
     // it will contain garbling information for each gate sent
-    Bytes garbling_bufr;
-    
+    Bytes m_garbling_bufr;
 
 };
 

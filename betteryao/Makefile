@@ -78,7 +78,7 @@ GarbledMal.o : Algebra.o Aes.h Bytes.h Env.h Prng.h GarbledBase.h GarbledMal.h G
 	$(CXX) -msse2 $(CXX_CFLAGS) -c GarbledMal.cpp
 
 GarbledCircuit.o: Algebra.o Aes.h Bytes.h Env.h Prng.h GarbledCircuit.h GarbledCircuit.cpp
-	$(CXX) -msse2 $(CXX_CFLAGS) -c GarbledCircuit.cpp
+	$(MPI_CXX) -msse2 $(CXX_CFLAGS) -c GarbledCircuit.cpp
 
 Env.o : Algebra.h Bytes.h ClawFree.h NetIO.h Env.h Env.cpp #Circuit.h 
 	$(CXX) $(CXX_CFLAGS) -c Env.cpp
