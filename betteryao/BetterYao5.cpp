@@ -1263,6 +1263,7 @@ void BetterYao5::evaluate_circuit(){
           m_gcs[ix].clear_garbling_bufr();
         }
         // m_gcs[ix].generate_Circuit();
+        GEN_SEND(Bytes(0)); // redundant value to prevent Evl from hanging
       }
     }
     GEN_END
@@ -1310,6 +1311,43 @@ void BetterYao5::evaluate_circuit(){
  */
 
 void BetterYao5::retrieve_outputs(){
+  GEN_BEGIN
+
+  assert(m_gcs.size()>0);  
+  for(int i = 0; i < m_gcs.size();i++){
+      Bytes gen_out_parity = m_gcs[i].get_gen_out();
+      GEN_SEND(gen_out_parity);
+      
+      Bytes evl_out_parity = m_gcs[i].get_evl_out();
+      GEN_SEND(evl_out_parity);
+
+    }
+    
+  GEN_END
+
+  EVL_BEGIN
+    std::cout << "Retrieve Outputs" << std::endl;
+  
+  assert(m_gcs.size()>0);
+  for(int i = 0; i < m_gcs.size();i++){
+    Bytes gen_out = m_gcs[i].get_gen_out();
+    Bytes gen_out_parity = EVL_RECV();
+    std::cout << "gen out (masked): " << gen_out.to_hex() << std::endl;
+    std::cout << "gen out (parity): " << gen_out_parity.to_hex() << std::endl;
+    gen_out = gen_out ^ gen_out_parity;
+    std::cout << "gen out  (final): " << gen_out.to_hex() << std::endl;
+    
+    Bytes evl_out = m_gcs[i].get_evl_out();
+    Bytes evl_out_parity = EVL_RECV();
+    std::cout << "evl out (masked): " << evl_out.to_hex() << std::endl;
+    std::cout << "evl out (parity): " << evl_out_parity.to_hex() << std::endl;
+    evl_out = evl_out ^ evl_out_parity;
+    std::cout << "evl out  (final):" << evl_out.to_hex() << std::endl;
+  }
+
+
+  EVL_END
+
 }
 
 void BetterYao5::gen_output_auth_proof(){

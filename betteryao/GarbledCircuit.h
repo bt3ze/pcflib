@@ -36,6 +36,9 @@ void *evl_next_gate(struct PCFState *st, struct PCFGate *gate);
 
 const int MAX_OUTPUT_SIZE = 1024;
 
+void print128_num(__m128i var);
+
+
 class GarbledCircuit {
 
 public:
@@ -76,6 +79,8 @@ public:
     Bytes get_garbling_bufr();
     void set_garbling_bufr(Bytes buf);
     void clear_garbling_bufr();
+    Bytes get_gen_out();
+    Bytes get_evl_out();
 
 protected:
 
@@ -124,7 +129,10 @@ void evaluate_Bob_Output(PCFGate* current_Gate, __m128i &current_key);
 void generate_Alice_Output(PCFGate* current_Gate, __m128i &current_key);
 void generate_Bob_Output(PCFGate* current_Gate, __m128i &current_key);
 
+void genHalfGate(PCFGate* current_Gate, __m128i &current_key);
+void evlHalfGate(PCFGate* current_Gate, __m128i &current_key);
 
+uint32_t increment_index();
 
     // circuit's free-XOR value
     __m128i  m_R;
@@ -153,7 +161,13 @@ void generate_Bob_Output(PCFGate* current_Gate, __m128i &current_key);
     // and by Eval to receive Gen's messages
     // it will contain garbling information for each gate sent
     Bytes m_garbling_bufr;
-
+    
+    // a couple of buffers that hold circuit output, used in the garbling functions
+    Bytes m_gen_out;
+    Bytes m_evl_out;
+    uint32_t m_in_bufr_ix;
+    uint32_t m_evl_out_ix;
+    uint32_t m_gen_out_ix;
 };
 
 
