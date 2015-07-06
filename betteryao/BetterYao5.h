@@ -216,6 +216,8 @@ protected:
         bool check_received_commitments_vs_generated(std::vector<Bytes> & received, std::vector<commitment_t> & generated,uint32_t p);
         void evl_set_inp_keys(uint32_t circuit_num);
 
+        void evl_inputs_transform(std::vector<Bytes> &source, std::vector<Bytes> &dest);
+
         void evaluate_circuit();
 
 
@@ -280,6 +282,7 @@ protected:
 
         std::vector<std::vector<Bytes> > m_gen_inp_keys;
         std::vector<std::vector<Bytes> > m_evl_inp_keys;
+        std::vector<std::vector<G> > m_evl_inp_ot_keys;
 
         std::vector<std::vector<Bytes> > m_evl_received_keys;
 
