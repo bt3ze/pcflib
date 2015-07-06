@@ -105,7 +105,9 @@ void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys
   Bytes tmp;
   
   m_prng.seed_rand(circuit_seed);
-  m_select_bits = permutation_bits;
+  //  m_select_bits.resize()
+  m_select_bits.insert(m_select_bits.begin(),permutation_bits.begin(),permutation_bits.begin() + permutation_bits.size());
+  // m_select_bits = permutation_bits;
 
   // initialize the value of R
   //tmp = m_prng.rand_bits(Env::k());
@@ -144,12 +146,18 @@ void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys
 void GarbledCircuit::set_Input_Keys(const std::vector<Bytes> * gen_keys, const std::vector<Bytes> * evl_keys){
   m_gen_inputs = gen_keys;
   m_evl_inputs = evl_keys;
+
+  for(int i = 0; i < m_evl_inputs->size();i++){
+    fprintf(stderr,"evl key %i: %s\n",i, (*m_evl_inputs)[i].to_hex().c_str());
+  }
 }
 
 void GarbledCircuit::init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys, const std::vector<Bytes> * evl_keys, const Bytes & evl_input){
   set_Input_Keys(gen_keys, evl_keys);
 
-  m_select_bits = evl_input;
+  //m_select_bits = evl_input;
+  m_select_bits.insert(m_select_bits.begin(),evl_input.begin(),evl_input.begin() + evl_input.size());
+
   fprintf(stderr,"***Eval Input (select bits) *** %s\t%s\n",evl_input.to_hex().c_str(),m_select_bits.to_hex().c_str());
   //std::cout << "Gen first input key: " << (*gen_keys)[0].to_hex() << std::endl;
 
@@ -228,17 +236,15 @@ void save_Key_to_128bit(Bytes & key, __m128i & destination){
 uint32_t GarbledCircuit::get_Input_Parity(uint32_t idx){
   // Gen uses this to look up permutation bits
   // Eval uses this function to figure out what input key to decrpyt
- GEN_BEGIN
-
    fprintf(stderr,"%s get %u input parity: %u\n",m_select_bits.to_hex().c_str(),idx,m_select_bits.get_ith_bit(idx));
-  return m_select_bits.get_ith_bit(idx);
+  
+ // fprintf(stderr,"HELP ME PLEASE\n");
+  for(int i = 0; i <= idx; i++){
+    fprintf(stderr,"%x",m_select_bits.get_ith_bit(i));
+  }
+  
+ return m_select_bits.get_ith_bit(idx);
 
-  GEN_END
-
-  EVL_BEGIN
-    fprintf(stderr,"%s get %u input parity: %u\n",m_select_bits.to_hex().c_str(),idx,m_select_bits.get_ith_bit(idx));
-    return m_select_bits.get_ith_bit(idx);
-  EVL_END
 }
 
 void GarbledCircuit::generate_Random_Key(__m128i & destination){
@@ -461,7 +467,7 @@ void GarbledCircuit::generate_Bob_Input(PCFGate* current_gate, __m128i &current_
     //tmp.clear();
 
     // load the second output key
-    tmp = get_Evl_Key(current_gate->wire2,1); // wire1 = wire2
+    tmp = get_Evl_Key(current_gate->wire1,1); // wire1 = wire2
     tmp.resize(16,0);
     output_keys[1] = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
     fprintf(stderr,"key2: %s\n",tmp.to_hex().c_str());
@@ -508,6 +514,8 @@ void GarbledCircuit::evaluate_Bob_Input(PCFGate* current_gate, __m128i &current_
   uint32_t bit = get_Input_Parity(current_gate->wire1);
   assert(bit == 0 || bit == 1);
   
+  //fprintf(stderr,"HELP ME\n");
+  
   fprintf(stderr,"selecting and decrypting Eval Input Key: %x (input wire %x)\n",bit,current_gate->wire1);
   
   // now select the one of two ciphertexts to decrypt
@@ -517,6 +525,7 @@ void GarbledCircuit::evaluate_Bob_Input(PCFGate* current_gate, __m128i &current_
                          m_garbling_bufr.begin() + Env::key_size_in_bytes() + bit * Env::key_size_in_bytes());
   
   fprintf(stderr,"decrypting encrypted buffer: %s\n",encrypted_input.to_hex().c_str()); 
+  fprintf(stderr,"eval buffer decryption key: %s\n",evl_input.to_hex().c_str());
 
   assert(evl_input.size() == Env::key_size_in_bytes());
   assert(evl_input.size() == encrypted_input.size());

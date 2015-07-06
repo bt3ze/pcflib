@@ -55,7 +55,7 @@ protected:
          */
         void generate_random_seeds(std::vector<Bytes> & seeds, uint32_t num_seeds);
         void seed_prngs(std::vector<Prng> & prngs, std::vector<Bytes> & seeds);
-        void generate_input_keys(Prng & rng, std::vector<Bytes> & keys, uint32_t num_keys);
+        void generate_input_keys(Prng & rng, std::vector<Bytes> & keys, uint32_t num_keys,uint32_t num_bits);
 
 
 
@@ -170,7 +170,7 @@ protected:
         // gen_commit_to_io_labels declared above
         void generate_eval_input_keys(uint32_t circuit_num);
         void generate_gen_input_label_commitments(uint32_t circuit_num);
-        void generate_eval_input_label_commitments(uint32_t circuit_num);
+        //void generate_eval_input_label_commitments(uint32_t circuit_num);
 
         void commit_to_gen_input_labels();
         void commit_to_eval_input_labels();
@@ -182,8 +182,8 @@ protected:
          */
 
         // Eval uses ot methods here, declared above in auxiliary functions
-                
-
+        void hash_eval_input_keys(std::vector<Bytes> & source, std::vector<Bytes> & destination, uint32_t num_bits);
+        
         
         /**
            STEP 6: CUT AND CHOOSE
@@ -213,7 +213,7 @@ protected:
         void evl_regenerate_circuits(uint32_t circuit_num);
         void evl_check_garbled_circuit_commitments(uint32_t circuit_num);
         void evl_check_commitment_regeneration(uint32_t circuit_num);
-        bool check_received_commitments_vs_generated(std::vector<Bytes> & received, std::vector<commitment_t> & generated);
+        bool check_received_commitments_vs_generated(std::vector<Bytes> & received, std::vector<commitment_t> & generated,uint32_t p);
         void evl_set_inp_keys(uint32_t circuit_num);
 
         void evaluate_circuit();
@@ -287,11 +287,18 @@ protected:
         std::vector<std::vector<commitment_t> >   m_gen_inp_commitments;
         std::vector<std::vector<Bytes> >          m_gen_received_input_commitments;
         
+
         // these input label commitments are used in
         // Step 5: Gen's I/O Commitments
         // right before Eval's input OTs
         std::vector<std::vector<commitment_t> >          m_gen_inp_label_commitments;
         std::vector<std::vector<commitment_t> >          m_evl_inp_label_commitments;
+        
+        // Gen uses this vector to store Eval's hashed input keys
+        // since he inputs them to the OT in longer form
+        // (size of group element)
+        // and he uses the k-bit hash as the key itself
+        std::vector<std::vector<Bytes> > m_evl_hashed_inp_keys;
 
         // when Gen sends his input label commitments in Step 4/5,
         // Evl puts them in here
