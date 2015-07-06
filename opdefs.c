@@ -135,7 +135,7 @@ void join_op(struct PCFState * st, struct PCFOP * op)
 
 void bits_op(struct PCFState * st, struct PCFOP * op)
 {
-  fprintf(stderr,"Bits\n");
+  // fprintf(stderr,"Bits\n");
   struct bits_op_data * data = op->data;
   uint32_t s_idx = data->source + st->base;
   uint32_t i = 0, cval;
@@ -197,7 +197,7 @@ void call_op (struct PCFState * st, struct PCFOP * op)
         }
       // idx (similarly, st->idx) now has the argument that was passed to alice()
 
-      fprintf(stderr,"alice call: %u, (newbase: %u)\n ",idx, data->newbase);
+      // fprintf(stderr,"alice call: %u, (newbase: %u)\n ",idx, data->newbase);
 
       // this loop with inp_i ensures that we call the function 
       // to retrieve outputs 32 times (for a whole word)
@@ -205,7 +205,7 @@ void call_op (struct PCFState * st, struct PCFOP * op)
       // and then resets the input index (inp_i) for the next input
       if(st->inp_i < 32)
         { 
-          fprintf(stderr,"inp_i < 32 \t inp_i=%x\n",st->inp_i);
+          // fprintf(stderr,"inp_i < 32 \t inp_i=%x\n",st->inp_i);
           i = st->inp_i;
           st->inp_i++;
           st->input_g.wire1 = st->inp_idx + i;
@@ -220,7 +220,7 @@ void call_op (struct PCFState * st, struct PCFOP * op)
 
           if(st->inp_idx + i < st->alice_in_size)
             { // if alice provided a value for this wire, then get it
-              fprintf(stderr,"A\t");
+              // fprintf(stderr,"A\t");
               
               st->wires[st->input_g.reswire].keydata = st->copy_key(st->callback(st, &st->input_g));
               st->curgate = &st->input_g;
@@ -235,7 +235,7 @@ void call_op (struct PCFState * st, struct PCFOP * op)
           // Not yet done with function call
           // so decrement the program counter to go through again
           st->PC--;
-          fprintf(stderr,"End Loop\n");
+          // fprintf(stderr,"End Loop\n");
         }
       else
         { // now we have iterated 32 times for an input
@@ -243,7 +243,7 @@ void call_op (struct PCFState * st, struct PCFOP * op)
           st->inp_i = 0;
         } 
       
-      fprintf(stderr,"End Alice Call\n");
+      // fprintf(stderr,"End Alice Call\n");
     }
   else if(strcmp(data->target->key, "bob") == 0)
     {
@@ -263,11 +263,11 @@ void call_op (struct PCFState * st, struct PCFOP * op)
           st->inp_idx = idx;
         }
  
-      fprintf(stderr,"bob call: %x\n",idx);
+      // fprintf(stderr,"bob call: %x\n",idx);
 
       if(st->inp_i < 32)
         {
-          fprintf(stderr,"inp_i < 32 \t inp_i=%x\n",st->inp_i);
+          // fprintf(stderr,"inp_i < 32 \t inp_i=%x\n",st->inp_i);
           i = st->inp_i;
           st->inp_i++;
           st->input_g.wire1 = st->inp_idx+i;
@@ -404,7 +404,7 @@ void gate_op(struct PCFState * st, struct PCFOP * op)
 
   assert(st->curgate == 0);
   assert(data->truth_table < 16);
-
+  
   if((st->wires[op1idx].flags != KNOWN_WIRE) || (st->wires[op2idx].flags != KNOWN_WIRE))
     {
       // Time for the callback

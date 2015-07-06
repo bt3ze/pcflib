@@ -344,20 +344,30 @@ void BetterYao5::generate_gen_input_keys(uint32_t circuit_num){
   // next generate permutation bits for Gen's input keys
   // { pi_{i} } <-$ {0,1} for i in (0, gen_inputs ]  
   m_gen_inp_permutation_bits[circuit_num] = m_circuit_prngs[circuit_num].rand_bits(get_gen_full_input_size());
-  
+
+  // these lines are for debugging purposes, setting the permutation bits
+  //m_gen_inp_permutation_bits[circuit_num].resize(get_gen_full_input_size()/8+1);
+  for(int i = 0; i < get_gen_full_input_size();i++){
+    m_gen_inp_permutation_bits[circuit_num].set_ith_bit(i,0);
+  }
+
+  std::cout << "gen permutation bits: " << m_gen_inp_permutation_bits[circuit_num].to_hex() << std::endl;
+
   // now set Gen's permutation bits
   // permutation bit 1 --> will be sent as the second in key pair to Eval
-  for(int i = 0; i < 2*get_gen_full_input_size();i+=2){
+  //for(int i = 0; i < 2*get_gen_full_input_size();i+=2){
     // this permutes the keys based on the permutation bit
-    if(m_gen_inp_permutation_bits[circuit_num].get_ith_bit(i/2)==1){
+    
+  //  if(m_gen_inp_permutation_bits[circuit_num].get_ith_bit(i%2)==1){
       // swap the two keys, then set their bits so that they look
       // like nothing's up (which lets us commit to them in this order)
       // but the secret permutation bits generated above hold the key to their true values.
-      std::swap(m_gen_inp_keys[circuit_num][i],m_gen_inp_keys[circuit_num][i+1]);
-      m_gen_inp_keys[circuit_num][i].set_ith_bit(0,0);
-      m_gen_inp_keys[circuit_num][i+1].set_ith_bit(0,1);
-    }
-  }
+  //    std::swap(m_gen_inp_keys[circuit_num][i],m_gen_inp_keys[circuit_num][i+1]);
+  //    m_gen_inp_keys[circuit_num][i].set_ith_bit(0,0);
+  //    m_gen_inp_keys[circuit_num][i+1].set_ith_bit(0,1);
+  //  }
+   
+  //}
 }
 
 
@@ -1252,7 +1262,7 @@ void BetterYao5::evaluate_circuit(){
         
         set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
         
-        m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix],m_key_generation_seeds[ix],&m_gen_inp_permutation_bits[ix],m_R[ix]);
+        m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix],m_key_generation_seeds[ix],m_gen_inp_permutation_bits[ix],m_R[ix]);
         
         Bytes bufr;
         while(get_next_gate(m_gcs[ix].m_st)){
@@ -1283,14 +1293,14 @@ void BetterYao5::evaluate_circuit(){
          if(m_chks[ix]){
            // if check circuit, then we will generate it
            
-           m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix],m_key_generation_seeds[ix],&m_gen_inp_permutation_bits[ix],m_R[ix]);
+           m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix],m_key_generation_seeds[ix],m_gen_inp_permutation_bits[ix],m_R[ix]);
            m_gcs[ix].generate_Circuit();
          }
          else if(!m_chks[ix]){
            
            // if evaluation circuit, we will evaluate it
            // std::cout << "gen first input key: " << m_cc_recv_gen_inp_commitments[0][0].to_hex() << std::endl;
-           m_gcs[ix].init_Evaluation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix],&m_private_input);
+           m_gcs[ix].init_Evaluation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix],m_private_input);
            //m_gcs[ix].evaluate_Circuit();
 
            Bytes bufr;
@@ -1314,12 +1324,15 @@ void BetterYao5::retrieve_outputs(){
   GEN_BEGIN
 
   assert(m_gcs.size()>0);  
+
   for(int i = 0; i < m_gcs.size();i++){
-      Bytes gen_out_parity = m_gcs[i].get_gen_out();
-      GEN_SEND(gen_out_parity);
-      
-      Bytes evl_out_parity = m_gcs[i].get_evl_out();
-      GEN_SEND(evl_out_parity);
+    m_gcs[i].trim_output_buffers();
+
+    Bytes gen_out_parity = m_gcs[i].get_gen_out();
+    GEN_SEND(gen_out_parity);
+    
+    Bytes evl_out_parity = m_gcs[i].get_evl_out();
+    GEN_SEND(evl_out_parity);
 
     }
     
@@ -1328,8 +1341,11 @@ void BetterYao5::retrieve_outputs(){
   EVL_BEGIN
     std::cout << "Retrieve Outputs" << std::endl;
   
+
   assert(m_gcs.size()>0);
   for(int i = 0; i < m_gcs.size();i++){
+    m_gcs[i].trim_output_buffers();
+
     Bytes gen_out = m_gcs[i].get_gen_out();
     Bytes gen_out_parity = EVL_RECV();
     std::cout << "gen out (masked): " << gen_out.to_hex() << std::endl;

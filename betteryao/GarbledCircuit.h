@@ -49,11 +49,11 @@ public:
     void init_Generation_Circuit(const std::vector<Bytes> * gen_keys,
                                    const std::vector<Bytes> * evl_keys,
                                    Bytes & rand_seed,
-                                   const Bytes * permutation_bits,
+                                   const Bytes & permutation_bits,
                                    const Bytes R);
     void init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys,
                                    const std::vector<Bytes> * evl_keys,
-                                   const Bytes * evl_input);
+                                   const Bytes & evl_input);
 
     void generate_Circuit();
     void evaluate_Circuit();
@@ -82,6 +82,7 @@ public:
     Bytes get_gen_out();
     Bytes get_evl_out();
 
+    void trim_output_buffers();
 protected:
 
 
@@ -143,7 +144,8 @@ uint32_t increment_index();
     Prng m_prng;
     // permutation bits important for generation circuits
     // (they will be secret to evaluation circuits)
-    const Bytes * m_select_bits;
+    //    const Bytes * m_select_bits;
+    Bytes m_select_bits;
 
     // hold values of constant wires 1 and 0
     __m128i m_const_wire[2];
