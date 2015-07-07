@@ -355,29 +355,29 @@ void BetterYao5::generate_gen_input_keys(uint32_t circuit_num){
 
   // these lines are for debugging purposes, setting the permutation bits
   //m_gen_inp_permutation_bits[circuit_num].resize(get_gen_full_input_size()/8+1);
-  //for(int i = 0; i < get_gen_full_input_size();i++){
-  //  m_gen_inp_permutation_bits[circuit_num].set_ith_bit(i,0);
-  //}
+  for(int i = 0; i < get_gen_full_input_size();i++){
+    m_gen_inp_permutation_bits[circuit_num].set_ith_bit(i,0);
+  }
 
   std::cout << "gen permutation bits: " << m_gen_inp_permutation_bits[circuit_num].to_hex() << std::endl;
-
+  
   //assert(m_gen_inp_permutation_bits[circuit_num].size() == get_gen_full_input_size());
   m_gen_select_bits[circuit_num] = m_gen_inp_permutation_bits[circuit_num] ^ get_gen_full_input();
-    
+  
   /*
   // now set Gen's permutation bits
   // permutation bit 1 --> will be sent as the second in key pair to Eval
   for(int i = 0; i < 2*get_gen_full_input_size();i+=2){
-    // this permutes the keys based on the permutation bit
-    
-    if(m_gen_inp_permutation_bits[circuit_num].get_ith_bit(i%2)==1){
-      // swap the two keys, then set their bits so that they look
-      // like nothing's up (which lets us commit to them in this order)
-      // but the secret permutation bits generated above hold the key to their true values.
-      std::swap(m_gen_inp_keys[circuit_num][i],m_gen_inp_keys[circuit_num][i+1]);
-      m_gen_inp_keys[circuit_num][i].set_ith_bit(0,0);
-      m_gen_inp_keys[circuit_num][i+1].set_ith_bit(0,1);
-    }
+  // this permutes the keys based on the permutation bit
+  
+  if(m_gen_inp_permutation_bits[circuit_num].get_ith_bit(i%2)==1){
+  // swap the two keys, then set their bits so that they look
+  // like nothing's up (which lets us commit to them in this order)
+  // but the secret permutation bits generated above hold the key to their true values.
+  std::swap(m_gen_inp_keys[circuit_num][i],m_gen_inp_keys[circuit_num][i+1]);
+  m_gen_inp_keys[circuit_num][i].set_ith_bit(0,0);
+  m_gen_inp_keys[circuit_num][i+1].set_ith_bit(0,1);
+  }
    
   }
   */
@@ -1024,15 +1024,7 @@ void BetterYao5::select_input_decommitments(std::vector<commitment_t> & source, 
   
   for(int i = 0; i < source.size()/2; i++){
     dest.push_back(source[2*i + (permutation_bits.get_ith_bit(i)
-                                     ^ input_bits.get_ith_bit(i))]);
-    /*
-    if(permutation_bits.get_ith_bit(i)==0){
-      
-      dest.push_back(source[2*i+  (permutation_bits.get_ith_bit(i)^input_bits.get_ith_bit(i))]);
-    } else{
-      dest.push_back(source[2*i+(1^(permutation_bits.get_ith_bit(i)^input_bits.get_ith_bit(i)))]);
-    }
-    */
+                                 ^ input_bits.get_ith_bit(i))]);
   }
 }
 
@@ -1051,6 +1043,8 @@ void BetterYao5::transfer_evaluation_circuit_info(){
   std::vector<commitment_t> gen_decommit_inputs;
   std::vector<commitment_t> gen_decommit_labels;
   Bytes gen_input = get_gen_full_input();
+  m_const_0_keys.resize(Env::node_load());
+  m_const_1_keys.resize(Env::node_load());
 
   for(int i =0; i < Env::node_load(); i++){
     // first, select Gen's actual inputs from all those he generates
@@ -1072,6 +1066,14 @@ void BetterYao5::transfer_evaluation_circuit_info(){
     gen_decommit_and_send_masked_vector(m_otp_prngs[2*i],gen_decommit_labels);
 
 
+    // GEN also sends Eval two keys for the constant wires
+    Bytes const0,const1;
+    m_const_0_keys[i] = m_circuit_prngs[i].rand_bits(Env::k());
+    m_const_1_keys[i] = m_circuit_prngs[i].rand_bits(Env::k());
+    m_const_0_keys[i].set_ith_bit(0,0);
+    m_const_1_keys[i].set_ith_bit(0,1);
+    gen_send_masked_info(m_otp_prngs[2*i],m_const_0_keys[i],Env::k());
+    gen_send_masked_info(m_otp_prngs[2*i],m_const_1_keys[i],Env::k());
 
   }
 
@@ -1085,6 +1087,11 @@ void BetterYao5::transfer_evaluation_circuit_info(){
   // prepare the vectors Eval will use to store Gen's decommitments
   m_cc_recv_gen_inp_commitments.resize(Env::node_load());
   m_cc_recv_gen_inp_label_commitments.resize(Env::node_load());
+  
+  // prepare to receive constant keys for the circuit
+  m_const_0_keys.resize(Env::node_load());
+  m_const_1_keys.resize(Env::node_load());
+
 
   for(int i = 0; i < Env::node_load();i++){
 
@@ -1107,10 +1114,19 @@ void BetterYao5::transfer_evaluation_circuit_info(){
       assert(m_cc_recv_gen_inp_commitments[i].size() == get_gen_full_input_size());
       assert(m_cc_recv_gen_inp_label_commitments[i].size() == get_gen_full_input_size());
 
+      evl_receive_masked_info(m_otp_prngs[i],m_const_0_keys[i],Env::k());
+      evl_receive_masked_info(m_otp_prngs[i],m_const_1_keys[i],Env::k());
+
+
     } else {
       // these sizes should be get_gen_full_input_size()
       evl_ignore_masked_info(m_gen_received_input_commitments[i].size()/2); // decommitted inputs
       evl_ignore_masked_info(m_gen_received_label_commitments[i].size()/2); // decommitted labels
+
+      // ignore the constant keys
+      evl_ignore_masked_info(1);
+      evl_ignore_masked_info(1);
+        
     }
   }
 
@@ -1224,7 +1240,8 @@ void BetterYao5::evl_inputs_transform(std::vector<Bytes> &source, std::vector<By
 // (circuit_num is the index of a check circuit
 void BetterYao5::evl_regenerate_circuits(uint32_t circuit_num){
   // first, Evl seeds the circuit prngs for which she has received seeds
-  
+  //TODO: FILL IN GENERATING CONSTANT KEYS
+
   m_circuit_prngs[circuit_num].seed_rand(m_circuit_seeds[circuit_num]);
 
   // next, Evl must regenerate the commitments that Gen sent her
@@ -1394,6 +1411,10 @@ void BetterYao5::evaluate_circuit(){
       // begin with one, just to make debugging easier
       for(int ix = 0; ix < m_gcs.size();ix++){
         
+        
+        // m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_hashed_inp_keys[ix],m_key_generation_seeds[ix],m_gen_select_bits[ix],m_R[ix], m_const_0_keys[ix], m_const_1_keys[ix]);
+        m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_hashed_inp_keys[ix],m_key_generation_seeds[ix],m_gen_inp_permutation_bits[ix],m_R[ix], m_const_0_keys[ix], m_const_1_keys[ix]);
+        
         m_gcs[ix].m_st = 
           load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
         m_gcs[ix].m_st->alice_in_size = get_gen_full_input_size();
@@ -1401,12 +1422,15 @@ void BetterYao5::evaluate_circuit(){
         
         set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
         
-        m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_hashed_inp_keys[ix],m_key_generation_seeds[ix],m_gen_select_bits[ix],m_R[ix]);
+        m_gcs[ix].set_Gen_Circuit_Functions();
+
         fprintf(stderr,"Gen Input: \t%s\nGen Full Input: \t%s\nGen Permutation Bits: \t%s\nGen select bits:\t%s\n",
                 m_private_input.to_hex().c_str(),
                 get_gen_full_input().to_hex().c_str(),
                 m_gen_inp_permutation_bits[ix].to_hex().c_str(),
                 m_gen_select_bits[ix].to_hex().c_str());
+        
+
         Bytes bufr;
         while(get_next_gate(m_gcs[ix].m_st)){
           bufr = m_gcs[ix].get_garbling_bufr();
@@ -1426,25 +1450,40 @@ void BetterYao5::evaluate_circuit(){
       if(Env::group_rank() == 0){
       // begin with one, just to make debugging easier
         for(int ix = 0; ix < m_gcs.size();ix++){
-          m_gcs[ix].m_st = 
-            load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
-          m_gcs[ix].m_st->alice_in_size = get_gen_full_input_size();
-          m_gcs[ix].m_st->bob_in_size = get_evl_inp_count();
-          set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
-  
           
          if(m_chks[ix]){
            // if check circuit, then we will generate it
            
-           m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_hashed_inp_keys[ix],m_key_generation_seeds[ix],m_gen_inp_permutation_bits[ix],m_R[ix]);
-           m_gcs[ix].generate_Circuit();
+           // m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_hashed_inp_keys[ix],m_key_generation_seeds[ix],m_gen_inp_permutation_bits[ix],m_R[ix],m_const_0_keys[ix], m_const_1_keys[ix]);
+           
+           
+           //m_gcs[ix].generate_Circuit();
+           /*
+             m_gcs[ix].m_st = 
+             load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
+           m_gcs[ix].m_st->alice_in_size = get_gen_full_input_size();
+           m_gcs[ix].m_st->bob_in_size = get_evl_inp_count();
+           set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
+  
+           m_gcs[ix].set_Circuit_Functions();
+           */
          }
          else if(!m_chks[ix]){
            
            // if evaluation circuit, we will evaluate it
            // std::cout << "gen first input key: " << m_cc_recv_gen_inp_commitments[0][0].to_hex() << std::endl;
            //m_gcs[ix].init_Evaluation_Circuit(&m_gen_inp_keys[ix],&m_evl_inp_keys[ix],m_private_input);
-           m_gcs[ix].init_Evaluation_Circuit(&m_gen_inp_keys[ix],&m_evl_received_keys[ix],m_private_input);
+           m_gcs[ix].init_Evaluation_Circuit(&m_gen_inp_keys[ix],&m_evl_received_keys[ix],m_private_input,m_const_0_keys[ix], m_const_1_keys[ix]);
+
+           
+           m_gcs[ix].m_st = 
+             load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
+           m_gcs[ix].m_st->alice_in_size = get_gen_full_input_size();
+           m_gcs[ix].m_st->bob_in_size = get_evl_inp_count();
+          
+          set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
+
+          m_gcs[ix].set_Evl_Circuit_Functions();
 
            //m_gcs[ix].evaluate_Circuit();
 
@@ -1455,7 +1494,7 @@ void BetterYao5::evaluate_circuit(){
              m_gcs[ix].set_garbling_bufr(bufr);
              
            } while(get_next_gate(m_gcs[ix].m_st));
-         } 
+         }
         }
       }
     EVL_END

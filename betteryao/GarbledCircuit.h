@@ -47,13 +47,19 @@ public:
     ~GarbledCircuit() {}
     // should also include permutation bits in this one?
     void init_Generation_Circuit(const std::vector<Bytes> * gen_keys,
-                                   const std::vector<Bytes> * evl_keys,
-                                   Bytes & rand_seed,
-                                   const Bytes & permutation_bits,
-                                   const Bytes R);
+                                 const std::vector<Bytes> * evl_keys,
+                                 Bytes & rand_seed,
+                                 const Bytes & permutation_bits,
+                                 const Bytes R,
+                                 const Bytes & zero_key,
+                                 const Bytes & one_key);
     void init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys,
-                                   const std::vector<Bytes> * evl_keys,
-                                   const Bytes & evl_input);
+                                 const std::vector<Bytes> * evl_keys,
+                                 const Bytes & evl_input,
+                                 const Bytes & zero_key,
+                                 const Bytes & one_key);
+    void set_Gen_Circuit_Functions();
+    void set_Evl_Circuit_Functions();
 
     void generate_Circuit();
     void evaluate_Circuit();
@@ -119,21 +125,25 @@ protected:
     // things to help with garbling
     void generate_Random_Key(__m128i & destination);
  
-void generate_Alice_Input(PCFGate* current_Gate, __m128i &current_key);
-void evaluate_Alice_Input(PCFGate* current_Gate, __m128i &current_key);
-void generate_Bob_Input(PCFGate* current_Gate, __m128i &current_key);
-void evaluate_Bob_Input(PCFGate* current_Gate, __m128i &current_key);
-void generate_Gate(PCFGate* current_Gate, __m128i &current_key);
-void evaluate_Gate(PCFGate* current_Gate, __m128i &current_key);
-void evaluate_Alice_Output(PCFGate* current_Gate, __m128i &current_key);
-void evaluate_Bob_Output(PCFGate* current_Gate, __m128i &current_key);
-void generate_Alice_Output(PCFGate* current_Gate, __m128i &current_key);
-void generate_Bob_Output(PCFGate* current_Gate, __m128i &current_key);
+    void generate_Alice_Input(PCFGate* current_Gate, __m128i &current_key);
+    void evaluate_Alice_Input(PCFGate* current_Gate, __m128i &current_key);
+    void generate_Bob_Input(PCFGate* current_Gate, __m128i &current_key);
+    void evaluate_Bob_Input(PCFGate* current_Gate, __m128i &current_key);
+    void generate_Gate(PCFGate* current_Gate, __m128i &current_key);
+    void evaluate_Gate(PCFGate* current_Gate, __m128i &current_key);
+    void evaluate_Alice_Output(PCFGate* current_Gate, __m128i &current_key);
+    void evaluate_Bob_Output(PCFGate* current_Gate, __m128i &current_key);
+    void generate_Alice_Output(PCFGate* current_Gate, __m128i &current_key);
+    void generate_Bob_Output(PCFGate* current_Gate, __m128i &current_key);
+    
+    void genHalfGate(PCFGate* current_Gate, __m128i &current_key);
+    void evlHalfGate(PCFGate* current_Gate, __m128i &current_key);
+    
+    
+    void xor_Gate(PCFGate* current_gate, __m128i &current_key);
 
-void genHalfGate(PCFGate* current_Gate, __m128i &current_key);
-void evlHalfGate(PCFGate* current_Gate, __m128i &current_key);
 
-uint32_t increment_index();
+    uint32_t increment_index();
 
     // circuit's free-XOR value
     __m128i  m_R;

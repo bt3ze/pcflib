@@ -208,17 +208,17 @@ void YaoBase::init_private(EnvParams &params)
 	}
 
 	EVL_BEGIN // evaluator
-		private_file >> input;          // 1st line is the evaluator's input
+          //private_file >> input;          // 1st line is the evaluator's input
         //m_evl_inp.from_hex(input);
-        m_private_input.from_hex(input);
+        //m_private_input.from_hex(input);
 	//m_evl_inp.resize((Env::circuit().evl_inp_cnt()+7)/8);
 		//m_evl_inp.back() &= MASK[Env::circuit().evl_inp_cnt()%8];
 	EVL_END
 
 	GEN_BEGIN // generator
-		private_file >> input >> input; // 2nd line is the generator's input
+          //private_file >> input >> input; // 2nd line is the generator's input
         //m_gen_inp.from_hex(input);
-        m_private_input.from_hex(input);
+        // m_private_input.from_hex(input);
 	//m_gen_inp.resize((Env::circuit().gen_inp_cnt()+7)/8);
 		//m_gen_inp.back() &= MASK[Env::circuit().gen_inp_cnt()%8];
 	GEN_END

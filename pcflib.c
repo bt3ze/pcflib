@@ -1012,6 +1012,7 @@ struct PCFGate * get_next_gate(struct PCFState * st)
   }
 }
 
+
 void * get_wire_key(struct PCFState * st, uint32_t idx)
 {
   return st->wires[idx].keydata;

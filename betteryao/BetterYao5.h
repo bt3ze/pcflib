@@ -404,6 +404,10 @@ protected:
         // which are defined to be the XOR of the permutation and input bits
         // and tell the circuit which alice key represents 0
         std::vector<Bytes> m_gen_select_bits;
+        
+        std::vector<Bytes> m_const_0_keys;
+        std::vector<Bytes> m_const_1_keys;
+
         /**
            old variables
          */
