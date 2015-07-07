@@ -357,7 +357,7 @@ void YaoBase::get_inputs(){
   std::string input_string;
   
   GEN_BEGIN
-    /*
+    
     raw_input_bufr = (char*)malloc(sizeof(char)*m_gen_inp_cnt);
     raw_input_bufr = get_bob_input(m_gen_inp_cnt,Env::private_file());
     fprintf(stderr, "Bob's (1) input is: %s",raw_input_bufr);
@@ -365,11 +365,11 @@ void YaoBase::get_inputs(){
     m_private_input.from_char_hex(raw_input_bufr, m_gen_inp_cnt);
     std::cout << "Bob's (2) input is: " << m_private_input.to_hex() << std::endl;
     // std::cout << "Bob's (3) input is: " << m_gen_inp.to_hex() << std::endl;
-    */
+    
     GEN_END
       
     EVL_BEGIN
-    /*
+    
     raw_input_bufr = (char*)malloc(sizeof(char)*m_evl_inp_cnt);
     raw_input_bufr = get_alice_input(m_evl_inp_cnt,Env::private_file());
     fprintf(stderr,"Alice's (1) input is: %s",raw_input_bufr);
@@ -377,7 +377,7 @@ void YaoBase::get_inputs(){
     m_private_input.from_char_hex(raw_input_bufr,m_evl_inp_cnt);
     std::cout << "Alice's (2) input is: " << m_private_input.to_hex() << std::endl;
     // std::cout << "Alice's (3) input is: " << m_evl_inp.to_hex() << std::endl;
-    */
+    
     EVL_END
 
 }

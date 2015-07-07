@@ -193,7 +193,8 @@ void call_op (struct PCFState * st, struct PCFOP * op)
             }
           
           // store this index to identify which input to grab
-          st->inp_idx = idx * 32;
+          // st->inp_idx = idx*32;
+          st->inp_idx = idx;
         }
       // idx (similarly, st->idx) now has the argument that was passed to alice()
 
@@ -260,7 +261,8 @@ void call_op (struct PCFState * st, struct PCFOP * op)
               assert(st->wires[st->base + data->newbase - i].flags == KNOWN_WIRE);
               idx += st->wires[st->base + data->newbase - i].value;
             }
-          st->inp_idx = idx * 32;
+          //st->inp_idx = idx * 32;
+          st->inp_idx = idx;
         }
  
       // fprintf(stderr,"bob call: %x\n",idx);

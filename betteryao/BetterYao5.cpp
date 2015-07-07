@@ -224,7 +224,13 @@ void BetterYao5::gen_generate_input_randomness(Prng & input_prng){
 }
 
 Bytes BetterYao5::get_gen_full_input(){
+  GEN_BEGIN
   return m_private_input + get_gen_output_mask() + get_gen_input_randomness();
+  GEN_END
+
+    EVL_BEGIN
+    return m_prng.rand_bits(get_gen_full_input_size());
+    EVL_END
 }
 
 Bytes BetterYao5::get_gen_output_mask(){
@@ -299,6 +305,7 @@ void BetterYao5::gen_generate_and_commit_to_inputs(){
   m_gen_inp_keys.resize(Env::node_load());
   m_gen_inp_permutation_bits.resize(Env::node_load());
   m_R.resize(Env::node_load());
+  m_gen_select_bits.resize(Env::node_load());
   for(int j = 0; j < Env::node_load();j++){
     generate_gen_input_keys(j);
   }
@@ -348,27 +355,32 @@ void BetterYao5::generate_gen_input_keys(uint32_t circuit_num){
 
   // these lines are for debugging purposes, setting the permutation bits
   //m_gen_inp_permutation_bits[circuit_num].resize(get_gen_full_input_size()/8+1);
-  for(int i = 0; i < get_gen_full_input_size();i++){
-    m_gen_inp_permutation_bits[circuit_num].set_ith_bit(i,0);
-  }
+  //for(int i = 0; i < get_gen_full_input_size();i++){
+  //  m_gen_inp_permutation_bits[circuit_num].set_ith_bit(i,0);
+  //}
 
   std::cout << "gen permutation bits: " << m_gen_inp_permutation_bits[circuit_num].to_hex() << std::endl;
 
+  //assert(m_gen_inp_permutation_bits[circuit_num].size() == get_gen_full_input_size());
+  m_gen_select_bits[circuit_num] = m_gen_inp_permutation_bits[circuit_num] ^ get_gen_full_input();
+    
+  /*
   // now set Gen's permutation bits
   // permutation bit 1 --> will be sent as the second in key pair to Eval
-  //for(int i = 0; i < 2*get_gen_full_input_size();i+=2){
+  for(int i = 0; i < 2*get_gen_full_input_size();i+=2){
     // this permutes the keys based on the permutation bit
     
-  //  if(m_gen_inp_permutation_bits[circuit_num].get_ith_bit(i%2)==1){
+    if(m_gen_inp_permutation_bits[circuit_num].get_ith_bit(i%2)==1){
       // swap the two keys, then set their bits so that they look
       // like nothing's up (which lets us commit to them in this order)
       // but the secret permutation bits generated above hold the key to their true values.
-  //    std::swap(m_gen_inp_keys[circuit_num][i],m_gen_inp_keys[circuit_num][i+1]);
-  //    m_gen_inp_keys[circuit_num][i].set_ith_bit(0,0);
-  //    m_gen_inp_keys[circuit_num][i+1].set_ith_bit(0,1);
-  //  }
+      std::swap(m_gen_inp_keys[circuit_num][i],m_gen_inp_keys[circuit_num][i+1]);
+      m_gen_inp_keys[circuit_num][i].set_ith_bit(0,0);
+      m_gen_inp_keys[circuit_num][i+1].set_ith_bit(0,1);
+    }
    
-  //}
+  }
+  */
 }
 
 
@@ -637,10 +649,10 @@ void BetterYao5::generate_eval_input_keys(uint32_t circuit_num){
   }
   std::cout << " done generating Eval input\trank: " << Env::group_rank() << std::endl;
   
-  fprintf(stderr,"eval input keys (rank %i):",Env::group_rank());
-  for(int i = 0; i < m_evl_inp_keys[circuit_num].size();i++){
-    fprintf(stderr,"%s\n",m_evl_inp_keys[circuit_num][i].to_hex().c_str());
-  }
+  //  fprintf(stderr,"eval input keys (rank %i):",Env::group_rank());
+  //for(int i = 0; i < m_evl_inp_keys[circuit_num].size();i++){
+  //  fprintf(stderr,"%s\n",m_evl_inp_keys[circuit_num][i].to_hex().c_str());
+  //  }
 
 }
 
@@ -996,15 +1008,31 @@ void BetterYao5::select_input_decommitments(std::vector<commitment_t> & source, 
   assert(source.size() == 2*get_gen_full_input_size());
   assert(source.size()/2 == (get_gen_full_input_size()%8 ==0 ? (permutation_bits.size()*8) : permutation_bits.size()*8 - 8 + ((source.size()/2)%8)));
   
-  // now, select the proper input key
-  // which is given by m_gen_inp_permutation_bits[i] XOR m_gen_inp[i]
+  // now we have a situation where we have a bunch of permutation bits
+  // and a bunch of keys, ordered [0,1,0,1] etc.
+  // the idea is that the permutation bit tells us if 
+  // the 0 key encodes a 0 (0th bit 0) or a 1 (0th bit 1)
+  // Gen also has his own input bits
+  // so we have the following table to describe which key Gen sends
+  // depending on his input key and the permutation bit
+  //   Gen Input     Permutation    Selected
+  //      0       |       0      |     0
+  //      0       |       1      |     1
+  //      1       |       0      |     1
+  //      1       |       1      |     0
+  // which is easily an XOR
+  
   for(int i = 0; i < source.size()/2; i++){
+    dest.push_back(source[2*i + (permutation_bits.get_ith_bit(i)
+                                     ^ input_bits.get_ith_bit(i))]);
+    /*
     if(permutation_bits.get_ith_bit(i)==0){
       
       dest.push_back(source[2*i+  (permutation_bits.get_ith_bit(i)^input_bits.get_ith_bit(i))]);
     } else{
       dest.push_back(source[2*i+(1^(permutation_bits.get_ith_bit(i)^input_bits.get_ith_bit(i)))]);
     }
+    */
   }
 }
 
@@ -1163,6 +1191,7 @@ void BetterYao5::garble_and_check_circuits(){
   m_evl_inp_label_commitments.resize(Env::node_load());
   m_gen_inp_permutation_bits.resize(Env::node_load());
   m_R.resize(Env::node_load());
+  m_gen_select_bits.resize(Env::node_load());
 
   for(int i = 0; i < Env::node_load();i++){
     if(m_chks[i]){ // this is a check circuit
@@ -1372,8 +1401,12 @@ void BetterYao5::evaluate_circuit(){
         
         set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
         
-        m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_hashed_inp_keys[ix],m_key_generation_seeds[ix],m_gen_inp_permutation_bits[ix],m_R[ix]);
-        
+        m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_hashed_inp_keys[ix],m_key_generation_seeds[ix],m_gen_select_bits[ix],m_R[ix]);
+        fprintf(stderr,"Gen Input: \t%s\nGen Full Input: \t%s\nGen Permutation Bits: \t%s\nGen select bits:\t%s\n",
+                m_private_input.to_hex().c_str(),
+                get_gen_full_input().to_hex().c_str(),
+                m_gen_inp_permutation_bits[ix].to_hex().c_str(),
+                m_gen_select_bits[ix].to_hex().c_str());
         Bytes bufr;
         while(get_next_gate(m_gcs[ix].m_st)){
           bufr = m_gcs[ix].get_garbling_bufr();
@@ -1440,11 +1473,11 @@ void BetterYao5::retrieve_outputs(){
   for(int i = 0; i < m_gcs.size();i++){
     m_gcs[i].trim_output_buffers();
 
-    Bytes gen_out_parity = m_gcs[i].get_gen_out();
-    GEN_SEND(gen_out_parity);
+    Bytes alice_out_parity = m_gcs[i].get_alice_out();
+    GEN_SEND(alice_out_parity);
     
-    Bytes evl_out_parity = m_gcs[i].get_evl_out();
-    GEN_SEND(evl_out_parity);
+    Bytes bob_out_parity = m_gcs[i].get_bob_out();
+    GEN_SEND(bob_out_parity);
 
     }
     
@@ -1458,19 +1491,19 @@ void BetterYao5::retrieve_outputs(){
   for(int i = 0; i < m_gcs.size();i++){
     m_gcs[i].trim_output_buffers();
 
-    Bytes gen_out = m_gcs[i].get_gen_out();
-    Bytes gen_out_parity = EVL_RECV();
-    std::cout << "gen out (masked): " << gen_out.to_hex() << std::endl;
-    std::cout << "gen out (parity): " << gen_out_parity.to_hex() << std::endl;
-    gen_out = gen_out ^ gen_out_parity;
-    std::cout << "gen out  (final): " << gen_out.to_hex() << std::endl;
+    Bytes alice_out = m_gcs[i].get_alice_out();
+    Bytes alice_out_parity = EVL_RECV();
+    std::cout << "alice out (masked): " << alice_out.to_hex() << std::endl;
+    std::cout << "alice out (parity): " << alice_out_parity.to_hex() << std::endl;
+    alice_out = alice_out ^ alice_out_parity;
+    std::cout << "alice out  (final): " << alice_out.to_hex() << std::endl;
     
-    Bytes evl_out = m_gcs[i].get_evl_out();
-    Bytes evl_out_parity = EVL_RECV();
-    std::cout << "evl out (masked): " << evl_out.to_hex() << std::endl;
-    std::cout << "evl out (parity): " << evl_out_parity.to_hex() << std::endl;
-    evl_out = evl_out ^ evl_out_parity;
-    std::cout << "evl out  (final):" << evl_out.to_hex() << std::endl;
+    Bytes bob_out = m_gcs[i].get_bob_out();
+    Bytes bob_out_parity = EVL_RECV();
+    std::cout << "bob out (masked): " << bob_out.to_hex() << std::endl;
+    std::cout << "bob out (parity): " << bob_out_parity.to_hex() << std::endl;
+    bob_out = bob_out ^ bob_out_parity;
+    std::cout << "bob out  (final):" << bob_out.to_hex() << std::endl;
   }
 
 

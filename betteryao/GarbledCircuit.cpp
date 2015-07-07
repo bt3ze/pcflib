@@ -26,7 +26,7 @@ void delete_key(void *key)
 }
 
  
-GarbledCircuit::GarbledCircuit(): m_gate_index(0), m_evl_out_ix(0),m_gen_out_ix(0) {
+GarbledCircuit::GarbledCircuit(): m_gate_index(0), m_bob_out_ix(0),m_alice_out_ix(0) {
 
   // initialize the key Mask
   Bytes tmp(16);
@@ -35,8 +35,8 @@ GarbledCircuit::GarbledCircuit(): m_gate_index(0), m_evl_out_ix(0),m_gen_out_ix(
   }
   m_clear_mask = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 
-  m_gen_out.clear();
-  m_evl_out.clear();
+  m_alice_out.clear();
+  m_bob_out.clear();
 
 }
 
@@ -76,13 +76,13 @@ void GarbledCircuit::evaluate_Circuit(){
  */
 void * gen_next_gate(PCFState *st, PCFGate *current_gate){
 
-  fprintf(stderr,"gen next gate\n");
+  //fprintf(stdout,"gen next gate\n");
 
   // returns void pointer, which is pointer to a key?
   // use this one to call the Garbled Circuit object again
   GarbledCircuit &cct = *reinterpret_cast<GarbledCircuit*>(get_external_circuit(st));
 
-  fprintf(stderr,"gen next gate\n");
+  //fprintf(stdout,"gen next gate\n");
   // now, call the appropriate function from cct
 
   //Bytes garbled_gate = Bytes(0);
@@ -100,14 +100,16 @@ void * evl_next_gate(PCFState *st, PCFGate *current_gate){
  }
 
 
-void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys, const std::vector<Bytes> * evl_keys, Bytes & circuit_seed, const Bytes & permutation_bits, const Bytes R){
+void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys, const std::vector<Bytes> * evl_keys, Bytes & circuit_seed, const Bytes & select_bits, const Bytes R){
   
   Bytes tmp;
   
   m_prng.seed_rand(circuit_seed);
   //  m_select_bits.resize()
-  m_select_bits.insert(m_select_bits.begin(),permutation_bits.begin(),permutation_bits.begin() + permutation_bits.size());
+  m_select_bits.insert(m_select_bits.begin(),select_bits.begin(),select_bits.begin() + select_bits.size());
   // m_select_bits = permutation_bits;
+
+  fprintf(stdout, "Gen select bits: %s\n",select_bits.to_hex().c_str());
 
   // initialize the value of R
   //tmp = m_prng.rand_bits(Env::k());
@@ -120,7 +122,7 @@ void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys
   tmp.resize(16,0);
   tmp.insert(tmp.begin(),R.begin(),R.begin()+Env::k()/8);
   m_R = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&tmp[0]));
-  fprintf(stderr,"R value: %s\n",R.to_hex().c_str());
+  fprintf(stdout,"R value: %s\n",R.to_hex().c_str());
   //  print128_num(m_R);
   
   // initialize the constant wires
@@ -148,7 +150,7 @@ void GarbledCircuit::set_Input_Keys(const std::vector<Bytes> * gen_keys, const s
   m_evl_inputs = evl_keys;
 
   for(int i = 0; i < m_evl_inputs->size();i++){
-    fprintf(stderr,"evl key %i: %s\n",i, (*m_evl_inputs)[i].to_hex().c_str());
+    fprintf(stdout,"evl key %i: %s\n",i, (*m_evl_inputs)[i].to_hex().c_str());
   }
 }
 
@@ -158,7 +160,7 @@ void GarbledCircuit::init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys
   //m_select_bits = evl_input;
   m_select_bits.insert(m_select_bits.begin(),evl_input.begin(),evl_input.begin() + evl_input.size());
 
-  fprintf(stderr,"***Eval Input (select bits) *** %s\t%s\n",evl_input.to_hex().c_str(),m_select_bits.to_hex().c_str());
+  fprintf(stdout,"***Eval Input (select bits) *** %s\t%s\n",evl_input.to_hex().c_str(),m_select_bits.to_hex().c_str());
   //std::cout << "Gen first input key: " << (*gen_keys)[0].to_hex() << std::endl;
 
   set_key_copy_function(m_st, copy_key);
@@ -200,7 +202,7 @@ void * GarbledCircuit::garble_On_Keys(void * x_key, void * y_key){
 
 Bytes GarbledCircuit::get_Gen_Key(uint32_t input_idx, uint32_t parity){
   assert(parity == 0 || parity == 1);
-  fprintf(stderr,"Get Gen Key: %u %u\n",input_idx,parity);
+  fprintf(stdout,"Get Gen Key: %u %u\n",input_idx,parity);
   return get_Gen_Input(2*input_idx + parity);
 }
 
@@ -210,9 +212,9 @@ Bytes GarbledCircuit::get_Evl_Key(uint32_t input_idx, uint32_t parity){
 }
 
 Bytes GarbledCircuit::get_Gen_Input(uint32_t idx){
-  fprintf(stderr,"Get Gen Input idx: %u\n",idx);
+  fprintf(stdout,"Get Gen Input idx: %u\n",idx);
   Bytes ret = (*m_gen_inputs)[idx];
-  //fprintf(stderr, "Gen's Input Key: %s\n", ret.to_hex().c_str());
+  //fprintf(stdout, "Gen's Input Key: %s\n", ret.to_hex().c_str());
   return ret;
 }
 
@@ -236,12 +238,12 @@ void save_Key_to_128bit(Bytes & key, __m128i & destination){
 uint32_t GarbledCircuit::get_Input_Parity(uint32_t idx){
   // Gen uses this to look up permutation bits
   // Eval uses this function to figure out what input key to decrpyt
-   fprintf(stderr,"%s get %u input parity: %u\n",m_select_bits.to_hex().c_str(),idx,m_select_bits.get_ith_bit(idx));
+  //   fprintf(stdout,"%s get %u input parity: %u\n",m_select_bits.to_hex().c_str(),idx,m_select_bits.get_ith_bit(idx));
   
- // fprintf(stderr,"HELP ME PLEASE\n");
-  for(int i = 0; i <= idx; i++){
-    fprintf(stderr,"%x",m_select_bits.get_ith_bit(i));
-  }
+ // fprintf(stdout,"HELP ME PLEASE\n");
+  //for(int i = 0; i <= idx; i++){
+  //  fprintf(stdout,"%x",m_select_bits.get_ith_bit(i));
+  //}
   
  return m_select_bits.get_ith_bit(idx);
 
@@ -256,7 +258,7 @@ void GarbledCircuit::generate_Random_Key(__m128i & destination){
 void print128_num(__m128i var)
 {
     uint16_t *val = (uint16_t*) &var;
-    fprintf(stderr,"Numerical: %x %x %x %x %x %x %x %x \n", 
+    fprintf(stdout,"Numerical: %x %x %x %x %x %x %x %x \n", 
            val[0], val[1], val[2], val[3], val[4], val[5], 
            val[6], val[7]);
 }
@@ -281,7 +283,7 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
     return &current_key;
 
   } else if (current_gate->tag == TAG_OUTPUT_A) {
-    fprintf(stderr,"Alice Output!\n");
+    fprintf(stdout,"Alice Output!\n");
     generate_Gate(current_gate, current_key);
     
     //m_gen_out.push_back(_mm_extract_epi8(current_key,0)&0x01);
@@ -290,37 +292,37 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
     // gen moves through all of his output bits and saves the parity of
     // the current zero keys, to be transmitted to Evl all together after
     // protocol execution
-    if(m_gen_out.size()*8 <= m_gen_out_ix){
-      m_gen_out.resize((m_gen_out.size()+1)*2,0); // grow by doubling for less work
+    if(m_alice_out.size()*8 <= m_alice_out_ix){
+      m_alice_out.resize((m_alice_out.size()+1)*2,0); // grow by doubling for less work
     }
 
     uint8_t out_bit = _mm_extract_epi8(current_key, 0) & 0x01;
     // gen out contains the permutation bits of the output keys
-    m_gen_out.set_ith_bit(m_gen_out_ix, out_bit);
-    m_gen_out_ix++;
+    m_alice_out.set_ith_bit(m_alice_out_ix, out_bit);
+    m_alice_out_ix++;
 
     m_gate_index++;
 
     return &current_key;
   } else if (current_gate->tag == TAG_OUTPUT_B){
-    fprintf(stderr,"Bob Output!\n");
+    fprintf(stdout,"Bob Output!\n");
     generate_Gate(current_gate,current_key);
     
     //m_garbling_bufr.push_back(_mm_extract_epi8(current_key,0)&0x01);
-    //    m_evl_out_ix++;
+    //    m_bob_out_ix++;
     
-    if (m_evl_out.size()*8 <= m_evl_out_ix)
+    if (m_bob_out.size()*8 <= m_bob_out_ix)
       {
         // dynamically grow output array by doubling
-        m_evl_out.resize((m_evl_out.size()+1)*2, 0);
+        m_bob_out.resize((m_bob_out.size()+1)*2, 0);
       }
     
     uint8_t out_bit = _mm_extract_epi8(current_key, 0) & 0x01;
     
     //out_bit ^= m_in_bufr_ix;
-    m_evl_out.set_ith_bit(m_evl_out_ix, out_bit);
+    m_bob_out.set_ith_bit(m_bob_out_ix, out_bit);
     //m_in_bufr_ix++;
-    m_evl_out_ix++;
+    m_bob_out_ix++;
     
     m_gate_index++;
 
@@ -348,40 +350,40 @@ void * GarbledCircuit::evl_Next_Gate(PCFGate *current_gate){
     return &current_key; // get_Gen_Key or create a random nonce
     
   } else if (current_gate->tag == TAG_OUTPUT_A) {
-    fprintf(stderr,"Alice Output!\n");
+    fprintf(stdout,"Alice Output!\n");
     evaluate_Gate(current_gate,current_key);
     
     // make sure the output buffer is big enough
-    if(m_gen_out.size()*8 <= m_gen_out_ix){
-      m_gen_out.resize((m_gen_out.size()+1)*2,0); // grow by doubling for less work
+    if(m_alice_out.size()*8 <= m_alice_out_ix){
+      m_alice_out.resize((m_alice_out.size()+1)*2,0); // grow by doubling for less work
     }
 
     uint8_t out_bit = _mm_extract_epi8(current_key, 0) & 0x01;
-    // out_bit ^= m_in_bufr_ix;
-    m_gen_out.set_ith_bit(m_gen_out_ix, out_bit);
+    // out_bit ^= *m_in_bufr_ix;
+    m_alice_out.set_ith_bit(m_alice_out_ix, out_bit);
     // m_in_bufr_ix++;
-    m_gen_out_ix++;
+    m_alice_out_ix++;
 
     m_gate_index++;
 
     return &current_key;
   } else if (current_gate->tag == TAG_OUTPUT_B){
-    fprintf(stderr,"Bob Output!\n");
+    fprintf(stdout,"Bob Output!\n");
     evaluate_Gate(current_gate, current_key);
     
-    if (m_evl_out.size()*8 <= m_evl_out_ix)
+    if (m_bob_out.size()*8 <= m_bob_out_ix)
       {
         // dynamically grow output array by doubling
-        m_evl_out.resize((m_evl_out.size()+1)*2, 0);
+        m_bob_out.resize((m_bob_out.size()+1)*2, 0);
       }
     
     uint8_t out_bit = _mm_extract_epi8(current_key, 0) & 0x01;
     
     
     //out_bit ^= m_in_bufr_ix;
-    m_evl_out.set_ith_bit(m_evl_out_ix, out_bit);
+    m_bob_out.set_ith_bit(m_bob_out_ix, out_bit);
     //m_in_bufr_ix++;
-    m_evl_out_ix++;
+    m_bob_out_ix++;
     
     m_gate_index++;
     
@@ -397,42 +399,45 @@ void * GarbledCircuit::evl_Next_Gate(PCFGate *current_gate){
 
 void GarbledCircuit::generate_Alice_Input(PCFGate* current_gate, __m128i &current_key){
   // Gen's input keys have already been generated and determined
-    // by his input keys
-    // here, we simply return the proper input key
-    fprintf(stderr,"Alice/Gen Input Gate\n");
-
-    uint32_t gen_input_idx = current_gate->wire1; // wire1 holds the input index
+  // by his input keys
+  // here, we return the proper input key encoding 0
+  // to do this, we need to know both his permutation bits and his input bits
+  fprintf(stdout,"Alice/Eval Input Gate\n");
+  
+  uint32_t gen_input_idx = current_gate->wire1; // wire1 holds the input index
+  
+  fprintf(stdout,"Next Wire Index: %u\n", gen_input_idx);
     
-    fprintf(stderr,"Next Wire Index: %u\n", gen_input_idx);
+  //    Bytes gen_input = get_Gen_Key(gen_input_idx, get_Input_Parity(gen_input_idx));
+  Bytes gen_input = get_Gen_Input(2*gen_input_idx + get_Input_Parity(gen_input_idx));
+  
+  Bytes gen_xor_input = get_Gen_Input(2*gen_input_idx + (1 ^ get_Input_Parity(gen_input_idx)));
     
-    //    Bytes gen_input = get_Gen_Key(gen_input_idx, get_Input_Parity(gen_input_idx));
-    Bytes gen_input = get_Gen_Input(2*gen_input_idx + get_Input_Parity(gen_input_idx));
-
-    Bytes gen_xor_input = get_Gen_Input(2*gen_input_idx + 1 - get_Input_Parity(gen_input_idx));
-    fprintf(stderr, "Gen Input Keys: %s %s", gen_input.to_hex().c_str(), gen_xor_input.to_hex().c_str()); 
-
-    fprintf(stderr,"Save to 128 Bit\n");
-    save_Key_to_128bit(gen_input,current_key);
-
-    // we need to set the garbling buffer to something (or nothing)
-    // because it will be sent by default between gates
-    m_garbling_bufr = Bytes(0);
+  fprintf(stdout, "Gen Input Keys: %s (%x) %s (%x) :: parity: %x\n", gen_input.to_hex().c_str(), gen_input.get_ith_bit(0), gen_xor_input.to_hex().c_str(), gen_xor_input.get_ith_bit(0), get_Input_Parity(gen_input_idx)); 
+  
+  fprintf(stdout,"Save to 128 Bit\n");
+  save_Key_to_128bit(gen_input,current_key);
+  
+  // we need to set the garbling buffer to something (or nothing)
+  // because it will be sent by default between gates
+  m_garbling_bufr = Bytes(0);
 }
 
 void GarbledCircuit::evaluate_Alice_Input(PCFGate* current_gate, __m128i &current_key){
     // here, Gen's input keys have been sent to Eval
   // she needs only to assign the input key to the wire
 
-  fprintf(stderr,"Alice/Gen Input Gate\n");
+  fprintf(stdout,"Alice/Gen Input Gate\n");
   
   uint32_t gen_input_idx = current_gate->wire1; // wire1 holds the input index
   
-  fprintf(stderr,"Next Wire Index: %u\n", gen_input_idx);
+  fprintf(stdout,"Next Wire Index: %u\n", gen_input_idx);
   
   Bytes gen_input = get_Gen_Input(gen_input_idx);
-  fprintf(stderr,"Gen Input: %s\n", gen_input.to_hex().c_str());
+  
+  fprintf(stdout,"Gen Input: %s\n", gen_input.to_hex().c_str());
   save_Key_to_128bit(gen_input,current_key);
-  fprintf(stderr,"Parity: %x (%x)\n",_mm_extract_epi8(current_key,0)&0x01,gen_input.get_ith_bit(0));
+  fprintf(stdout,"Parity: %x (%x)\n",_mm_extract_epi8(current_key,0)&0x01,gen_input.get_ith_bit(0));
   // and current_key is available up the call stack
 }
 
@@ -452,26 +457,26 @@ void GarbledCircuit::generate_Bob_Input(PCFGate* current_gate, __m128i &current_
     // save this zero-key for future access
     current_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&new_zero_key[0]));
 
-    fprintf(stderr, "\nBob Input:: new current key:\n");
+    fprintf(stdout, "\nBob/Gen Input:: new current key:\n");
     print128_num(current_key);
     __m128i xor_key = _mm_xor_si128(current_key, m_R);
-    fprintf(stderr, "Bob xor-input key:\n");
+    fprintf(stdout, "Bob xor-input key:\n");
     print128_num(xor_key);
 
     // load the first output key
     tmp = get_Evl_Key(current_gate->wire1,0);
     tmp.resize(16,0);
     output_keys[0] = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
-    fprintf(stderr,"key1: %s\n",tmp.to_hex().c_str());
-    // print128_num(output_keys[0]);
+    fprintf(stdout,"key1: %s\n",tmp.to_hex().c_str());
+    //print128_num(output_keys[0]);
     //tmp.clear();
 
     // load the second output key
     tmp = get_Evl_Key(current_gate->wire1,1); // wire1 = wire2
     tmp.resize(16,0);
     output_keys[1] = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
-    fprintf(stderr,"key2: %s\n",tmp.to_hex().c_str());
-    //    print128_num(output_keys[1]);
+    fprintf(stdout,"key2: %s\n",tmp.to_hex().c_str());
+    //print128_num(output_keys[1]);
     
     // encrypt the output keys so that Eval can get only one of them
     output_keys[0] = _mm_xor_si128(output_keys[0], current_key);
@@ -494,10 +499,10 @@ void GarbledCircuit::generate_Bob_Input(PCFGate* current_gate, __m128i &current_
     assert(m_garbling_bufr.size() == 2*Env::key_size_in_bytes());
     
     // quick print check
-    fprintf(stderr,"Eval Key: ");
+    fprintf(stdout,"Eval Key: ");
     print128_num(current_key);
-    fprintf(stderr,"Garbling buffer transmission: %s\n",m_garbling_bufr.to_hex().c_str());
-    fprintf(stderr,"\n");
+    fprintf(stdout,"Garbling buffer transmission: %s\n",m_garbling_bufr.to_hex().c_str());
+    fprintf(stdout,"\n");
     
 }
 
@@ -515,10 +520,10 @@ void GarbledCircuit::evaluate_Bob_Input(PCFGate* current_gate, __m128i &current_
   uint32_t bit = get_Input_Parity(current_gate->wire1);
   assert(bit == 0 || bit == 1);
   
-  //fprintf(stderr,"HELP ME\n");
+  //fprintf(stdout,"HELP ME\n");
 
-  fprintf(stderr,"\nreceived garbling buffer: %s\n",m_garbling_bufr.to_hex().c_str());
-  fprintf(stderr,"selecting and decrypting Eval Input Key: %x (input wire %x)\n",bit,current_gate->wire1);
+  fprintf(stdout,"\nreceived garbling buffer: %s\n",m_garbling_bufr.to_hex().c_str());
+  fprintf(stdout,"selecting and decrypting Eval Input Key: %x (input wire %x)\n",bit,current_gate->wire1);
   
   // now select the one of two ciphertexts to decrypt
   Bytes encrypted_input;
@@ -526,8 +531,8 @@ void GarbledCircuit::evaluate_Bob_Input(PCFGate* current_gate, __m128i &current_
                          m_garbling_bufr.begin() + bit * Env::key_size_in_bytes(),
                          m_garbling_bufr.begin() + Env::key_size_in_bytes() + bit * Env::key_size_in_bytes());
   
-  fprintf(stderr,"decrypting encrypted buffer: %s\n",encrypted_input.to_hex().c_str()); 
-  fprintf(stderr,"eval buffer decryption key: %s\n",evl_input.to_hex().c_str());
+  fprintf(stdout,"decrypting encrypted buffer: %s\n",encrypted_input.to_hex().c_str()); 
+  fprintf(stdout,"eval buffer decryption key: %s\n",evl_input.to_hex().c_str());
 
   assert(evl_input.size() == Env::key_size_in_bytes());
   assert(evl_input.size() == encrypted_input.size());
@@ -535,10 +540,10 @@ void GarbledCircuit::evaluate_Bob_Input(PCFGate* current_gate, __m128i &current_
   evl_input = evl_input ^ encrypted_input;
   save_Key_to_128bit(evl_input,current_key);
   
-  fprintf(stderr,"Bob Key: (parity %x)\n", _mm_extract_epi8(current_key,0)&0x01);
+  fprintf(stdout,"Bob Key: (parity %x)\n", _mm_extract_epi8(current_key,0)&0x01);
   // a quick print check
   print128_num(current_key);
-  fprintf(stderr,"\n");
+  fprintf(stdout,"\n");
 
 }
 
@@ -553,13 +558,13 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
        *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire2))
        );
     //std::cout << "XOR Gate" << std::endl;
-    //fprintf(stderr,"XOR Gate\n");
+    //fprintf(stdout,"XOR Gate\n");
 
 
     //print128_num(current_key);
     __m128i cur_xor =  _mm_xor_si128(current_key, m_R);
     //print128_num(cur_xor);
-    //fprintf(stderr,"\n");
+    //fprintf(stdout,"\n");
 
   } else {
 #endif
@@ -573,58 +578,75 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
     __m128i aes_plaintext, aes_ciphertext;
     __m128i aes_key[2];
     
+    Bytes gate_out_bufr;
+    gate_out_bufr.resize(3*Env::key_size_in_bytes());
+      
     uint8_t bit;
     
-    // load the inputs from the PCF state container
+    // load the (zero-key) inputs from the PCF state container
     X[0] = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire1));
     Y[0] = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire2));
     // and derive their XOR-complements
     X[1] = _mm_xor_si128(X[0], m_R); // X[1] = X[0] ^ R
     Y[1] = _mm_xor_si128(Y[0], m_R); // Y[1] = Y[0] ^ R
     
-    //fprintf(stderr,"garbling input keys:\n");
-    //print128_num(X[0]);
-    //print128_num(X[1]);
-    //print128_num(Y[0]);
-    //print128_num(Y[1]);
-    //fprintf(stderr,"\n");
+    fprintf(stdout,"garbling input keys: (parity: %i %i) \n",
+            _mm_extract_epi8(X[0],0) &0x01,
+            _mm_extract_epi8(Y[0],0) &0x01);
+    print128_num(X[0]);
+    print128_num(X[1]);
+    print128_num(Y[0]);
+    print128_num(Y[1]);
+    fprintf(stdout,"\n");
 
-    // and get the permutation bits
+    // and get the permutation bits (tells if each zero-key has a 1 on the end)
     const uint8_t perm_x = _mm_extract_epi8(X[0],0) & 0x01;
     const uint8_t perm_y = _mm_extract_epi8(Y[0],0) & 0x01;
     // construct the permutation index
     const uint8_t de_garbled_ix = (perm_y << 1)|perm_x; // wire1 + 2*wire2
     
     // now we are ready to garble
+
     // load the plaintext to be encrypted
     aes_plaintext = _mm_set1_epi64x(m_gate_index);
     // and load the garbling keys
+    
     aes_key[0] = _mm_load_si128(X+perm_x);
     aes_key[1] = _mm_load_si128(Y+perm_y);
+    //aes_key[0] = _mm_load_si128(X); // this is still the zero key
+    //aes_key[1] = _mm_load_si128(Y); // this is still the zero key
     
     // now run the key derivation function using the keys and the gate index
     KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
     
     // clear extra bits at the front
     aes_ciphertext = _mm_and_si128(aes_ciphertext, m_clear_mask);
+    // aes_ciphertext now contains the encryption of both zero-keys
     
-    // extract the permutation bit for this wire?
+    // this bit discovers what the semantics of the next wire will be
     bit = (current_gate->truth_table >> (3-de_garbled_ix)) & 0x01;
     
 #ifdef GRR
     // GRR technique: using zero entry's key as one of the output keys
     // the output key is the encrypted gate index
+    // this puts the zero key in Z[0] and the one key in Z[1]
+    
+    // we want the new zero-key to be in Z[0]
     _mm_store_si128(Z+bit, aes_ciphertext);
     // and other output is an offset
-    Z[1-bit] = _mm_xor_si128(Z[bit], m_R);
+    Z[1 - bit] = _mm_xor_si128(Z[bit], m_R);
+    //Z[1] = _mm_xor_si128(Z[0], m_R);
     // and load it into current_key to return it to the circuit's state container
     current_key = _mm_load_si128(Z);
-    
-    //fprintf(stderr,"output keys: \n");
-    //print128_num(Z[0]);
-    //fprintf(stderr,"parity: %x\n",_mm_extract_epi8(Z[0],0) & 0x01);
-    //print128_num(Z[1]);
-    //fprintf(stderr,"parity: %x\n",_mm_extract_epi8(Z[1],0) & 0x01);
+    // this way we return the new zero-key
+
+    fprintf(stdout,"output keys: (parity %i %i) \n",_mm_extract_epi8(Z[0],0) & 0x01,
+      _mm_extract_epi8(Z[1],0) & 0x01);
+    print128_num(Z[0]);
+    //fprintf(stdout,"parity: %x\n",);
+    print128_num(Z[1]);
+    //    fprintf(stdout,"\n\n");
+    //fprintf(stdout,"parity: %x\n",_mm_extract_epi8(Z[1],0) & 0x01);
     
 #else
     // practically, this code is obsolete. we should be using GRR
@@ -699,8 +721,8 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
     m_garbling_bufr.insert(m_garbling_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
     
     //m_garbling_bufr += tmp;
-    //fprintf(stderr,"Input Gates to Garble Function: %x %x \n", current_gate->wire1, current_gate->wire2);
-    //fprintf(stderr, "Gen Send Gate: %s\n", m_garbling_bufr.to_hex().c_str()); 
+    //fprintf(stdout,"Input Gates to Garble Function: %x %x \n", current_gate->wire1, current_gate->wire2);
+    //fprintf(stdout, "Gen Send Gate: %s\n", m_garbling_bufr.to_hex().c_str()); 
     
     //GEN_SEND(garbling_bufr);
     // m_garbling_bufr.clear();
@@ -728,15 +750,14 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
          *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire2))
          );
       
-      //std::cout << "XOR Gate" << std::endl;
-      //fprintf(stderr,"XOR Gate\n");
-      //fprintf(stderr,"input keys: %x %x\n",current_gate->wire1, current_gate->wire2);
-      //print128_num(key1);
-      //print128_num(key2);
-      // fprintf(stderr,"parity: %x %x\n",_mm_extract_epi8(key1,0)&0x01, _mm_extract_epi8(key2,0)&0x01);
+      fprintf(stdout,"XOR Gate\n");
+      fprintf(stdout,"input keys: %x %x\n",current_gate->wire1, current_gate->wire2);
+      print128_num(key1);
+      print128_num(key2);
+      fprintf(stdout,"parity: %x %x\n",_mm_extract_epi8(key1,0)&0x01, _mm_extract_epi8(key2,0)&0x01);
       
-      //print128_num(current_key);
-      //fprintf(stderr,"\n");
+      print128_num(current_key);
+      fprintf(stdout,"\n");
   
     } else {
 #endif    
@@ -747,9 +768,9 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
     __m128i a;
     Bytes::const_iterator it;
     
-    //fprintf(stderr,"receive: \n");
+    //fprintf(stdout,"receive: \n");
     
-    //fprintf(stderr,"EVL Receive Gate: %s\n",m_garbling_bufr.to_hex().c_str());
+    //fprintf(stdout,"EVL Receive Gate: %s\n",m_garbling_bufr.to_hex().c_str());
     
     //assert(m_garbling_bufr.size() == 3 * Env::key_size_in_bytes());
     
@@ -761,12 +782,12 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
     const uint8_t perm_x = _mm_extract_epi8(aes_key[0], 0) & 0x01;
     const uint8_t perm_y = _mm_extract_epi8(aes_key[1], 0) & 0x01;
     
-    //fprintf(stderr,"garbling input keys:\n");
-    //print128_num(aes_key[0]);
-    //fprintf(stderr,"parity: %x\n",perm_x); 
-    //print128_num(aes_key[1]);
-    //fprintf(stderr,"parity: %x\n",perm_y); 
-    //    fprintf(stderr,"\n");
+    fprintf(stdout,"garbling input keys:\n");
+    print128_num(aes_key[0]);
+    fprintf(stdout,"parity: %x\n",perm_x); 
+    print128_num(aes_key[1]);
+    fprintf(stdout,"parity: %x\n",perm_y); 
+    fprintf(stdout,"\n");
     
     KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
     aes_ciphertext = _mm_and_si128(aes_ciphertext, m_clear_mask);
@@ -798,10 +819,10 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
 #ifdef FREE_XOR
   }
 #endif
-  //fprintf(stderr,"derived key: \n");
-  // print128_num(current_key);
-  // fprintf(stderr,"parity: %x\n",_mm_extract_epi8(current_key,0) & 0x01);
-  //fprintf(stderr,"\n");
+  fprintf(stdout,"derived key: \n");
+  print128_num(current_key);
+  fprintf(stdout,"parity: %x\n",_mm_extract_epi8(current_key,0) & 0x01);
+  fprintf(stdout,"\n");
   // current_key will be returned
 }
 
@@ -811,10 +832,10 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
 
 
 }
-  */
+  
 
-  /*
-  void GarbledCircuit::evlHalfGate(PCFGate* current_Gate, __m128i &current_key){
+  
+void GarbledCircuit::evlHalfGate(PCFGate* current_gate, __m128i &current_key){
   Bytes TG, TE;
 
   assert(m_garbling_bufr.size() == 2*Env::key_size_in_bytes());
@@ -854,10 +875,10 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
   // here we use a single-key AES call
   
   
-
-
+  
+  
 }
-  */
+  */ 
 
   uint32_t GarbledCircuit::increment_index(){
   return m_gate_index++;
@@ -880,14 +901,14 @@ void GarbledCircuit::set_const_key(byte c, const Bytes &key)
 
 Bytes GarbledCircuit::get_garbling_bufr(){
   //std::cout << "get garbling bufr: " << m_garbling_bufr.to_hex() << std::endl;
-  //fprintf(stderr,"get garbling bufr: %s\n", m_garbling_bufr.to_hex().c_str()); 
+  //fprintf(stdout,"get garbling bufr: %s\n", m_garbling_bufr.to_hex().c_str()); 
   return m_garbling_bufr;
 }
 
 void GarbledCircuit::set_garbling_bufr(Bytes buf){
   m_garbling_bufr = buf;
   
-  //fprintf(stderr,"setting garbling bufr: %s %s\n",buf.to_hex().c_str(),m_garbling_bufr.to_hex().c_str());
+  //fprintf(stdout,"setting garbling bufr: %s %s\n",buf.to_hex().c_str(),m_garbling_bufr.to_hex().c_str());
 }
 
 void GarbledCircuit::clear_garbling_bufr(){
@@ -916,19 +937,19 @@ const Bytes GarbledCircuit::get_const_key(byte c, byte b)
 }
 
 
- Bytes GarbledCircuit::get_gen_out(){
-  return m_gen_out;
+ Bytes GarbledCircuit::get_alice_out(){
+  return m_alice_out;
 }
 
- Bytes GarbledCircuit::get_evl_out(){
-  return m_evl_out;
+ Bytes GarbledCircuit::get_bob_out(){
+  return m_bob_out;
 }
 
  void GarbledCircuit::trim_output_buffers(){
-  if(m_gen_out_ix>0)
-    m_gen_out.resize(m_gen_out_ix/8,0);
-  if(m_evl_out_ix>0)
-    m_evl_out.resize(m_evl_out_ix/8,0);
+  if(m_alice_out_ix>0)
+    m_alice_out.resize(m_alice_out_ix/8,0);
+  if(m_bob_out_ix>0)
+    m_bob_out.resize(m_bob_out_ix/8,0);
 }
 
 #endif

@@ -75,12 +75,12 @@ public:
     struct PCFState *m_st;
     // get the constant wires
     void * get_Const_Wire(uint32_t i);
-  
+ 
     Bytes get_garbling_bufr();
     void set_garbling_bufr(Bytes buf);
     void clear_garbling_bufr();
-    Bytes get_gen_out();
-    Bytes get_evl_out();
+    Bytes get_bob_out();
+    Bytes get_alice_out();
 
     void trim_output_buffers();
 protected:
@@ -165,11 +165,11 @@ uint32_t increment_index();
     Bytes m_garbling_bufr;
     
     // a couple of buffers that hold circuit output, used in the garbling functions
-    Bytes m_gen_out;
-    Bytes m_evl_out;
+    Bytes m_alice_out;
+    Bytes m_bob_out;
     uint32_t m_in_bufr_ix;
-    uint32_t m_evl_out_ix;
-    uint32_t m_gen_out_ix;
+    uint32_t m_alice_out_ix;
+    uint32_t m_bob_out_ix;
 };
 
 

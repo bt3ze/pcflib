@@ -400,7 +400,10 @@ protected:
         
         // this vector tracks Gen's permutation bits
         std::vector<Bytes>     m_gen_inp_permutation_bits;
-
+        // and these will track Gen's select bits
+        // which are defined to be the XOR of the permutation and input bits
+        // and tell the circuit which alice key represents 0
+        std::vector<Bytes> m_gen_select_bits;
         /**
            old variables
          */
