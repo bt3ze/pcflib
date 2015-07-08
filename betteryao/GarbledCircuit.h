@@ -38,7 +38,9 @@ const int MAX_OUTPUT_SIZE = 1024;
 
 void print128_num(__m128i var);
 
-
+void Double(__m128i & k, __m128i & mask);
+void H_Pi(__m128i & destination, __m128i &key, __m128i & tweak);
+                        
 class GarbledCircuit {
 
 public:
@@ -138,7 +140,8 @@ protected:
     
     void genHalfGate(PCFGate* current_Gate, __m128i &current_key);
     void evlHalfGate(PCFGate* current_Gate, __m128i &current_key);
-    
+
+    void genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, byte a1, byte a2, byte a3); 
     
     void xor_Gate(PCFGate* current_gate, __m128i &current_key);
 

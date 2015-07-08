@@ -22,6 +22,9 @@
 
 #include <wmmintrin.h>
 
+void KDF128_Fixed_Key(const uint8_t *in, uint8_t * out){
+}
+
 void KDF128(const uint8_t *in, uint8_t *out, const uint8_t *key)
 {
     ALIGN16 uint8_t KEY[16*11];
@@ -55,6 +58,11 @@ void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key)
 
 #include <openssl/evp.h>
 #include <openssl/sha.h>
+
+void KDF128_Fixed_Key(const uint8_t *in, uint8_t * out){
+  
+}
+
 
 void KDF128(const uint8_t *in, uint8_t *out, const uint8_t *key)
 {
@@ -96,3 +104,4 @@ Bytes KDF256(const Bytes &msg, const Bytes &key)
         KDF256(&msg[0], &out[0], &key[0]);
 	return out;
 }
+

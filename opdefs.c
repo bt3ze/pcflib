@@ -302,7 +302,7 @@ void call_op (struct PCFState * st, struct PCFOP * op)
     }
   else if(strcmp(data->target->key, "output_alice") == 0)
     {
-      fprintf(stdout,"output alice opdef: %x\n",st->inp_i);
+      // fprintf(stdout,"output alice opdef: %x\n",st->inp_i);
       uint32_t i;
       if(st->inp_i < 32)
         {

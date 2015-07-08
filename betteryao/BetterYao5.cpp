@@ -355,32 +355,15 @@ void BetterYao5::generate_gen_input_keys(uint32_t circuit_num){
 
   // these lines are for debugging purposes, setting the permutation bits
   //m_gen_inp_permutation_bits[circuit_num].resize(get_gen_full_input_size()/8+1);
-  for(int i = 0; i < get_gen_full_input_size();i++){
-    m_gen_inp_permutation_bits[circuit_num].set_ith_bit(i,0);
-  }
+  //for(int i = 0; i < get_gen_full_input_size();i++){
+  //  m_gen_inp_permutation_bits[circuit_num].set_ith_bit(i,0);
+  //}
 
   std::cout << "gen permutation bits: " << m_gen_inp_permutation_bits[circuit_num].to_hex() << std::endl;
   
   //assert(m_gen_inp_permutation_bits[circuit_num].size() == get_gen_full_input_size());
   m_gen_select_bits[circuit_num] = m_gen_inp_permutation_bits[circuit_num] ^ get_gen_full_input();
   
-  /*
-  // now set Gen's permutation bits
-  // permutation bit 1 --> will be sent as the second in key pair to Eval
-  for(int i = 0; i < 2*get_gen_full_input_size();i+=2){
-  // this permutes the keys based on the permutation bit
-  
-  if(m_gen_inp_permutation_bits[circuit_num].get_ith_bit(i%2)==1){
-  // swap the two keys, then set their bits so that they look
-  // like nothing's up (which lets us commit to them in this order)
-  // but the secret permutation bits generated above hold the key to their true values.
-  std::swap(m_gen_inp_keys[circuit_num][i],m_gen_inp_keys[circuit_num][i+1]);
-  m_gen_inp_keys[circuit_num][i].set_ith_bit(0,0);
-  m_gen_inp_keys[circuit_num][i+1].set_ith_bit(0,1);
-  }
-   
-  }
-  */
 }
 
 
@@ -605,12 +588,14 @@ void BetterYao5::gen_commit_to_io_labels(){
     assert(m_evl_hashed_inp_keys[i].size() == 2*get_evl_inp_count());
     generate_commitments(m_circuit_prngs[i],m_evl_hashed_inp_keys[i],m_evl_inp_label_commitments[i]);
 
+    /*
     if(Env::group_rank() == 0){
       fprintf(stderr,"committed to these keys: \n");
       for(int j = 0; j < m_evl_hashed_inp_keys[i].size();j++){
         fprintf(stderr,"%s\n",m_evl_hashed_inp_keys[i][j].to_hex().c_str());
       }
     }
+    */
 
     
   }
@@ -1410,9 +1395,7 @@ void BetterYao5::evaluate_circuit(){
     if(Env::group_rank() == 0){
       // begin with one, just to make debugging easier
       for(int ix = 0; ix < m_gcs.size();ix++){
-        
-        
-        // m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_hashed_inp_keys[ix],m_key_generation_seeds[ix],m_gen_select_bits[ix],m_R[ix], m_const_0_keys[ix], m_const_1_keys[ix]);
+
         m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_hashed_inp_keys[ix],m_key_generation_seeds[ix],m_gen_inp_permutation_bits[ix],m_R[ix], m_const_0_keys[ix], m_const_1_keys[ix]);
         
         m_gcs[ix].m_st = 
