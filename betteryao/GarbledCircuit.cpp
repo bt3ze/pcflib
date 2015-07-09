@@ -888,14 +888,24 @@ void Double(__m128i & key, __m128i & clear_mask){
 }
 
 void H_Pi(__m128i & destination, __m128i &key, __m128i & tweak, __m128i & clear_mask){
-  __m128i K;
-
+  __m128i K,K1;
+  
   Double(key, clear_mask);
   K = _mm_xor_si128(key,tweak);
-  KDF128_Fixed_Key((uint8_t*)&destination, (uint8_t*)&K);
-  destination = _mm_xor_si128(destination, K);
+  K1 = K;
+  fprintf(stdout,"\nK: ");
+  print128_num(K);
+  fprintf(stdout,"Destination: ");
+  print128_num(destination);
+  //  KDF128_Fixed_Key((uint8_t*)&destination, (uint8_t*)&K);
+  KDF128((uint8_t*)&K,(uint8_t*)&destination, (uint8_t*)&K1);
+  fprintf(stdout,"AES output: ");
+  print128_num(K);
+  print128_num(destination);
+  destination = _mm_xor_si128(destination, K1);
   
   destination = _mm_and_si128(destination,clear_mask);
+  fprintf(stdout,"\n");
 }
 
 
@@ -985,8 +995,10 @@ void GarbledCircuit::genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i &
     Tg = _mm_xor_si128(Tg,m_R);
   }
   
-  Te = _mm_xor_si128(H_Wb0j2, H_Wb1j2);
-  Te = _mm_xor_si128(Te,Wa0);
+  fprintf(stdout,"reprint key1: ");
+  print128_num(key1);
+
+  Te = _mm_xor_si128(key1,_mm_xor_si128(H_Wb0j2, H_Wb1j2));
 
   fprintf(stdout, "Tg: ");
   print128_num(Tg);
@@ -1000,7 +1012,7 @@ void GarbledCircuit::genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i &
 
   We = H_Wb0j2;
   if(perm_y){
-    We = _mm_xor_si128(H_Wb0j2,_mm_xor_si128(Te,Wa0));
+    We = _mm_xor_si128(H_Wb0j2,_mm_xor_si128(Te,key1));
   }
 
   fprintf(stdout, "Wg: ");
@@ -1080,8 +1092,8 @@ void GarbledCircuit::evlHalfGatePair(__m128i &current_key, __m128i & key1, __m12
   print128_num(key2);
 
   __m128i H_Waj1,H_Wbj2;
-  H_Pi(H_Waj1, key1, j1_128, m_clear_mask);
-  H_Pi(H_Wbj2, key2, j2_128, m_clear_mask);
+  H_Pi(H_Waj1, Wa, j1_128, m_clear_mask);
+  H_Pi(H_Wbj2, Wb, j2_128, m_clear_mask);
 
   fprintf(stdout,"j: ");
   print128_num(j1_128);
@@ -1099,6 +1111,11 @@ void GarbledCircuit::evlHalfGatePair(__m128i &current_key, __m128i & key1, __m12
   print128_num(Te);
 
   
+  fprintf(stdout,"reprint key1: ");
+  print128_num(key1);
+  fprintf(stdout,"reprint Wa: ");
+  print128_num(Wa);
+  
   // ready for the KDF (or hash function)
   // here we use a single-key AES call
   __m128i Wg, We;
@@ -1107,8 +1124,9 @@ void GarbledCircuit::evlHalfGatePair(__m128i &current_key, __m128i & key1, __m12
   if(sa){
     Wg = _mm_xor_si128(H_Waj1,Tg);
   }
+  We = H_Wbj2;
   if(sb){
-    We = _mm_xor_si128(We,_mm_xor_si128(Te,key1));
+    We = _mm_xor_si128(H_Wbj2,_mm_xor_si128(Te,key1));
   }
   
   fprintf(stdout,"Wg: ");

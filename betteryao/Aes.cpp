@@ -22,7 +22,7 @@
 
 #include <wmmintrin.h>
 
-void KDF128_Fixed_Key(const uint8_t *in, uint8_t * out){
+void KDF128_Fixed_Key(const uint8_t *out, uint8_t * in){
   // TODO: this needs to be made such that it is actually
   // a fixed key AES permutation
   // this is just for testing purposes
