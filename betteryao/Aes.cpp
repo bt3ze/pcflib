@@ -23,6 +23,10 @@
 #include <wmmintrin.h>
 
 void KDF128_Fixed_Key(const uint8_t *in, uint8_t * out){
+  // TODO: this needs to be made such that it is actually
+  // a fixed key AES permutation
+  // this is just for testing purposes
+  KDF128(in, out, in);
 }
 
 void KDF128(const uint8_t *in, uint8_t *out, const uint8_t *key)
@@ -60,7 +64,7 @@ void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key)
 #include <openssl/sha.h>
 
 void KDF128_Fixed_Key(const uint8_t *in, uint8_t * out){
-  
+  KDF128(in,out,in);
 }
 
 

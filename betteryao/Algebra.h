@@ -206,7 +206,7 @@ public:
 
 	virtual void random() { random(I.m_prng); }
 
-	virtual void random(Prng &prng)
+	virtual void random (Prng &prng)
 	{
 		m_fptr_exp = &exp; // preprocessing needs to be redone
 

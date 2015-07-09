@@ -37,7 +37,7 @@ const int MAX_OUTPUT_SIZE = 1024;
 class GarbledBase {
 
 public:
-     GarbledBase();
+  GarbledBase();
      virtual ~GarbledBase() {}
 
      // virtual functions to be implemented by HBC and Malicious circuit objects
