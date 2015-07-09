@@ -611,158 +611,172 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
   } else {
 #endif
     if(current_gate->truth_table == 0x01){ // AND Gate
-      fprintf(stdout,"AND GATE!");
+      fprintf(stdout,"AND GATE!\n");
       __m128i key1 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire1));
       __m128i key2 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire2));
       
 
       genHalfGatePair(current_key, key1, key2, m_garbling_bufr, 0, 0, 0);
+      //genHalfAndGatePair(current_key, key1, key2, m_garbling_bufr, 0, 0, 0);
+      
       // all 1s is an OR gate
       
-    } else { 
+    }
+    
+    else if(current_gate->truth_table == 0x07){ // OR Gate
+
+      fprintf(stdout,"OR Gate!");
+      __m128i key1 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire1));
+      __m128i key2 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire2));
+      genHalfGatePair(current_key, key1, key2, m_garbling_bufr, 1, 1, 1);
+
+    }
+    
+    else { 
+
 
       fprintf(stdout,"Gate Type: %x\n",current_gate->truth_table);
-
-    // first, get the inputs
-    // X and Y are input, Z is output
-    __m128i X[2], Y[2], Z[2];
-    // we need a couple of 128-bit variables
-    __m128i aes_plaintext, aes_ciphertext;
-    __m128i aes_key[2];
-    
-    // we will send 3 gate ciphertexts
-    //Bytes gate_out_bufr;
-    //gate_out_bufr.resize(3*Env::key_size_in_bytes());
       
-    uint8_t bit;
+      // first, get the inputs
+      // X and Y are input, Z is output
+      __m128i X[2], Y[2], Z[2];
+      // we need a couple of 128-bit variables
+      __m128i aes_plaintext, aes_ciphertext;
+      __m128i aes_key[2];
     
-    // load the (zero-key) inputs from the PCF state container
-    X[0] = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire1));
-    Y[0] = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire2));
-    // and derive their XOR-complements
-    X[1] = _mm_xor_si128(X[0], m_R); // X[1] = X[0] ^ R
-    Y[1] = _mm_xor_si128(Y[0], m_R); // Y[1] = Y[0] ^ R
-    
-    
-    fprintf(stdout,"garbling input keys: %i %i (parity: %i %i) \n",
-            current_gate->wire1,
-            current_gate->wire2,
-            _mm_extract_epi8(X[0],0) &0x01,
-            _mm_extract_epi8(Y[0],0) &0x01);
-    print128_num(X[0]);
-    print128_num(X[1]);
-    print128_num(Y[0]);
-    print128_num(Y[1]);
-    
-
-    // and get the permutation bits (tells if each zero-key has a 1 on the end)
-    const uint8_t perm_x = _mm_extract_epi8(X[0],0) & 0x01;
-    const uint8_t perm_y = _mm_extract_epi8(Y[0],0) & 0x01;
-    // construct the permutation index
-    const uint8_t de_garbled_ix = (perm_y << 1)|perm_x; // wire1 + 2*wire2
-    
-    // now we are ready to garble
-
-    // load the plaintext to be encrypted
-    aes_plaintext = _mm_set1_epi64x(m_gate_index);
-    // and load the garbling keys
-    
-    aes_key[0] = _mm_load_si128(X+perm_x);
-    aes_key[1] = _mm_load_si128(Y+perm_y);
-    
-    // now run the key derivation function using the keys and the gate index
-    KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
-    
-    // clear extra bits at the front
-    aes_ciphertext = _mm_and_si128(aes_ciphertext, m_clear_mask);
-    // aes_ciphertext now contains the encryption of both zero-keys
-    
-    // this bit discovers what the semantics of the next wire will be
-    bit = (current_gate->truth_table >> (3-de_garbled_ix)) & 0x01;
-    
+      // we will send 3 gate ciphertexts
+      //Bytes gate_out_bufr;
+      //gate_out_bufr.resize(3*Env::key_size_in_bytes());
+      
+      uint8_t bit;
+      
+      // load the (zero-key) inputs from the PCF state container
+      X[0] = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire1));
+      Y[0] = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire2));
+      // and derive their XOR-complements
+      X[1] = _mm_xor_si128(X[0], m_R); // X[1] = X[0] ^ R
+      Y[1] = _mm_xor_si128(Y[0], m_R); // Y[1] = Y[0] ^ R
+      
+      
+      fprintf(stdout,"garbling input keys: %i %i (parity: %i %i) \n",
+              current_gate->wire1,
+              current_gate->wire2,
+              _mm_extract_epi8(X[0],0) &0x01,
+              _mm_extract_epi8(Y[0],0) &0x01);
+      print128_num(X[0]);
+      print128_num(X[1]);
+      print128_num(Y[0]);
+      print128_num(Y[1]);
+      
+      
+      // and get the permutation bits (tells if each zero-key has a 1 on the end)
+      const uint8_t perm_x = _mm_extract_epi8(X[0],0) & 0x01;
+      const uint8_t perm_y = _mm_extract_epi8(Y[0],0) & 0x01;
+      // construct the permutation index
+      const uint8_t de_garbled_ix = (perm_y << 1)|perm_x; // wire1 + 2*wire2
+      
+      // now we are ready to garble
+      
+      // load the plaintext to be encrypted
+      aes_plaintext = _mm_set1_epi64x(m_gate_index);
+      // and load the garbling keys
+      
+      aes_key[0] = _mm_load_si128(X+perm_x);
+      aes_key[1] = _mm_load_si128(Y+perm_y);
+      
+      // now run the key derivation function using the keys and the gate index
+      KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
+      
+      // clear extra bits at the front
+      aes_ciphertext = _mm_and_si128(aes_ciphertext, m_clear_mask);
+      // aes_ciphertext now contains the encryption of both zero-keys
+      
+      // this bit discovers what the semantics of the next wire will be
+      bit = (current_gate->truth_table >> (3-de_garbled_ix)) & 0x01;
+      
 #ifdef GRR
-    // GRR technique: using zero entry's key as one of the output keys
-    // the output key is the encrypted gate index
-    // this puts the zero key in Z[0] and the one key in Z[1]
-    
-    // we want the new zero-key to be in Z[0]
-    _mm_store_si128(Z+bit, aes_ciphertext);
-    // and other output is an offset
-    Z[1 - bit] = _mm_xor_si128(Z[bit], m_R);
-    // and load it into current_key to return it to the circuit's state container
-    current_key = _mm_load_si128(Z);
-    // this way we return the new zero-key
-    
-
+      // GRR technique: using zero entry's key as one of the output keys
+      // the output key is the encrypted gate index
+      // this puts the zero key in Z[0] and the one key in Z[1]
+      
+      // we want the new zero-key to be in Z[0]
+      _mm_store_si128(Z+bit, aes_ciphertext);
+      // and other output is an offset
+      Z[1 - bit] = _mm_xor_si128(Z[bit], m_R);
+      // and load it into current_key to return it to the circuit's state container
+      current_key = _mm_load_si128(Z);
+      // this way we return the new zero-key
+      
+      
 #else
-    // practically, this code is obsolete. we should be using GRR
-
-    // otherwise we generate a new random key for the 0th entry
-    tmp = m_prng.rand_bits(Env::k());
-    tmp.resize(16, 0);
-    Z[0] = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
-    Z[1] = _mm_xor_si128(Z[0], m_R);
+      // practically, this code is obsolete. we should be using GRR
+      
+      // otherwise we generate a new random key for the 0th entry
+      tmp = m_prng.rand_bits(Env::k());
+      tmp.resize(16, 0);
+      Z[0] = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
+      Z[1] = _mm_xor_si128(Z[0], m_R);
+      
+      // new ciphertext becomes the xor of this and the output key
+      aes_ciphertext = _mm_xor_si128(aes_ciphertext, Z[bit]);
+      // we put it back in tmp so that we can communicate it to Evl
     
-    // new ciphertext becomes the xor of this and the output key
-    aes_ciphertext = _mm_xor_si128(aes_ciphertext, Z[bit]);
-    // we put it back in tmp so that we can communicate it to Evl
-    
-    _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), aes_ciphertext);
-    // now we have to save this key to send to Evl
+      _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), aes_ciphertext);
+      // now we have to save this key to send to Evl
 #endif
-     
-    // now we encrypt the next several truth table entries before sending them to Eval
-    // the first entry is (X[1-x],Y[y])
-    // so we take the XOR-offset of X
-    // Bytes tmp;
-    tmp.resize(16,0);
+      
+      // now we encrypt the next several truth table entries before sending them to Eval
+      // the first entry is (X[1-x],Y[y])
+      // so we take the XOR-offset of X
+      // Bytes tmp;
+      tmp.resize(16,0);
+      
+      // we just used X[0] as aex_key[0],
+      // so now take the XOR with R to get X[1-x]
+      aes_key[0] = _mm_xor_si128(aes_key[0], m_R);
+      
+      // and run through the KDF
+      // key derivation function
+      KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
+      // and mask to remove unnecessary bits
+      aes_ciphertext = _mm_and_si128(aes_ciphertext, m_clear_mask);
+      
+      // recover the permutation bit
+      bit = (current_gate->truth_table>>(3-(0x01^de_garbled_ix)))&0x01;
+      // encrypt the key using the ciphertext and load it into tmp to send
+      aes_ciphertext = _mm_xor_si128(aes_ciphertext, Z[bit]);
+      _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), aes_ciphertext);
+      // and we add tmp to the buffer we're sending to Eval
+      
+      m_garbling_bufr.insert(m_garbling_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
+      
+      
+      // encrypt the 2nd entry : (X[x], Y[1-y])
+      aes_key[0] = _mm_xor_si128(aes_key[0], m_R);
+      aes_key[1] = _mm_xor_si128(aes_key[1], m_R);
     
-    // we just used X[0] as aex_key[0],
-    // so now take the XOR with R to get X[1-x]
-    aes_key[0] = _mm_xor_si128(aes_key[0], m_R);
-
-    // and run through the KDF
-    // key derivation function
-    KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
-    // and mask to remove unnecessary bits
-    aes_ciphertext = _mm_and_si128(aes_ciphertext, m_clear_mask);
-
-    // recover the permutation bit
-    bit = (current_gate->truth_table>>(3-(0x01^de_garbled_ix)))&0x01;
-    // encrypt the key using the ciphertext and load it into tmp to send
-    aes_ciphertext = _mm_xor_si128(aes_ciphertext, Z[bit]);
-    _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), aes_ciphertext);
-    // and we add tmp to the buffer we're sending to Eval
-    
-    m_garbling_bufr.insert(m_garbling_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
-    
-    
-    // encrypt the 2nd entry : (X[x], Y[1-y])
-    aes_key[0] = _mm_xor_si128(aes_key[0], m_R);
-    aes_key[1] = _mm_xor_si128(aes_key[1], m_R);
-    
-    KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
-    aes_ciphertext = _mm_and_si128(aes_ciphertext, m_clear_mask);
-    bit = (current_gate->truth_table>>(3-(0x02^de_garbled_ix)))&0x01;
-    aes_ciphertext = _mm_xor_si128(aes_ciphertext, Z[bit]);
-    
-    _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), aes_ciphertext);
-    
-    m_garbling_bufr.insert(m_garbling_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
-    
-    // encrypt the 3rd entry : (X[1-x], Y[1-y])
-    aes_key[0] = _mm_xor_si128(aes_key[0], m_R);
-    
-    KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
-    aes_ciphertext = _mm_and_si128(aes_ciphertext, m_clear_mask);
-    bit = (current_gate->truth_table>>(3-(0x03^de_garbled_ix)))&0x01;
-    aes_ciphertext = _mm_xor_si128(aes_ciphertext, Z[bit]);
-    _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), aes_ciphertext);
-    
-    m_garbling_bufr.insert(m_garbling_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
-    
+      KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
+      aes_ciphertext = _mm_and_si128(aes_ciphertext, m_clear_mask);
+      bit = (current_gate->truth_table>>(3-(0x02^de_garbled_ix)))&0x01;
+      aes_ciphertext = _mm_xor_si128(aes_ciphertext, Z[bit]);
+      
+      _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), aes_ciphertext);
+      
+      m_garbling_bufr.insert(m_garbling_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
+      
+      // encrypt the 3rd entry : (X[1-x], Y[1-y])
+      aes_key[0] = _mm_xor_si128(aes_key[0], m_R);
+      
+      KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
+      aes_ciphertext = _mm_and_si128(aes_ciphertext, m_clear_mask);
+      bit = (current_gate->truth_table>>(3-(0x03^de_garbled_ix)))&0x01;
+      aes_ciphertext = _mm_xor_si128(aes_ciphertext, Z[bit]);
+      _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), aes_ciphertext);
+      
+      m_garbling_bufr.insert(m_garbling_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
+      
     }
-
+    
 #ifdef FREE_XOR
   }
 #endif
@@ -771,7 +785,7 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
   print128_num(current_key);
   __m128i xor_offset = _mm_xor_si128(current_key, m_R);
   print128_num(xor_offset);
-    
+  
   fprintf(stdout,"\n");
   
 }
@@ -792,7 +806,16 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
       
       evlHalfGatePair(current_key, key1,key2,m_garbling_bufr);
 
-    } else { 
+    } 
+    else if(current_gate->truth_table == 0x07){ // OR gate
+      fprintf(stdout,"OR GATE!\n");
+      __m128i key1 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire1));
+      __m128i key2 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire2));
+      
+      evlHalfGatePair(current_key, key1,key2,m_garbling_bufr);
+      
+    }
+    else { 
 
     // non-XOR gate
     __m128i aes_key[2], aes_plaintext, aes_ciphertext;
@@ -875,15 +898,18 @@ void GarbledCircuit::genHalfGate(PCFGate* current_gate, __m128i &current_key){
    (we don't want a key boundary overflowing!)
  */
 void Double(__m128i & key, __m128i & clear_mask){
-  fprintf(stdout,"Double Key: ");
-  print128_num(key);
+  
+  //fprintf(stdout,"Double Key: ");
+  // print128_num(key);
+  
   uint64_t * modifier = (uint64_t*) &key;
   uint64_t carry = modifier[0] & ((uint64_t) 0x8000000000000000) > 0 ? 1 : 0;
   modifier[0] = modifier[0]<<1;
   modifier[1] = (modifier[1]<<1) | carry;
   key = _mm_and_si128(key, clear_mask);
-  fprintf(stdout,"Doubled Key: ");
-  print128_num(key);
+ 
+  //fprintf(stdout,"Doubled Key: ");
+  //print128_num(key);
 
 }
 
@@ -893,19 +919,105 @@ void H_Pi(__m128i & destination, __m128i &key, __m128i & tweak, __m128i & clear_
   Double(key, clear_mask);
   K = _mm_xor_si128(key,tweak);
   K1 = K;
-  fprintf(stdout,"\nK: ");
-  print128_num(K);
-  fprintf(stdout,"Destination: ");
-  print128_num(destination);
-  //  KDF128_Fixed_Key((uint8_t*)&destination, (uint8_t*)&K);
-  KDF128((uint8_t*)&K,(uint8_t*)&destination, (uint8_t*)&K1);
-  fprintf(stdout,"AES output: ");
-  print128_num(K);
-  print128_num(destination);
-  destination = _mm_xor_si128(destination, K1);
   
+  // fprintf(stdout,"\nK: ");
+  //print128_num(K);
+  //fprintf(stdout,"Destination: ");
+  //print128_num(destination);
+  //  KDF128_Fixed_Key((uint8_t*)&destination, (uint8_t*)&K);
+  
+  KDF128((uint8_t*)&K,(uint8_t*)&destination, (uint8_t*)&K1);
+  
+  //fprintf(stdout,"AES output: ");
+  //print128_num(K);
+  //print128_num(destination);
+  
+  destination = _mm_xor_si128(destination, K1);
   destination = _mm_and_si128(destination,clear_mask);
-  fprintf(stdout,"\n");
+  
+  //fprintf(stdout,"\n");
+}
+
+
+void GarbledCircuit::genHalfAndGatePair(__m128i& out_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, byte a1, byte a2, byte a3){
+  // this function implements half-gate generation by
+  // Zahur, Rosulek, and Evans
+
+  assert(a1==0||a1==1);
+  assert(a2==0||a2==1);
+  assert(a3==0||a3==1);
+  
+  const uint8_t perm_x = _mm_extract_epi8(key1,0) & 0x01;
+  const uint8_t perm_y = _mm_extract_epi8(key2,0) & 0x01;
+
+  __m128i Wa0, Wb0,Wa1,Wb1; // incoming wire keys
+  __m128i Wg, We; // half gate wire keys
+
+  // Tg and Te are the transmitted variables for the Generator and Evaluator, respectively 
+  __m128i Tg, Te;
+  // Ha and Hb will contain the results of applying the KDF
+  __m128i Ha0, Ha1, Hb0, Hb1;
+
+  // __m128i tmp; // temporarily stores the output of H that will be used again
+  Bytes tmp_bufr; // transfers keys to output buffer
+  
+  uint32_t j1, j2;
+  j1 = increment_index();
+  j2 = increment_index();
+  // fprintf(stdout,"Gate indices: %x %x\n",j1,j2);
+
+  __m128i j1_128, j2_128;
+  j1_128 = _mm_set1_epi64x(j1);
+  j2_128 = _mm_set1_epi64x(j2);
+  
+  Wa0 = key1;
+  Wb0 = key2;
+  Wa1 = _mm_xor_si128(Wa0,m_R);
+  Wb1 = _mm_xor_si128(Wb0,m_R);
+
+  __m128i H_Wa0j1, H_Wa1j1, H_Wb0j2, H_Wb1j2;
+  H_Pi(H_Wa0j1, Wa0, j1_128, m_clear_mask);
+  H_Pi(H_Wa1j1, Wa1, j1_128, m_clear_mask);
+  H_Pi(H_Wb0j2, Wb0, j2_128, m_clear_mask);
+  H_Pi(H_Wb1j2, Wb1, j2_128, m_clear_mask);
+
+  Tg = _mm_xor_si128(H_Wa0j1, H_Wa1j1);
+  if(perm_y){
+    Tg = _mm_xor_si128(Tg,m_R);
+  }
+  
+  Te = _mm_xor_si128(key1,_mm_xor_si128(H_Wb0j2, H_Wb1j2));
+  
+  Wg = H_Wa0j1;
+  
+  if(perm_x){
+    Wg = _mm_xor_si128(H_Wa0j1,Tg);
+  }
+
+  We = H_Wb0j2;
+  if(perm_y){
+    We = _mm_xor_si128(H_Wb0j2,_mm_xor_si128(Te, key1));
+  }
+
+  
+  // add Tg to output buffer
+  tmp_bufr.resize(16,0);
+  _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp_bufr[0]),Tg);
+  out_bufr.clear();
+  out_bufr.insert(out_bufr.begin(),tmp_bufr.begin(),tmp_bufr.begin()+Env::key_size_in_bytes());
+
+  // add Te to output buffer
+  tmp_bufr.clear();
+  tmp_bufr.resize(16,0);
+  _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp_bufr[0]),Te);
+  out_bufr.insert(out_bufr.end(),tmp_bufr.begin(),tmp_bufr.begin()+Env::key_size_in_bytes());
+
+  // combine half gates:
+  out_key = _mm_xor_si128(Wg,We);
+  
+  // fprintf(stdout,"Half Gate Out Buffer: %s\n", out_bufr.to_hex().c_str());
+  
+
 }
 
 
@@ -928,43 +1040,18 @@ void GarbledCircuit::genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i &
   // Ha and Hb will contain the results of applying the KDF
   __m128i Ha0, Ha1, Hb0, Hb1;
 
-  __m128i tmp; // temporarily stores the output of H that will be used again
+  // __m128i tmp; // temporarily stores the output of H that will be used again
   Bytes tmp_bufr; // transfers keys to output buffer
   
   uint32_t j1, j2;
   j1 = increment_index();
   j2 = increment_index();
-  fprintf(stdout,"Gate indices: %x %x\n",j1,j2);
+  // fprintf(stdout,"Gate indices: %x %x\n",j1,j2);
 
   __m128i j1_128, j2_128;
   j1_128 = _mm_set1_epi64x(j1);
   j2_128 = _mm_set1_epi64x(j2);
   
-  // set the Wire keys
-  //  Wa0 = _mm_load_si128(key1);
-  //  Wb0 = _mm_load_si128(key2);
-
-  /*
-  Bytes keybuf1, keybuf2;
-  keybuf1.resize(16,0);
-  keybuf2.resize(16,0);
-  _mm_storeu_si128(reinterpret_cast<__m128i*>(&keybuf1[0]),key1);
-  _mm_storeu_si128(reinterpret_cast<__m128i*>(&keybuf2[0]),key2);
-
-  fprintf(stdout,"\nkey 1: %s\nkey2: %s\n",keybuf1.to_hex().c_str(),keybuf2.to_hex().c_str());
-  */
-  fprintf(stdout,"Input Keys:\n");
-  print128_num(key1);
-  print128_num(key2);
-  __m128i keyx1, keyx2;
-  keyx1 = _mm_xor_si128(key1,m_R);
-  keyx2 = _mm_xor_si128(key2,m_R);
-  fprintf(stdout,"xor-offset keys: \n");
-  print128_num(keyx1);
-  print128_num(keyx2);
-
-  //Wa0 = perm_x? keyx1 : key1;
-  // Wb0 = perm_y? keyx2 : key2;
   Wa0 = key1;
   Wb0 = key2;
   Wa1 = _mm_xor_si128(Wa0,m_R);
@@ -975,51 +1062,24 @@ void GarbledCircuit::genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i &
   H_Pi(H_Wa1j1, Wa1, j1_128, m_clear_mask);
   H_Pi(H_Wb0j2, Wb0, j2_128, m_clear_mask);
   H_Pi(H_Wb1j2, Wb1, j2_128, m_clear_mask);
-  
-  fprintf(stdout,"j: ");
-  print128_num(j1_128);
-  fprintf(stdout,"j': ");
-  print128_num(j2_128);
-  fprintf(stdout, "H(Wa0,j) : ");
-  print128_num(H_Wa0j1);
-  fprintf(stdout, "H(Wa1,j) : ");
-  print128_num(H_Wa1j1);
-  fprintf(stdout, "H(Wb0,j'): ");
-  print128_num(H_Wb0j2);
-  fprintf(stdout, "H(Wb1,j'): ");
-  print128_num(H_Wb1j2);
-  
 
+
+  // first half gate
   Tg = _mm_xor_si128(H_Wa0j1, H_Wa1j1);
-  if(perm_y){
+  if(perm_y != a2){
     Tg = _mm_xor_si128(Tg,m_R);
   }
-  
-  fprintf(stdout,"reprint key1: ");
-  print128_num(key1);
 
-  Te = _mm_xor_si128(key1,_mm_xor_si128(H_Wb0j2, H_Wb1j2));
-
-  fprintf(stdout, "Tg: ");
-  print128_num(Tg);
-  fprintf(stdout, "Te: ");
-  print128_num(Te);
-
-  Wg = H_Wa0j1;
-  if(perm_x){
-    Wg = _mm_xor_si128(H_Wa0j1,Tg);
+  Wg = perm_x? H_Wa1j1 : H_Wa0j1;
+  if(((perm_x != a1) && (perm_y != a2)) != a3){
+    Wg = _mm_xor_si128(Wg, m_R);
   }
-
-  We = H_Wb0j2;
-  if(perm_y){
-    We = _mm_xor_si128(H_Wb0j2,_mm_xor_si128(Te,key1));
-  }
-
-  fprintf(stdout, "Wg: ");
-  print128_num(Wg);
-  fprintf(stdout, "We: ");
-  print128_num(We);
   
+  // second half gate
+  We = perm_y ? H_Wb1j2 : H_Wb0j2;
+  Te = _mm_xor_si128(H_Wb0j2,H_Wb1j2);
+  Te = _mm_xor_si128(Te, a1? key2 : key1);
+
   // add Tg to output buffer
   tmp_bufr.resize(16,0);
   _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp_bufr[0]),Tg);
@@ -1034,6 +1094,16 @@ void GarbledCircuit::genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i &
 
   // combine half gates:
   out_key = _mm_xor_si128(Wg,We);
+  
+  fprintf(stdout,"input keys:\n");
+  fprintf(stdout,"key1: ");
+  print128_num(key1);
+  fprintf(stdout,"key2: ");
+  print128_num(key2);
+  fprintf(stdout,"Wg: ");
+  print128_num(Wg);
+  fprintf(stdout,"We: ");
+  print128_num(We);
 
   fprintf(stdout,"Half Gate Out Buffer: %s\n", out_bufr.to_hex().c_str());
   
@@ -1058,7 +1128,7 @@ void GarbledCircuit::evlHalfGatePair(__m128i &current_key, __m128i & key1, __m12
   j1 = increment_index();
   j2 = increment_index();
 
-  fprintf(stdout,"Gate indices: %x %x\n", j1,j2);
+  // fprintf(stdout,"Gate indices: %x %x\n", j1,j2);
 
   __m128i j1_128, j2_128;
 
@@ -1087,37 +1157,10 @@ void GarbledCircuit::evlHalfGatePair(__m128i &current_key, __m128i & key1, __m12
   Wa = key1;
   Wb = key2;
 
-  fprintf(stdout, "input keys: \n");
-  print128_num(key1);
-  print128_num(key2);
-
-  __m128i H_Waj1,H_Wbj2;
+  __m128i H_Waj1,H_Wbj2; // output of hashes
   H_Pi(H_Waj1, Wa, j1_128, m_clear_mask);
   H_Pi(H_Wbj2, Wb, j2_128, m_clear_mask);
 
-  fprintf(stdout,"j: ");
-  print128_num(j1_128);
-  fprintf(stdout,"j': ");
-  print128_num(j2_128);  
-
-  fprintf(stdout,"H_Waj1: ");
-  print128_num(H_Waj1);
-  fprintf(stdout,"H_Wbj2: ");
-  print128_num(H_Wbj2);
-
-  fprintf(stdout,"Tg: ");
-  print128_num(Tg);
-  fprintf(stdout,"Te: ");
-  print128_num(Te);
-
-  
-  fprintf(stdout,"reprint key1: ");
-  print128_num(key1);
-  fprintf(stdout,"reprint Wa: ");
-  print128_num(Wa);
-  
-  // ready for the KDF (or hash function)
-  // here we use a single-key AES call
   __m128i Wg, We;
 
   Wg = H_Waj1;
@@ -1128,13 +1171,19 @@ void GarbledCircuit::evlHalfGatePair(__m128i &current_key, __m128i & key1, __m12
   if(sb){
     We = _mm_xor_si128(H_Wbj2,_mm_xor_si128(Te,key1));
   }
+
+  current_key = _mm_xor_si128(Wg,We);
   
+fprintf(stdout,"input keys:\n");
+  fprintf(stdout,"key1: ");
+  print128_num(key1);
+  fprintf(stdout,"key2: ");
+  print128_num(key2);
   fprintf(stdout,"Wg: ");
   print128_num(Wg);
   fprintf(stdout,"We: ");
   print128_num(We);
 
-  current_key = _mm_xor_si128(Wg,We);
 
 }  
 
