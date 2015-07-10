@@ -804,7 +804,7 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
       __m128i key1 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire1));
       __m128i key2 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire2));
       
-      evlHalfGatePair(current_key, key1,key2,m_garbling_bufr);
+      evlHalfGatePair(current_key, key1,key2,m_garbling_bufr,0);
 
     } 
     else if(current_gate->truth_table == 0x07){ // OR gate
@@ -812,7 +812,7 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
       __m128i key1 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire1));
       __m128i key2 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire2));
       
-      evlHalfGatePair(current_key, key1,key2,m_garbling_bufr);
+      evlHalfGatePair(current_key, key1,key2,m_garbling_bufr,1);
       
     }
     else { 
@@ -1054,6 +1054,9 @@ void GarbledCircuit::genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i &
   
   Wa0 = key1;
   Wb0 = key2;
+
+  __m128i key1x = _mm_xor_si128(key1,m_R);
+
   Wa1 = _mm_xor_si128(Wa0,m_R);
   Wb1 = _mm_xor_si128(Wb0,m_R);
 
@@ -1062,7 +1065,7 @@ void GarbledCircuit::genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i &
   H_Pi(H_Wa1j1, Wa1, j1_128, m_clear_mask);
   H_Pi(H_Wb0j2, Wb0, j2_128, m_clear_mask);
   H_Pi(H_Wb1j2, Wb1, j2_128, m_clear_mask);
-
+  
 
   // first half gate
   Tg = _mm_xor_si128(H_Wa0j1, H_Wa1j1);
@@ -1078,7 +1081,7 @@ void GarbledCircuit::genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i &
   // second half gate
   We = perm_y ? H_Wb1j2 : H_Wb0j2;
   Te = _mm_xor_si128(H_Wb0j2,H_Wb1j2);
-  Te = _mm_xor_si128(Te, a1? key2 : key1);
+  Te = _mm_xor_si128(Te, a1? key1x :key1);
 
   // add Tg to output buffer
   tmp_bufr.resize(16,0);
@@ -1095,24 +1098,14 @@ void GarbledCircuit::genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i &
   // combine half gates:
   out_key = _mm_xor_si128(Wg,We);
   
-  fprintf(stdout,"input keys:\n");
-  fprintf(stdout,"key1: ");
-  print128_num(key1);
-  fprintf(stdout,"key2: ");
-  print128_num(key2);
-  fprintf(stdout,"Wg: ");
-  print128_num(Wg);
-  fprintf(stdout,"We: ");
-  print128_num(We);
-
-  fprintf(stdout,"Half Gate Out Buffer: %s\n", out_bufr.to_hex().c_str());
+  // fprintf(stdout,"Half Gate Out Buffer: %s\n", out_bufr.to_hex().c_str());
   
 
 }
   
 
 
-void GarbledCircuit::evlHalfGatePair(__m128i &current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr){
+void GarbledCircuit::evlHalfGatePair(__m128i &current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr, byte a1){
   assert(in_bufr.size() == 2*Env::key_size_in_bytes());
 
 
@@ -1161,29 +1154,21 @@ void GarbledCircuit::evlHalfGatePair(__m128i &current_key, __m128i & key1, __m12
   H_Pi(H_Waj1, Wa, j1_128, m_clear_mask);
   H_Pi(H_Wbj2, Wb, j2_128, m_clear_mask);
 
-  __m128i Wg, We;
+  __m128i Wg, We,tmp,tmpwe;
+  __m128i xorTeKey1;
 
   Wg = H_Waj1;
   if(sa){
     Wg = _mm_xor_si128(H_Waj1,Tg);
   }
+  
   We = H_Wbj2;
+  xorTeKey1 = _mm_xor_si128(Te, key1);
   if(sb){
-    We = _mm_xor_si128(H_Wbj2,_mm_xor_si128(Te,key1));
+    We = _mm_xor_si128(H_Wbj2,xorTeKey1);
   }
 
   current_key = _mm_xor_si128(Wg,We);
-  
-fprintf(stdout,"input keys:\n");
-  fprintf(stdout,"key1: ");
-  print128_num(key1);
-  fprintf(stdout,"key2: ");
-  print128_num(key2);
-  fprintf(stdout,"Wg: ");
-  print128_num(Wg);
-  fprintf(stdout,"We: ");
-  print128_num(We);
-
 
 }  
 

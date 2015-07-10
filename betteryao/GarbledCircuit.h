@@ -143,7 +143,7 @@ protected:
 
     void genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, byte a1, byte a2, byte a3); 
     void genHalfAndGatePair(__m128i& out_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, byte a1, byte a2, byte a3); 
-    void evlHalfGatePair(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr); 
+    void evlHalfGatePair(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr, byte a1); 
     
     void xor_Gate(PCFGate* current_gate, __m128i &current_key);
 
