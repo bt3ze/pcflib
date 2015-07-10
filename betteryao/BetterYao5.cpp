@@ -354,10 +354,10 @@ void BetterYao5::generate_gen_input_keys(uint32_t circuit_num){
   m_gen_inp_permutation_bits[circuit_num] = m_circuit_prngs[circuit_num].rand_bits(get_gen_full_input_size());
 
   // these lines are for debugging purposes, setting the permutation bits
-  //m_gen_inp_permutation_bits[circuit_num].resize(get_gen_full_input_size()/8+1);
-  for(int i = 0; i < get_gen_full_input_size();i++){
-    m_gen_inp_permutation_bits[circuit_num].set_ith_bit(i,0);
-  }
+  ////m_gen_inp_permutation_bits[circuit_num].resize(get_gen_full_input_size()/8+1);
+  //  for(int i = 0; i < get_gen_full_input_size();i++){
+  //  m_gen_inp_permutation_bits[circuit_num].set_ith_bit(i,0);
+  //}
 
   std::cout << "gen permutation bits: " << m_gen_inp_permutation_bits[circuit_num].to_hex() << std::endl;
   
