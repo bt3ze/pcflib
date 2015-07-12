@@ -55,7 +55,7 @@ protected:
          */
         void generate_random_seeds(std::vector<Bytes> & seeds, uint32_t num_seeds);
         void seed_prngs(std::vector<Prng> & prngs, std::vector<Bytes> & seeds);
-        void generate_input_keys(Prng & rng, std::vector<Bytes> & keys, uint32_t num_keys);
+        void generate_input_keys(Prng & rng, std::vector<Bytes> & keys, uint32_t num_keys,uint32_t num_bits);
 
 
 
@@ -116,6 +116,12 @@ protected:
         // her private input and the matrix
         void evl_generate_new_input();
         
+        // TODO: change this to account for eval's 
+        // new inpout generation
+        uint32_t get_evl_inp_count(){
+          return m_evl_inp_cnt; 
+        }
+
         
         /**
            Gen has a couple of inputs segments, and therefore gets
@@ -164,7 +170,7 @@ protected:
         // gen_commit_to_io_labels declared above
         void generate_eval_input_keys(uint32_t circuit_num);
         void generate_gen_input_label_commitments(uint32_t circuit_num);
-        void generate_eval_input_label_commitments(uint32_t circuit_num);
+        //void generate_eval_input_label_commitments(uint32_t circuit_num);
 
         void commit_to_gen_input_labels();
         void commit_to_eval_input_labels();
@@ -176,8 +182,8 @@ protected:
          */
 
         // Eval uses ot methods here, declared above in auxiliary functions
-                
-
+        void hash_eval_input_keys(std::vector<Bytes> & source, std::vector<Bytes> & destination, uint32_t num_bits);
+        
         
         /**
            STEP 6: CUT AND CHOOSE
@@ -207,8 +213,12 @@ protected:
         void evl_regenerate_circuits(uint32_t circuit_num);
         void evl_check_garbled_circuit_commitments(uint32_t circuit_num);
         void evl_check_commitment_regeneration(uint32_t circuit_num);
-        bool check_received_commitments_vs_generated(std::vector<Bytes> & received, std::vector<commitment_t> & generated);
+        bool check_received_commitments_vs_generated(std::vector<Bytes> & received, std::vector<commitment_t> & generated,uint32_t p);
+        void evl_set_inp_keys(uint32_t circuit_num);
 
+        void evl_inputs_transform(std::vector<Bytes> &source, std::vector<Bytes> &dest);
+
+        void evaluate_circuit();
 
 
         /**
@@ -272,6 +282,7 @@ protected:
 
         std::vector<std::vector<Bytes> > m_gen_inp_keys;
         std::vector<std::vector<Bytes> > m_evl_inp_keys;
+        std::vector<std::vector<G> > m_evl_inp_ot_keys;
 
         std::vector<std::vector<Bytes> > m_evl_received_keys;
 
@@ -279,11 +290,18 @@ protected:
         std::vector<std::vector<commitment_t> >   m_gen_inp_commitments;
         std::vector<std::vector<Bytes> >          m_gen_received_input_commitments;
         
+
         // these input label commitments are used in
         // Step 5: Gen's I/O Commitments
         // right before Eval's input OTs
         std::vector<std::vector<commitment_t> >          m_gen_inp_label_commitments;
         std::vector<std::vector<commitment_t> >          m_evl_inp_label_commitments;
+        
+        // Gen uses this vector to store Eval's hashed input keys
+        // since he inputs them to the OT in longer form
+        // (size of group element)
+        // and he uses the k-bit hash as the key itself
+        std::vector<std::vector<Bytes> > m_evl_hashed_inp_keys;
 
         // when Gen sends his input label commitments in Step 4/5,
         // Evl puts them in here
@@ -292,6 +310,7 @@ protected:
         // Gen also commits to a way of generating output labels
         // but that's embedded in the logic of the code
 
+        std::vector<Bytes> m_R;
 
         // Gen input label decommitments
         // replaces m_gen_inp_decom
@@ -319,9 +338,8 @@ protected:
 	Bytes                           m_chks;
 	Bytes                           m_all_chks;
 
-        // Gen's input decommitments
-        std::vector<std::vector<Bytes> >      m_gen_inp_decom;
-
+        // Gen's input decommitments (obsolete)
+        // std::vector<std::vector<Bytes> >      m_gen_inp_decom;
         
         
         // *********************************************************
@@ -359,8 +377,17 @@ protected:
         // Eval will get one of the seeds to decrypt as chooses
         std::vector<Bytes>                   m_otp_seeds;
         std::vector<Prng>                    m_otp_prngs;
-
         
+        /**
+           The next set of seeds is for generation circuits
+           the (randomly generated) seed is used to seed the circuit
+           object's PRNG to generate new wire keys.
+           For lack of a better place to put it, these are generated
+           during circuit information transfer
+         */
+        std::vector<Bytes>                   m_key_generation_seeds;
+
+
         // variables for Gen's input check
         // this contains Gen's input hashes, which must all be consistent
         std::vector<Bytes>                   m_gen_inp_hash;
@@ -373,6 +400,13 @@ protected:
         
         // this vector tracks Gen's permutation bits
         std::vector<Bytes>     m_gen_inp_permutation_bits;
+        // and these will track Gen's select bits
+        // which are defined to be the XOR of the permutation and input bits
+        // and tell the circuit which alice key represents 0
+        std::vector<Bytes> m_gen_select_bits;
+        
+        std::vector<Bytes> m_const_0_keys;
+        std::vector<Bytes> m_const_1_keys;
 
         /**
            old variables
