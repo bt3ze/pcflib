@@ -3,10 +3,8 @@
 
 #include "YaoBase.h"
 #include "Bytes.h"
-//#include "garbled_circuit_m.h"
-//#include "GarbledBase.h"
-//#include "GarbledMal.h"
 #include "GarbledCircuit.h"
+//#include "otextension.h"
 
 #include <vector>
 
@@ -282,7 +280,8 @@ protected:
 
         std::vector<std::vector<Bytes> > m_gen_inp_keys;
         std::vector<std::vector<Bytes> > m_evl_inp_keys;
-        std::vector<std::vector<G> > m_evl_inp_ot_keys;
+        //        std::vector<std::vector<G> > m_evl_inp_ot_keys;
+        std::vector<std::vector<Bytes> > m_evl_inp_ot_keys;
 
         std::vector<std::vector<Bytes> > m_evl_received_keys;
 

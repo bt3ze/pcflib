@@ -402,6 +402,7 @@ void YaoBase::size_inputs(){
         
 }
 
+/*
 void YaoBase::oblivious_transfer()
 {
 	reset_timers();
@@ -656,3 +657,4 @@ void YaoBase::oblivious_transfer()
           
         step_report("ob-transfer");
 }
+*/

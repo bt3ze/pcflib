@@ -6,7 +6,7 @@
  */
 
 #include "cbitvector.h"
-
+ 
 /* Fill random values using the pre-defined AES key */
 void CBitVector::FillRand(uint32_t bits, crypto* crypt) {
 	if (bits > m_nByteSize << 3)
@@ -65,27 +65,50 @@ void CBitVector::Create(uint64_t numelementsDimA, uint64_t numelementsDimB, uint
 }
 
 void CBitVector::ResizeinBytes(int newSizeBytes) {
-	BYTE* tBits = m_pBits;
-	int tSize = m_nByteSize;
+  BYTE* tBits = m_pBits;
+  int tSize = m_nByteSize;
+  
+  m_nByteSize = newSizeBytes;
+  m_pBits = new BYTE[m_nByteSize];
+  
+  memcpy(m_pBits, tBits, tSize);
+  
+  delete (tBits);
+}
 
-	m_nByteSize = newSizeBytes;
-	m_pBits = new BYTE[m_nByteSize];
+void CBitVector::Copy(std::vector<Bytes> &buf){
+  BYTE* cvec_idx = m_pBits;
+  for(int i = 0; i < buf.size();i++){
+    uint8_t* bytes_idx = buf[i].begin();
+    uint8_t* bytes_end = buf[i].end();
+    while(bytes_idx != bytes_end){
+      *cvec_idx++ = *bytes_idx++;
+    }
+  }
+}
 
-	memcpy(m_pBits, tBits, tSize);
-
-	delete (tBits);
+void CBitVector::Copy_to_Bytes(std::vector<Bytes> &buf){
+  BYTE* cvec_idx = m_pBits;
+  for(int i = 0; i < buf.size();i++){
+    uint8_t* bytes_idx = buf[i].begin();
+    uint8_t* bytes_end = buf[i].end();
+    while(bytes_idx != bytes_end){
+      *bytes_idx++ = *cvec_idx++;
+    }
+  }
 }
 
 void CBitVector::Copy(BYTE* p, int pos, int len) {
-	if (pos + len > m_nByteSize) {
-		if (m_pBits)
-			ResizeinBytes(pos + len);
-		else {
-			CreateBytes(pos + len);
-		}
-	}
-	memcpy(m_pBits + pos, p, len);
+  if (pos + len > m_nByteSize) {
+    if (m_pBits)
+      ResizeinBytes(pos + len);
+    else {
+      CreateBytes(pos + len);
+    }
+  }
+  memcpy(m_pBits + pos, p, len);
 }
+
 
 //pos and len in bits
 void CBitVector::SetBits(BYTE* p, uint64_t pos, uint64_t len) {

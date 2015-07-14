@@ -14,6 +14,8 @@
 #include <iostream>
 #include <iomanip>
 
+#include "../../Bytes.h"
+
 static const BYTE REVERSE_NIBBLE_ORDER[16] = { 0x0, 0x8, 0x4, 0xC, 0x2, 0xA, 0x6, 0xE, 0x1, 0x9, 0x5, 0xD, 0x3, 0xB, 0x7, 0xF };
 
 static const BYTE REVERSE_BYTE_ORDER[256] = { 0x00, 0x80, 0x40, 0xC0, 0x20, 0xA0, 0x60, 0xE0, 0x10, 0x90, 0x50, 0xD0, 0x30, 0xB0, 0x70, 0xF0, 0x08, 0x88, 0x48, 0xC8, 0x28, 0xA8,
@@ -160,6 +162,11 @@ public:
 		Copy(vec.GetArr(), pos, len);
 	}
 	void Copy(BYTE* p, int pos, int len);
+        
+        // for integrating with BetterYao
+        void Copy(std::vector<Bytes> &buf);
+        void Copy_to_Bytes(std::vector<Bytes> &buf);
+
 
 	void XOR_no_mask(int p, int bitPos, int bitLen);
 	unsigned int GetInt(int bitPos, int bitLen);

@@ -60,9 +60,9 @@ void BetterYao5::SS13(){
 void BetterYao5::generate_random_seeds(std::vector<Bytes> & seeds,uint32_t num_seeds){
  
   Bytes rand;
-  G rand_elem;
-  //  Prng prng = Prng();
-
+  //  G rand_elem;
+  Prng prng = Prng();
+  
   seeds.clear();
 
   for(int i=0;i<num_seeds;i++){
@@ -70,13 +70,13 @@ void BetterYao5::generate_random_seeds(std::vector<Bytes> & seeds,uint32_t num_s
     // so we generate them as random group elements
 
     
-    // this version does not work
-    //rand = prng.rand_bits(Env::elm_size_in_bytes()*8);
+    // this version useful for ALSZ extension
+    rand = prng.rand_bits(Env::elm_size_in_bytes()*8);
     //std::cout << "prng rand element: " << rand.to_hex() << std::endl;
-    //seeds.push_back(rand);
+    seeds.push_back(rand);
     
-    rand_elem.random();
-    seeds.push_back(rand_elem.to_bytes());
+    //rand_elem.random();
+    //seeds.push_back(rand_elem.to_bytes());
   }
 }
 
@@ -614,17 +614,19 @@ void BetterYao5::generate_eval_input_keys(uint32_t circuit_num){
     
 
   Bytes rand_key;
-  G rnd;
+  // G rnd;
   for(int i = 0; i < get_evl_inp_count()*2;i++){
 
     // this implementation will replace the current one when
     // we link ALSZ OT extensions
-    //rand_key = m_circuit_prngs[circuit_num].rand_bits(Env::elm_size_in_bytes()*8);
+    rand_key = m_circuit_prngs[circuit_num].rand_bits(Env::elm_size_in_bytes()*8);
     //rnd.from_bytes(rand_key);
-
-    rnd.random(m_circuit_prngs[circuit_num]);
-    m_evl_inp_keys[circuit_num].push_back(rnd.to_bytes());
     
+    //rnd.random(m_circuit_prngs[circuit_num]);
+    //m_evl_inp_keys[circuit_num].push_back(rnd.to_bytes());
+    
+    m_evl_inp_keys[circuit_num].push_back(rand_key);
+
   }
   std::cout << " done generating Eval input\trank: " << Env::group_rank() << std::endl;
 
@@ -908,7 +910,9 @@ void BetterYao5::transfer_check_circuit_info(){
  GEN_BEGIN
    assert(m_otp_prngs.size()/2 == Env::node_load());
    for(int i=0;i<m_otp_prngs.size()/2;i++){
-    gen_send_masked_info(m_otp_prngs[2*i+1],m_circuit_seeds[i],(int)(Env::elm_size_in_bytes()*8UL));
+    gen_send_masked_info(m_otp_prngs[2*i+1],m_circuit_seeds[i],
+                         //(int)(Env::elm_size_in_bytes()*8UL));
+                         Env::k());
   }
   GEN_END
 
@@ -917,7 +921,9 @@ void BetterYao5::transfer_check_circuit_info(){
   m_circuit_seeds.resize(m_chks.size());
   for(int i=0;i<m_chks.size();i++){
     if(m_chks[i]){ // check circuit
-      evl_receive_masked_info(m_otp_prngs[i],m_circuit_seeds[i],Env::elm_size_in_bytes()*8);
+      evl_receive_masked_info(m_otp_prngs[i],m_circuit_seeds[i],
+                              //Env::elm_size_in_bytes()*8);
+                              Env::k());
     } else{
       evl_ignore_masked_info(1); // one Bytes segment sent
     }
@@ -930,7 +936,9 @@ void BetterYao5::transfer_check_circuit_info(){
   GEN_BEGIN
   generate_random_seeds(m_key_generation_seeds, Env::node_load());
   for(int i = 0; i < m_otp_prngs.size()/2;i++){
-    gen_send_masked_info(m_otp_prngs[2*i+1],m_key_generation_seeds[i],(int)Env::elm_size_in_bytes()*8);
+    gen_send_masked_info(m_otp_prngs[2*i+1],m_key_generation_seeds[i],
+                         //(int)Env::elm_size_in_bytes()*8);
+                         Env::k());
   }
     
   GEN_END
@@ -939,7 +947,9 @@ void BetterYao5::transfer_check_circuit_info(){
     m_key_generation_seeds.resize(Env::node_load());
   for(int i = 0; i < m_chks.size();i++){
     if(m_chks[i]){
-      evl_receive_masked_info(m_otp_prngs[i],m_key_generation_seeds[i],Env::elm_size_in_bytes()*8);
+      evl_receive_masked_info(m_otp_prngs[i],m_key_generation_seeds[i],
+                              //Env::elm_size_in_bytes()*8);
+                              Env::k());
     } else{
       evl_ignore_masked_info(1); // one Bytes segment
     }
@@ -1178,6 +1188,7 @@ void BetterYao5::garble_and_check_circuits(){
 
 }
 
+/*
 void BetterYao5::evl_inputs_transform(std::vector<Bytes> &source, std::vector<Bytes> &dest){
   G a;
   for(int i = 0; i < source.size();i++){
@@ -1185,7 +1196,7 @@ void BetterYao5::evl_inputs_transform(std::vector<Bytes> &source, std::vector<By
     dest.push_back(a.to_bytes());
   }
 }
-
+*/
 
 // this function only called on check circuits
 // (circuit_num is the index of a check circuit
@@ -1212,7 +1223,7 @@ void BetterYao5::evl_regenerate_circuits(uint32_t circuit_num){
   // these have to be transformed by changing them to and from 
   // G elements a couple times, to simulate what would happen in OT.
   std::vector<Bytes> evl_transform_inputs;
-  evl_inputs_transform(m_evl_inp_keys[circuit_num],evl_transform_inputs);
+  // evl_inputs_transform(m_evl_inp_keys[circuit_num],evl_transform_inputs);
 
   std::cout << "Hash Eval Input Keys" << std::endl;
   // these have to be hashed to become the correct length for an input key
@@ -1509,38 +1520,41 @@ uint32_t ceil_log_base_2(uint32_t k){
  */
 
 void BetterYao5::ot_send(std::vector<Bytes> & sender_inputs){
-  ot_send_init();
-  ot_send_random(sender_inputs);
+  //OT_alsz_send(Env::ip_server(), Env::IP_SERVER_PORT, sender_inputs.size(), Env::k(), Env::s(), sender_inputs, sender_inputs);
+
+  //ot_send_init();
+  //  ot_send_random(sender_inputs);
 }
 
 void BetterYao5::ot_receive(Bytes selection_bits, std::vector<Bytes> & results_container){
-  ot_receive_init();
-  ot_receive_random(selection_bits, results_container);
+  // OT_alsz_recv(Env::ip_server(), Env::IP_SERVER_PORT, results_container.size(), Env::k(), Env::s(), selection_bits, results_container);
+  //ot_receive_init();
+  //ot_receive_random(selection_bits, results_container);
 }
 
 
 void BetterYao5::ot_send_batch(std::vector<std::vector<Bytes> > & sender_inputs){
-  ot_send_init();
+  //ot_send_init();
   for(int j = 0; j < sender_inputs.size(); j++){
     if(Env::group_rank() == 0)
       for(int i = 0; i < sender_inputs[j].size();i++){
          fprintf(stderr,"ot send input (%i): %s\n",i,sender_inputs[j][i].to_hex().c_str());
       }
-    ot_send_random(sender_inputs[j]);
+    //ot_send_random(sender_inputs[j]);
   }
 }
 
 void BetterYao5::ot_receive_batch(Bytes selection_bits, std::vector<std::vector<Bytes> > & results_container){
-  ot_receive_init();
+  //ot_receive_init();
   for(int j = 0; j < results_container.size();j++){
-    ot_receive_random(selection_bits, results_container[j]);
+    //ot_receive_random(selection_bits, results_container[j]);
     if(Env::group_rank() == 0)
       for(int i = 0; i < results_container[j].size();i++){
          fprintf(stderr,"ot receive input (%i): %s\n",i,results_container[j][i].to_hex().c_str());
      }
   }
 }
-
+/*
 void BetterYao5::ot_send_init(){
   double start;
   
@@ -1792,3 +1806,4 @@ void BetterYao5::ot_receive_random(Bytes selection_bits, std::vector<Bytes> & re
   // not quite the right assertion because number of bits need not be
   // an even multiple of 8.
 }
+*/

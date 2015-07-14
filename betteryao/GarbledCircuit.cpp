@@ -25,7 +25,7 @@ void delete_key(void *key)
   if (key != 0) _mm_free(key);
 }
 
- 
+  
 GarbledCircuit::GarbledCircuit(): m_gate_index(0), m_bob_out_ix(0),m_alice_out_ix(0) {
 
   // initialize the key Mask

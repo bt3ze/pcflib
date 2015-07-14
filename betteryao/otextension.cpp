@@ -3,14 +3,14 @@
 
 #include "otextension.h"
 
-BOOL Init(crypto* crypt)
+BOOL OT_Init(crypto* crypt)
 {
 	m_vSocket = new CSocket();//*) malloc(sizeof(CSocket) * m_nNumOTThreads);
 
 	return TRUE;
 }
 
-BOOL Cleanup()
+BOOL OT_Cleanup()
 {
 	delete sndthread;
 
@@ -25,7 +25,7 @@ BOOL Cleanup()
 }
 
 
-BOOL Connect()
+BOOL OT_Connect()
 {
 	bool bFail = FALSE;
 	uint64_t lTO = CONNECT_TIMEO_MILISEC;
@@ -76,7 +76,7 @@ connect_failure:
 
 
 
-BOOL Listen()
+BOOL OT_Listen()
 {
 #ifndef BATCH
 	cout << "Listening: " << m_nAddr << ":" << m_nPort << ", with size: " << m_nNumOTThreads << endl;
@@ -141,10 +141,10 @@ void InitOTSender(const char* address, int port, crypto* crypt)
 	m_nAddr = address;
 	
 	//Initialize values
-	Init(crypt);
+	OT_Init(crypt);
 	
 	//Server listen
-	Listen();
+	OT_Listen();
 
 	sndthread = new SndThread(m_vSocket);
 	rcvthread = new RcvThread(m_vSocket);
@@ -152,12 +152,14 @@ void InitOTSender(const char* address, int port, crypto* crypt)
 	rcvthread->Start();
 	sndthread->Start();
 
-	switch(m_eProt) {
-		case ALSZ: sender = new ALSZOTExtSnd(nSndVals, crypt, rcvthread, sndthread, m_nBaseOTs, m_nChecks); break;
-		case IKNP: sender = new IKNPOTExtSnd(nSndVals, crypt, rcvthread, sndthread); break;
-		case NNOB: sender = new NNOBOTExtSnd(nSndVals, crypt, rcvthread, sndthread); break;
-		default: sender = new ALSZOTExtSnd(nSndVals, crypt, rcvthread, sndthread, m_nBaseOTs, m_nChecks); break;
-	}
+        //	switch(m_eProt) {
+	//	case ALSZ: sender = new ALSZOTExtSnd(nSndVals, crypt, rcvthread, sndthread, m_nBaseOTs, m_nChecks); break;
+	//	case IKNP: sender = new IKNPOTExtSnd(nSndVals, crypt, rcvthread, sndthread); break;
+	//	case NNOB: sender = new NNOBOTExtSnd(nSndVals, crypt, rcvthread, sndthread); break;
+	//	default:
+        sender = new ALSZOTExtSnd(nSndVals, crypt, rcvthread, sndthread, m_nBaseOTs, m_nChecks); 
+        //break;
+	// }
 
 	if(m_bUseMinEntCorAssumption)
 		sender->EnableMinEntCorrRobustness();
@@ -172,10 +174,10 @@ void InitOTReceiver(const char* address, int port, crypto* crypt)
 	m_nAddr = address;
 
 	//Initialize values
-	Init(crypt);
+	OT_Init(crypt);
 	
 	//Client connect
-	Connect();
+	OT_Connect();
 
 	sndthread = new SndThread(m_vSocket);
 	rcvthread = new RcvThread(m_vSocket);
@@ -183,12 +185,14 @@ void InitOTReceiver(const char* address, int port, crypto* crypt)
 	rcvthread->Start();
 	sndthread->Start();
 
-	switch(m_eProt) {
-		case ALSZ: receiver = new ALSZOTExtRec(nSndVals, crypt, rcvthread, sndthread, m_nBaseOTs, m_nChecks); break;
-		case IKNP: receiver = new IKNPOTExtRec(nSndVals, crypt, rcvthread, sndthread); break;
-		case NNOB: receiver = new NNOBOTExtRec(nSndVals, crypt, rcvthread, sndthread); break;
-		default: receiver = new ALSZOTExtRec(nSndVals, crypt, rcvthread, sndthread, m_nBaseOTs, m_nChecks); break;
-	}
+	//switch(m_eProt) {
+	//	case ALSZ: receiver = new ALSZOTExtRec(nSndVals, crypt, rcvthread, sndthread, m_nBaseOTs, m_nChecks); break;
+	//	case IKNP: receiver = new IKNPOTExtRec(nSndVals, crypt, rcvthread, sndthread); break;
+	//	case NNOB: receiver = new NNOBOTExtRec(nSndVals, crypt, rcvthread, sndthread); break;
+	//	default:
+        receiver = new ALSZOTExtRec(nSndVals, crypt, rcvthread, sndthread, m_nBaseOTs, m_nChecks);
+        //break;
+	//}
 
 
 	if(m_bUseMinEntCorAssumption)
@@ -225,8 +229,7 @@ BOOL ObliviouslySend(CBitVector& X1, CBitVector& X2, int numOTs, int bitlength,
 	return success;
 }
 
-BOOL ObliviouslyReceive(CBitVector& choices, CBitVector& ret, int numOTs, int bitlength,
-		snd_ot_flavor stype, rec_ot_flavor rtype, crypto* crypt)
+BOOL ObliviouslyReceive(CBitVector& choices, CBitVector& ret, int numOTs, int bitlength,snd_ot_flavor stype, rec_ot_flavor rtype, crypto* crypt)
 {
 	bool success = FALSE;
 
@@ -253,6 +256,118 @@ BOOL ObliviouslyReceive(CBitVector& choices, CBitVector& ret, int numOTs, int bi
 	return success;
 }
 
+
+void OT_alsz_send(const char* addr, unsigned short port, uint64_t numOTs, uint32_t bitlength, uint32_t sec_param, std::vector<Bytes> &send_vals1, std::vector<Bytes>& send_vals2){
+  
+  //snd_ot_flavor stype = Snd_OT;
+  //rec_ot_flavor rtype = Rec_OT;
+
+  //OTExtSnd *sender;
+
+
+  m_nBaseOTs = 10;
+  m_nChecks = 10;
+  
+  m_bUseMinEntCorAssumption = false;
+  m_eProt = ALSZ;
+  
+  uint32_t runs = 1;
+
+  // hardcode the constant seed. TODO: change this to pid?
+  crypto *crypt = new crypto(sec_param, (uint8_t*)m_cConstSeed[0]);
+
+  // now, initialize the sender
+  //  InitOTSender(addr->c_str(), port, crypt);
+  // addr is already a char*
+  InitOTSender(addr, port, crypt);
+  
+  CBitVector delta, X1, X2;
+  
+  //The masking function with which the values that are sent in the last communication step are processed
+  m_fMaskFct = new XORMasking(bitlength, delta);
+  
+  //creates delta as an array with "numOTs" entries of "bitlength" bit-values and fills delta with random values
+  delta.Create(numOTs, bitlength, crypt);
+  
+  //Create X1 and X2 as two arrays with "numOTs" entries of "bitlength" bit-values and resets them to 0
+  //X1.Create(numOTs, bitlength, crypt);
+  //X2.Create(numOTs, bitlength, crypt);
+  // 
+  X1.Create(numOTs, bitlength);
+  X2.Create(numOTs, bitlength);
+  X1.Copy(send_vals1, bitlength);
+  X2.Copy(send_vals2, bitlength);
+
+#ifndef BATCH
+  cout << getProt(m_eProt) << " Sender performing " << numOTs << " " << getSndFlavor(stype) << " / " <<
+    getRecFlavor(rtype) << " extensions on " << bitlength << " bit elements with " <<	m_nNumOTThreads << " threads, " <<
+    getFieldType(m_eFType) << " and" << (m_bUseMinEntCorAssumption ? "": " no" ) << " min-ent-corr-robustness " <<
+    runs << " times" << endl;
+#endif
+
+  for(uint32_t i = 0; i < runs; i++) {
+    ObliviouslySend(X1, X2, numOTs, bitlength, stype, rtype, crypt);
+  }
+  
+  delete crypt;
+  
+}
+
+void OT_alsz_recv(const char* addr, unsigned short port, uint64_t numOTs, uint32_t bitlength, uint32_t sec_param, Bytes select_bits, std::vector<Bytes> & result_bytes){
+
+  snd_ot_flavor stype = Snd_OT;
+  rec_ot_flavor rtype = Rec_OT;
+
+  OTExtRec *receiver;
+
+  m_nBaseOTs = 10;
+  m_nChecks = 10;
+  
+  m_bUseMinEntCorAssumption = false;
+  m_eProt = ALSZ;
+  
+  uint32_t runs = 1;
+  
+  // hardcode the constant seed. TODO: change this to pid?
+  crypto *crypt = new crypto(sec_param, (uint8_t*) m_cConstSeed[0]);
+
+  //  InitOTReceiver(addr->c_str(), port, crypt);
+   InitOTReceiver(addr, port, crypt);
+  
+
+  CBitVector choices, response;
+  
+  //The masking function with which the values that are sent in the last communication step are processed
+  m_fMaskFct = new XORMasking(bitlength);
+  
+  //Create the bitvector choices as a bitvector with numOTs entries
+  choices.Create(numOTs, crypt);
+  
+  //Pre-generate the response vector for the results
+  response.Create(numOTs, bitlength);
+  response.Reset();
+  
+  /* 
+   * The inputs of the receiver in G_OT, C_OT and R_OT are the same. The only difference is the version
+   * variable that has to match the version of the sender. 
+   */
+#ifndef BATCH
+  cout << getProt(m_eProt) << " Receiver performing " << numOTs << " " << getSndFlavor(stype) << " / " <<
+    getRecFlavor(rtype) << " extensions on " << bitlength << " bit elements with " <<	m_nNumOTThreads << " threads, " <<
+    getFieldType(m_eFType) << " and" << (m_bUseMinEntCorAssumption ? "": " no" ) << " min-ent-corr-robustness " <<
+    runs << " times" << endl;
+#endif
+
+  for(uint32_t i = 0; i < runs; i++) {
+    ObliviouslyReceive(choices, response, numOTs, bitlength, stype, rtype, crypt);
+  }
+
+  response.Copy_to_Bytes(result_bytes);
+
+  //Cleanup();
+  delete crypt;
+  
+}
 
 /**
 int main(int argc, char** argv)

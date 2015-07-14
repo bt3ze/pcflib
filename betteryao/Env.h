@@ -3,9 +3,9 @@
 
 #include <cassert>
 
-#include "Algebra.h"
+//#include "Algebra.h"
 #include "Bytes.h"
-#include "ClawFree.h"
+//#include "ClawFree.h"
 // #include "Circuit.h"
 #include "NetIO.h"
 
@@ -41,7 +41,7 @@ struct EnvParams
 	ServerSocket *server;
 
   // Circuit       circuit;
-	ClawFree      claw_free;
+  // ClawFree      claw_free;
 
 	//const char   *circuit_file; // boolean circuit computing f(x,y) -> (f1, f2)
 	const char   *private_file;
@@ -57,9 +57,9 @@ class Env
 {
 	Env (EnvParams &params) : m_params(params)
 	{
-		exp_length = Z().length_in_bytes();
-		elm_length = G().length_in_bytes();
-		key_length = (params.secu_param+7)/8;
+          //exp_length = Z().length_in_bytes();
+          //elm_length = G().length_in_bytes();
+          //key_length = (params.secu_param+7)/8;
 	}
 
 	// prohibited member functions
@@ -113,14 +113,16 @@ public:
 
 	static size_t exp_size_in_bytes()
 	{
-		assert(instance != 0);
-		return instance->exp_length;
+          //assert(instance != 0);
+		//return instance->exp_length;
+          return k()/8;
 	}
 
 	static size_t elm_size_in_bytes()
 	{
-		assert(instance != 0);
-		return instance->elm_length;
+          //assert(instance != 0);
+          //return instance->elm_length;
+          return k()/8;
 	}
 
         /*
@@ -202,6 +204,11 @@ public:
 		assert(instance != 0);
 		return instance->m_params.remote;
 	}
+
+        static const char * ip_server(){
+          assert(instance != 0);
+          return instance->m_params.ipserve_addr;
+        }
 
 	virtual ~Env() {}
 };

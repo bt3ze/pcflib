@@ -3,9 +3,9 @@ CXX        = g++
 MPI_CXX    = mpicxx
 
 LIBS       = -lpbc -lgmp -lcrypto -llog4cxx -lpthread -lgmpxx
-HEADERS    = Algebra.h Aes.h Bytes.h Env.h NetIO.h Prng.h Commitment.h \
-	 # Circuit.h 	GarbledBase.h GarbledHBC.h GarbledMal.h   ClawFree.h  garbled_circuit.h garbled_circuit_hbc.h garbled_circuit_m.h
-OBJS       = Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o Commitment.o
+HEADERS    = Aes.h Bytes.h Env.h NetIO.h Prng.h Commitment.h \
+	 #  Algebra.h  Circuit.h 	GarbledBase.h GarbledHBC.h GarbledMal.h   ClawFree.h  garbled_circuit.h garbled_circuit_hbc.h garbled_circuit_m.h
+OBJS       =  Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o Commitment.o # Algebra.o
 OLDGARB	   = garbled_circuit.o garbled_circuit_hbc.o garbled_circuit_m.o  # Circuit.o GarbledCct3.o
 GARBLES    = GarbledCircuit.o #GarbledBase.o GarbledHBC.o GarbledMal.o 
 OTEXTENSION = alsz.o ot-crypto.o ot-util.o
@@ -51,11 +51,16 @@ pcflib.o: ../pcflib.c ../pcflib.h
 opdefs.o: ../opdefs.c ../pcflib.h ../opdefs.h 
 	gcc -Wall -Werror -c -fPIC ../opdefs.c -g -DBETTERYAO
 
+#ot-alsz: alsz.o ot-crypto.o ot-util.o
+
 #sim: $(MAINS) $(OBJS)
 #	$(MPI_CXX) -o sim $(CXX_CFLAGS) $^ $(LIBS)
 
 #test-circuit: test-circuit.cpp $(OBJS)
 #	$(MPI_CXX) $(CXX_CFLAGS) -o test-circuit $(CXX_LFLAGS) $^ $(LIBS)
+
+otextension.o: otextension.h otextension.cpp
+	$(CXX) -c  -IOTExtension/mains -IOTExtension/ot$(OT-CFLAGS) otextension.cpp
 
 alsz.o:  $(OTE)/util/*.cpp
 	$(CC) -c -IOTExtension/ot $(OT-CFLAGS) OTExtension/ot/*.cpp
@@ -75,17 +80,17 @@ ot-crypto.o: $(OTE)/util/crypto/*.cpp
 server : ipserver.cpp Bytes.o Env.o NetIO.o
 	$(CXX) -pthread -o server $(CXX_CFLAGS) $(CXX_LFLAGS) $^ $(LIBS)
 
-GarbledCircuit.o: Algebra.o Aes.h Bytes.h Env.h Prng.h GarbledCircuit.h GarbledCircuit.cpp
+GarbledCircuit.o: Aes.h Bytes.h Env.h Prng.h GarbledCircuit.h GarbledCircuit.cpp
 	$(MPI_CXX) -msse2 $(CXX_CFLAGS) -c GarbledCircuit.cpp
 
-Env.o : Algebra.h Bytes.h ClawFree.h NetIO.h Env.h Env.cpp #Circuit.h 
-	$(CXX) $(CXX_CFLAGS) -c Env.cpp
+Env.o : Bytes.h ClawFree.h NetIO.h Env.h Env.cpp #Circuit.h  Algebra.h 
+	$(CXX) $(CXX_CFLAGS) -c Env.cpp 
 
 NetIO.o : Bytes.h NetIO.h NetIO.cpp
 	$(CXX) $(CXX_CFLAGS) -c NetIO.cpp
 
-Algebra.o: Bytes.h Prng.h Algebra.h Algebra.cpp
-	$(CXX) $(CXX_CFLAGS) -c Algebra.cpp
+#Algebra.o: Bytes.h Prng.h Algebra.h Algebra.cpp
+#	$(CXX) $(CXX_CFLAGS) -c Algebra.cpp
 
 #Circuit.o : Bytes.h Circuit.h Circuit.cpp
 #	$(CXX) $(CXX_CFLAGS) -c Circuit.cpp

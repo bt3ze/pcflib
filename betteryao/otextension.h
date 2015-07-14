@@ -4,8 +4,8 @@
 #include "OTExtension/util/typedefs.h"
 #include "OTExtension/util/crypto/crypto.h"
 #include "OTExtension/util/socket.h"
-#include "OTExtension/ot/iknp-ot-ext-snd.h"
-//#include "../ot/iknp-ot-ext-rec.h"
+//#include "OTExtension/ot/iknp-ot-ext-snd.h"
+//#include "OTExtension/ot/iknp-ot-ext-rec.h"
 #include "OTExtension/ot/alsz-ot-ext-snd.h"
 #include "OTExtension/ot/alsz-ot-ext-rec.h"
 //#include "../ot/nnob-ot-ext-snd.h"
@@ -24,6 +24,8 @@
 #include <iomanip>
 #include <string>
 
+#include "Bytes.h"
+
 using namespace std;
 
 //TODO only for debugging purpose!!
@@ -32,10 +34,10 @@ static const char* m_cConstSeed[2] = {"437398417012387813714564100", "1565756615
 USHORT		m_nPort = 7766;
 const char* m_nAddr ;// = "localhost";
 
-BOOL Init(crypto* crypt);
-BOOL Cleanup();
-BOOL Connect();
-BOOL Listen();
+BOOL OT_Init(crypto* crypt);
+BOOL OT_Cleanup();
+BOOL OT_Connect();
+BOOL OT_Listen();
 
 void InitOTSender(const char* address, int port, crypto* crypt);
 void InitOTReceiver(const char* address, int port, crypto* crypt);
@@ -70,6 +72,10 @@ double rndgentime;
 int32_t read_test_options(int32_t* argcp, char*** argvp, uint32_t* role, uint64_t* numots, uint32_t* bitlen,
 		uint32_t* secparam, string* address, uint16_t* port, ot_ext_prot* protocol, snd_ot_flavor* sndflav,
 		rec_ot_flavor* rcvflav, uint32_t* nthreads, uint32_t* nbaseots, uint32_t* nchecks, bool* usemecr, uint32_t* runs);
+
+
+void OT_alsz_send(const char* addr, unsigned short port, uint64_t num_OTs, uint32_t bitlength, uint32_t sec_param, std::vector<Bytes>& send_vals1, std::vector<Bytes> & send_vals2);
+void OT_alsz_recv(const char* addr, unsigned short port, uint64_t num_OTs, uint32_t bitlength, uint32_t sec_param, Bytes selection_bits, std::vector<Bytes> &result_bytes);
 
 
 #endif
