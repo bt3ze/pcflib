@@ -8,10 +8,11 @@ HEADERS    = Aes.h Bytes.h Env.h NetIO.h Prng.h Commitment.h \
 OBJS       =  Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o Commitment.o # Algebra.o
 OLDGARB	   = garbled_circuit.o garbled_circuit_hbc.o garbled_circuit_m.o  # Circuit.o GarbledCct3.o
 GARBLES    = GarbledCircuit.o #GarbledBase.o GarbledHBC.o GarbledMal.o 
-OTEXTENSION = alsz.o ot-crypto.o ot-util.o
+#OTEXTENSION = alsz.o ot-crypto.o ot-util.o otextension.o
 OT-UTILS =  parse_options.o cbitvector.o
 OT-CRYPTO = crypto.o ecc-pk-crypto.o gmp-pk-crypto.o
 OT-ALSZ = alsz-ot-ext-rec.o alsz-ot-ext-snd.o ot-ext.o ot-ext-snd.o ot-ext-rec.o simpleot.o
+OTX = otextension.o
 #OT-OBJS = cbitvector.o crypto.o ecc-pk-crypto.o gmp-pk-crypto.o
 MAINS      = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp
 SPLITMAINS = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp splityao/BetterYao5.cpp splityao/BetterYaoEvl.cpp splityao/BetterYaoGen.cpp 
@@ -32,7 +33,7 @@ betteryao: $(MAINS) $(OBJS) $(OLDGARB)
 	$(MPI_CXX) -o evl -DEVL_CODE $(CXX_CFLAGS) $^ $(LIBS)
 	$(MPI_CXX) -o gen -DGEN_CODE $(CXX_CFLAGS) $^ $(LIBS)
 
-betteryao5: $(MAINS5) $(OBJS) $(GARBLES) $(MACROS)
+betteryao5: $(MAINS5) $(OBJS) $(GARBLES) $(OTX) $(MACROS)
 	$(MPI_CXX) -o evl5 -DEVL_CODE -DYAO5 $(CXX_CFLAGS) $^ $(OT-UTILS) $(OT-CRYPTO) $(OT-ALSZ) $(OBJECTS_MIRACL) $(MIRACL_PATH) $(MIRACL_LIB) $(LIBS)
 	$(MPI_CXX) -o gen5 -DGEN_CODE -DYAO5 $(CXX_CFLAGS) $^ $(OT-UTILS) $(OT-CRYPTO) $(OT-ALSZ) $(OBJECTS_MIRACL) $(MIRACL_PATH) $(MIRACL_LIB) $(LIBS)
 

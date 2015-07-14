@@ -4,7 +4,7 @@
 #include "YaoBase.h"
 #include "Bytes.h"
 #include "GarbledCircuit.h"
-//#include "otextension.h"
+#include "otextension.h"
 
 #include <vector>
 

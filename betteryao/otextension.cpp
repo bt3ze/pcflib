@@ -3,7 +3,7 @@
 
 #include "otextension.h"
 
-BOOL OT_Init(crypto* crypt)
+BOOL OT_Init(crypto* crypt, CSocket *m_vSocket)
 {
 	m_vSocket = new CSocket();//*) malloc(sizeof(CSocket) * m_nNumOTThreads);
 
@@ -12,26 +12,26 @@ BOOL OT_Init(crypto* crypt)
 
 BOOL OT_Cleanup()
 {
-	delete sndthread;
+  // delete sndthread;
 
 	//rcvthread->Wait();
 
-	delete rcvthread;
+  //	delete rcvthread;
 
-	//cout << "Cleaning" << endl;
-	delete m_vSocket;
+  //cout << "Cleaning" << endl;
+  //	delete m_vSocket;
 	//cout << "done" << endl;
 	return true;
 }
 
 
-BOOL OT_Connect()
+BOOL OT_Connect(const char* m_nAddr, USHORT m_nPort, CSocket* m_vSocket)
 {
 	bool bFail = FALSE;
 	uint64_t lTO = CONNECT_TIMEO_MILISEC;
 
 #ifndef BATCH
-	cout << "Connecting to party "<< !m_nPID << ": " << m_nAddr << ", " << m_nPort << endl;
+	//cout << "Connecting to party "<< !m_nPID << ": " << m_nAddr << ", " << m_nPort << endl;
 #endif
 	for(int k = 0; k >= 0 ; k--)
 	{
@@ -48,7 +48,7 @@ BOOL OT_Connect()
 				// send pid when connected
 				m_vSocket->Send( &k, sizeof(int) );
 		#ifndef BATCH
-				cout << " (" << !m_nPID << ") (" << k << ") connected" << endl;
+				//cout << " (" << !m_nPID << ") (" << k << ") connected" << endl;
 		#endif
 				if(k == 0) 
 				{
@@ -70,13 +70,13 @@ BOOL OT_Connect()
 server_not_available:
 	printf("Server not available: ");
 connect_failure:
-	cout << " (" << !m_nPID << ") connection failed" << endl;
+	//cout << " (" << !m_nPID << ") connection failed" << endl;
 	return FALSE;
 }
 
 
 
-BOOL OT_Listen()
+BOOL OT_Listen(const char* m_nAddr, USHORT m_nPort, CSocket * m_vSocket)
 {
 #ifndef BATCH
 	cout << "Listening: " << m_nAddr << ":" << m_nPort << ", with size: " << m_nNumOTThreads << endl;
@@ -111,7 +111,7 @@ BOOL OT_Listen()
 		}
 
 	#ifndef BATCH
-		cout <<  " (" << m_nPID <<") (" << threadID << ") connection accepted" << endl;
+		//cout <<  " (" << m_nPID <<") (" << threadID << ") connection accepted" << endl;
 	#endif
 		// locate the socket appropriately
 		m_vSocket->AttachFrom(sock);
@@ -131,23 +131,23 @@ listen_failure:
 
 
 
-void InitOTSender(const char* address, int port, crypto* crypt)
+void InitOTSender(const char* address, int port, crypto* crypt, OTExtSnd * sender, bool m_bUseMinEntCorAssumption, uint32_t m_nBaseOTs, uint32_t m_nChecks, field_type m_eFType, CSocket * m_vSocket)
 {
 	int nSndVals = 2;
 #ifdef OTTiming
 	timeval np_begin, np_end;
 #endif
-	m_nPort = (USHORT) port;
-	m_nAddr = address;
-	
-	//Initialize values
-	OT_Init(crypt);
+	USHORT m_nPort = (USHORT) port;
+	const char * m_nAddr = address;
+
+        //Initialize values
+	OT_Init(crypt, m_vSocket);
 	
 	//Server listen
-	OT_Listen();
+	OT_Listen(m_nAddr, m_nPort, m_vSocket);
 
-	sndthread = new SndThread(m_vSocket);
-	rcvthread = new RcvThread(m_vSocket);
+	SndThread* sndthread = new SndThread(m_vSocket);
+	RcvThread* rcvthread = new RcvThread(m_vSocket);
 
 	rcvthread->Start();
 	sndthread->Start();
@@ -166,21 +166,21 @@ void InitOTSender(const char* address, int port, crypto* crypt)
 	sender->ComputeBaseOTs(m_eFType);
 }
 
-void InitOTReceiver(const char* address, int port, crypto* crypt)
+void InitOTReceiver(const char* address, int port, crypto* crypt, OTExtRec * receiver, bool m_bUseMinEntCorAssumption, uint32_t m_nBaseOTs, uint32_t m_nChecks, field_type m_eFType, CSocket * m_vSocket)
 {
 	int nSndVals = 2;
 
-	m_nPort = (USHORT) port;
-	m_nAddr = address;
+	USHORT m_nPort = (USHORT) port;
+	const char* m_nAddr = address;
 
-	//Initialize values
-	OT_Init(crypt);
+        //Initialize values
+	OT_Init(crypt, m_vSocket);
 	
 	//Client connect
-	OT_Connect();
+	OT_Connect(m_nAddr, m_nPort, m_vSocket);
 
-	sndthread = new SndThread(m_vSocket);
-	rcvthread = new RcvThread(m_vSocket);
+	SndThread* sndthread = new SndThread(m_vSocket);
+	RcvThread* rcvthread = new RcvThread(m_vSocket);
 	
 	rcvthread->Start();
 	sndthread->Start();
@@ -202,7 +202,7 @@ void InitOTReceiver(const char* address, int port, crypto* crypt)
 
 
 BOOL ObliviouslySend(CBitVector& X1, CBitVector& X2, int numOTs, int bitlength,
-		snd_ot_flavor stype, rec_ot_flavor rtype, crypto* crypt)
+                     snd_ot_flavor stype, rec_ot_flavor rtype, crypto* crypt, OTExtSnd * sender, uint32_t m_nNumOTThreads, CSocket * m_vSocket, MaskingFunction * m_fMaskFct)
 {
 	bool success = FALSE;
 
@@ -222,14 +222,14 @@ BOOL ObliviouslySend(CBitVector& X1, CBitVector& X2, int numOTs, int bitlength,
 	cout << "Sent:\t\t" << m_vSocket->get_bytes_sent() << " bytes" << endl;
 	cout << "Received:\t" << m_vSocket->get_bytes_received() <<" bytes" << endl;
 #else
-	cout << getMillies(ot_begin, ot_end) + rndgentime << "\t" << m_vSocket->get_bytes_sent() << "\t" << m_vSocket->get_bytes_received() << endl;
+        //	cout << getMillies(ot_begin, ot_end) + rndgentime << "\t" << m_vSocket->get_bytes_sent() << "\t" << m_vSocket->get_bytes_received() << endl;
 #endif
 
 
 	return success;
 }
 
-BOOL ObliviouslyReceive(CBitVector& choices, CBitVector& ret, int numOTs, int bitlength,snd_ot_flavor stype, rec_ot_flavor rtype, crypto* crypt)
+BOOL ObliviouslyReceive(CBitVector& choices, CBitVector& ret, int numOTs, int bitlength,snd_ot_flavor stype, rec_ot_flavor rtype, crypto* crypt, OTExtRec * receiver, uint32_t m_nNumOTThreads, CSocket * m_vSocket,  MaskingFunction * m_fMaskFct)
 {
 	bool success = FALSE;
 
@@ -249,7 +249,7 @@ BOOL ObliviouslyReceive(CBitVector& choices, CBitVector& ret, int numOTs, int bi
 	cout << "Sent:\t\t" << m_vSocket->get_bytes_sent() << " bytes" << endl;
 	cout << "Received:\t" << m_vSocket->get_bytes_received() <<" bytes" << endl;
 #else
-	cout << getMillies(ot_begin, ot_end) + rndgentime << "\t" << m_vSocket->get_bytes_sent() << "\t" << m_vSocket->get_bytes_received() << endl;
+	//cout << getMillies(ot_begin, ot_end) + rndgentime << "\t" << m_vSocket->get_bytes_sent() << "\t" << m_vSocket->get_bytes_received() << endl;
 #endif
 	
 
@@ -259,19 +259,25 @@ BOOL ObliviouslyReceive(CBitVector& choices, CBitVector& ret, int numOTs, int bi
 
 void OT_alsz_send(const char* addr, unsigned short port, uint64_t numOTs, uint32_t bitlength, uint32_t sec_param, std::vector<Bytes> &send_vals1, std::vector<Bytes>& send_vals2){
   
-  //snd_ot_flavor stype = Snd_OT;
-  //rec_ot_flavor rtype = Rec_OT;
+  snd_ot_flavor stype = Snd_OT;
+  rec_ot_flavor rtype = Rec_OT;
 
-  //OTExtSnd *sender;
+  OTExtSnd *sender;
+  CSocket * m_vSocket;
+	
 
-
-  m_nBaseOTs = 10;
-  m_nChecks = 10;
+  uint32_t m_nBaseOTs = 10;
+  uint32_t m_nChecks = 10;
   
-  m_bUseMinEntCorAssumption = false;
-  m_eProt = ALSZ;
+  uint32_t m_nNumOTThreads = 1;
+
+  bool m_bUseMinEntCorAssumption = false;
+  // ot_ext_prot m_eProt = ALSZ;
   
   uint32_t runs = 1;
+
+  field_type m_eFType = ECC_FIELD;
+
 
   // hardcode the constant seed. TODO: change this to pid?
   crypto *crypt = new crypto(sec_param, (uint8_t*)m_cConstSeed[0]);
@@ -279,12 +285,14 @@ void OT_alsz_send(const char* addr, unsigned short port, uint64_t numOTs, uint32
   // now, initialize the sender
   //  InitOTSender(addr->c_str(), port, crypt);
   // addr is already a char*
-  InitOTSender(addr, port, crypt);
+  InitOTSender(addr, port, crypt, sender, m_bUseMinEntCorAssumption, m_nBaseOTs, m_nChecks, m_eFType, m_vSocket);
   
   CBitVector delta, X1, X2;
+
+
   
   //The masking function with which the values that are sent in the last communication step are processed
-  m_fMaskFct = new XORMasking(bitlength, delta);
+  MaskingFunction* m_fMaskFct = new XORMasking(bitlength, delta);
   
   //creates delta as an array with "numOTs" entries of "bitlength" bit-values and fills delta with random values
   delta.Create(numOTs, bitlength, crypt);
@@ -295,8 +303,10 @@ void OT_alsz_send(const char* addr, unsigned short port, uint64_t numOTs, uint32
   // 
   X1.Create(numOTs, bitlength);
   X2.Create(numOTs, bitlength);
-  X1.Copy(send_vals1, bitlength);
-  X2.Copy(send_vals2, bitlength);
+  X1.Copy(send_vals1);
+  X2.Copy(send_vals2);
+
+
 
 #ifndef BATCH
   cout << getProt(m_eProt) << " Sender performing " << numOTs << " " << getSndFlavor(stype) << " / " <<
@@ -306,7 +316,7 @@ void OT_alsz_send(const char* addr, unsigned short port, uint64_t numOTs, uint32
 #endif
 
   for(uint32_t i = 0; i < runs; i++) {
-    ObliviouslySend(X1, X2, numOTs, bitlength, stype, rtype, crypt);
+    ObliviouslySend(X1, X2, numOTs, bitlength, stype, rtype, crypt, sender, m_nNumOTThreads, m_vSocket, m_fMaskFct);
   }
   
   delete crypt;
@@ -319,26 +329,32 @@ void OT_alsz_recv(const char* addr, unsigned short port, uint64_t numOTs, uint32
   rec_ot_flavor rtype = Rec_OT;
 
   OTExtRec *receiver;
+  CSocket * m_vSocket;
+	
 
-  m_nBaseOTs = 10;
-  m_nChecks = 10;
+  uint32_t m_nBaseOTs = 10;
+  uint32_t m_nChecks = 10;
   
-  m_bUseMinEntCorAssumption = false;
-  m_eProt = ALSZ;
+  uint32_t m_nNumOTThreads = 1;
+
+  bool m_bUseMinEntCorAssumption = false;
+  // ot_ext_prot m_eProt = ALSZ;
   
   uint32_t runs = 1;
   
+  field_type m_eFType = ECC_FIELD;
+
   // hardcode the constant seed. TODO: change this to pid?
   crypto *crypt = new crypto(sec_param, (uint8_t*) m_cConstSeed[0]);
 
   //  InitOTReceiver(addr->c_str(), port, crypt);
-   InitOTReceiver(addr, port, crypt);
+  InitOTReceiver(addr, port, crypt, receiver, m_bUseMinEntCorAssumption, m_nBaseOTs, m_nChecks, m_eFType, m_vSocket);
   
 
   CBitVector choices, response;
   
   //The masking function with which the values that are sent in the last communication step are processed
-  m_fMaskFct = new XORMasking(bitlength);
+  MaskingFunction* m_fMaskFct = new XORMasking(bitlength);
   
   //Create the bitvector choices as a bitvector with numOTs entries
   choices.Create(numOTs, crypt);
@@ -359,7 +375,7 @@ void OT_alsz_recv(const char* addr, unsigned short port, uint64_t numOTs, uint32
 #endif
 
   for(uint32_t i = 0; i < runs; i++) {
-    ObliviouslyReceive(choices, response, numOTs, bitlength, stype, rtype, crypt);
+    ObliviouslyReceive(choices, response, numOTs, bitlength, stype, rtype, crypt,receiver, m_nNumOTThreads, m_vSocket, m_fMaskFct);
   }
 
   response.Copy_to_Bytes(result_bytes);
