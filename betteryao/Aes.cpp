@@ -2,7 +2,7 @@
 #include <cassert>
 
 #include "Bytes.h"
-#include "aes.h"
+#include "Aes.h"
 
 #if !defined (ALIGN16)
 # if defined (__GNUC__)
