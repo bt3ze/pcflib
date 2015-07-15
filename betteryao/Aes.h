@@ -72,12 +72,16 @@ typedef __m128i block;
 typedef struct { __m128i rd_key[15]; int rounds; } AES_KEY_J;
 
 //void KDF128_Fixed_Key(const uint8_t *in, uint8_t * out);
-void KDF128_Fixed_Key(uint8_t *out, const uint8_t * in, const AES_KEY_J * key);
+//AES
+void KDF128(uint8_t *out, const uint8_t * in, const AES_KEY_J * key);
 
-Bytes KDF128(const Bytes &in, const Bytes &key);
-Bytes KDF256(const Bytes &in, const Bytes &key);
+// obsolete
+//Bytes KDF128(const Bytes &in, const Bytes &key);
+//Bytes KDF256(const Bytes &in, const Bytes &key);
 
-void KDF128(const uint8_t *in, uint8_t *out, const uint8_t *key);
+//void KDF128(const uint8_t *in, uint8_t *out, const uint8_t *key);
+
+//SHA
 void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key);
 
 #ifdef __CPLUSPLUS
@@ -86,13 +90,19 @@ extern "C"
 #endif
 
   // old KSS AES encryption code
-void AES_128_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
-void AES_192_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
-void AES_256_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
+  // these functions were not actually supported
+  // no one ever turned the AESNI flag on (with aes support)
+//void AES_128_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
+  //void AES_192_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
+  //void AES_256_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
 
-void AES_ECB_decrypt (const uint8_t *in, uint8_t *out, unsigned long length, const uint8_t *KS, int nr);
-void AES_ECB_encrypt (const uint8_t *in, uint8_t *out, unsigned long length, const uint8_t *KS, int nr);
+  //void AES_ECB_decrypt (const uint8_t *in, uint8_t *out, unsigned long length, const uint8_t *KS, int nr);
+  //void AES_ECB_encrypt (const uint8_t *in, uint8_t *out, unsigned long length, const uint8_t *KS, int nr);
 
+
+void AES_128_fixed_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
+void AES_192_fixed_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
+void AES_256_fixed_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
 
 
 int AES_set_encrypt_key(const unsigned char *userKey, const int bits, AES_KEY_J *key);

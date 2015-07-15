@@ -24,8 +24,7 @@
 #include <wmmintrin.h>
 #include <emmintrin.h>
 
-
-void KDF128_Fixed_Key(uint8_t *out, const uint8_t * in, const AES_KEY_J * key){
+void KDF128(uint8_t *out, const uint8_t * in, const AES_KEY_J * key){
   // TODO: this needs to be made such that it is actually
   // a fixed key AES permutation
   // this is just for testing purposes
@@ -33,6 +32,21 @@ void KDF128_Fixed_Key(uint8_t *out, const uint8_t * in, const AES_KEY_J * key){
   AES_encrypt(in, out, key);
 }
 
+#include <openssl/evp.h>
+#include <openssl/sha.h>
+
+void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key)
+{
+	SHA256_CTX sha256;
+
+	SHA256_Init(&sha256);
+	SHA256_Update(&sha256, key, 32);
+	SHA256_Final(out, &sha256);
+}
+
+
+/*
+//these functions didn't actually have support
 void KDF128(const uint8_t *in, uint8_t *out, const uint8_t *key)
 {
     ALIGN16 uint8_t KEY[16*11];
@@ -44,7 +58,8 @@ void KDF128(const uint8_t *in, uint8_t *out, const uint8_t *key)
     AES_ECB_encrypt(PLAINTEXT, CIPHERTEXT, 64, KEY, 10);
     _mm_storeu_si128((__m128i*)out,((__m128i*)CIPHERTEXT)[0]);
 }
-
+*/
+/*
 void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key)
 {
     ALIGN16 uint8_t KEY[16*15];
@@ -55,7 +70,7 @@ void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key)
     AES_ECB_encrypt(PLAINTEXT, CIPHERTEXT, 64, KEY, 14);
     _mm_storeu_si128((__m128i*)out,((__m128i*)CIPHERTEXT)[0]);
 }
-
+*/
 
 // the following functions are copied from the JustGarble project
 /*
@@ -108,7 +123,7 @@ extern "C"
 
 
 
-void AES_128_native_Key_Expansion(const unsigned char *userkey, void *key) {
+void AES_128_fixed_Key_Expansion(const unsigned char *userkey, void *key) {
 	__m128i x0, x1, x2;
 	__m128i *kp = (__m128i *) key;
 	kp[0] = x0 = _mm_loadu_si128((__m128i *) userkey);
@@ -136,7 +151,7 @@ void AES_128_native_Key_Expansion(const unsigned char *userkey, void *key) {
 }
 
 
-void AES_192_native_Key_Expansion(const unsigned char *userkey, void *key) {
+void AES_192_fixed_Key_Expansion(const unsigned char *userkey, void *key) {
 	__m128i x0, x1, x2, x3, tmp, *kp = (__m128i *) key;
 	kp[0] = x0 = _mm_loadu_si128((__m128i *) userkey);
 	tmp = x3 = _mm_loadu_si128((__m128i *) (userkey + 16));
@@ -147,7 +162,7 @@ void AES_192_native_Key_Expansion(const unsigned char *userkey, void *key) {
 	EXPAND192_STEP(10, 64);
 }
 
-void AES_256_native_Key_Expansion(const unsigned char *userkey, void *key) {
+void AES_256_fixed_Key_Expansion(const unsigned char *userkey, void *key) {
 	__m128i x0, x1, x2, x3, *kp = (__m128i *) key;
 	kp[0] = x0 = _mm_loadu_si128((__m128i *) userkey);
 	kp[1] = x3 = _mm_loadu_si128((__m128i *) (userkey + 16));
@@ -184,11 +199,11 @@ void AES_256_native_Key_Expansion(const unsigned char *userkey, void *key) {
 
 int AES_set_encrypt_key (const unsigned char *userKey, const int bits, AES_KEY_J *key){
 	if (bits == 128) {
-	  AES_128_native_Key_Expansion(userKey, key);
+	  AES_128_fixed_Key_Expansion(userKey, key);
 	} else if (bits == 192) {
-	  AES_192_native_Key_Expansion(userKey, key);
+	  AES_192_fixed_Key_Expansion(userKey, key);
 	} else if (bits == 256) {
-	  AES_256_native_Key_Expansion(userKey, key);
+	  AES_256_fixed_Key_Expansion(userKey, key);
 	}
 #if (OCB_KEY_LEN == 0)
 	key->rounds = 6 + bits / 32;
@@ -303,13 +318,7 @@ void AES_ecb_decrypt_blks(block *blks, unsigned nblks, AES_KEY_J *key) {
 #include <openssl/sha.h>
 
 
-void KDF128_Fixed_Key(uint8_t *out, const uint8_t * in, const AES_KEY_J * key){
-  KDF128(in,out,in);
-  //  KDF128(in,out,key);
-}
-
-
-void KDF128(const uint8_t *in, uint8_t *out, const uint8_t *key)
+void KDF128(uint8_t *out, const uint8_t *in, const uint8_t *key)
 {
 	SHA256_CTX sha256;
 

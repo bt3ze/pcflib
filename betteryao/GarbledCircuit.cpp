@@ -843,7 +843,7 @@ void H_Pi(__m128i & destination, __m128i &key, __m128i & tweak, __m128i & clear_
 
   //K1 = K;
 
-  KDF128_Fixed_Key((uint8_t*)&destination,(uint8_t*)&K, &fixed_key);
+  KDF128((uint8_t*)&destination,(uint8_t*)&K, &fixed_key);
   destination = _mm_xor_si128(destination, K);
   destination = _mm_and_si128(destination,clear_mask);
   
