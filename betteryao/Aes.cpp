@@ -4,6 +4,7 @@
 #include "Bytes.h"
 #include "Aes.h"
 
+
 #if !defined (ALIGN16)
 # if defined (__GNUC__)
 #  define ALIGN16  __attribute__  ( (aligned (16)))
@@ -13,7 +14,7 @@
 #endif
 
 
-#if defined AESNI
+#if defined AESNI 
 
 //
 // When AES-NI is available, KDF(key, in) = AES_key (in), where
@@ -21,8 +22,10 @@
 //
 
 #include <wmmintrin.h>
+#include <emmintrin.h>
 
-inline void KDF128_Fixed_Key(uint8_t *out, const uint8_t * in, const AES_KEY * key){
+
+inline void KDF128_Fixed_Key(uint8_t *out, const uint8_t * in, const AES_KEY_J * key){
   // TODO: this needs to be made such that it is actually
   // a fixed key AES permutation
   // this is just for testing purposes
@@ -72,8 +75,40 @@ void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key)
     along with JustGarble.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifdef __CPLUSPLUS
+extern "C"
+{
+#endif
 
-inline void AES_128_Key_Expansion(const unsigned char *userkey, void *key) {
+#define ROUNDS(ctx) ((ctx)->rounds)
+
+#define EXPAND_ASSIST(v1,v2,v3,v4,shuff_const,aes_const)                    \
+    v2 = _mm_aeskeygenassist_si128(v4,aes_const);                           \
+    v3 = _mm_castps_si128(_mm_shuffle_ps(_mm_castsi128_ps(v3),              \
+                                         _mm_castsi128_ps(v1), 16));        \
+    v1 = _mm_xor_si128(v1,v3);                                              \
+    v3 = _mm_castps_si128(_mm_shuffle_ps(_mm_castsi128_ps(v3),              \
+                                         _mm_castsi128_ps(v1), 140));       \
+    v1 = _mm_xor_si128(v1,v3);                                              \
+    v2 = _mm_shuffle_epi32(v2,shuff_const);                                 \
+    v1 = _mm_xor_si128(v1,v2)
+
+#define EXPAND192_STEP(idx,aes_const)                                       \
+    EXPAND_ASSIST(x0,x1,x2,x3,85,aes_const);                                \
+    x3 = _mm_xor_si128(x3,_mm_slli_si128 (x3, 4));                          \
+    x3 = _mm_xor_si128(x3,_mm_shuffle_epi32(x0, 255));                      \
+    kp[idx] = _mm_castps_si128(_mm_shuffle_ps(_mm_castsi128_ps(tmp),        \
+                                              _mm_castsi128_ps(x0), 68));   \
+    kp[idx+1] = _mm_castps_si128(_mm_shuffle_ps(_mm_castsi128_ps(x0),       \
+                                                _mm_castsi128_ps(x3), 78)); \
+    EXPAND_ASSIST(x0,x1,x2,x3,85,(aes_const*2));                            \
+    x3 = _mm_xor_si128(x3,_mm_slli_si128 (x3, 4));                          \
+    x3 = _mm_xor_si128(x3,_mm_shuffle_epi32(x0, 255));                      \
+    kp[idx+2] = x0; tmp = x3
+
+
+
+void AES_128_Key_Expansion(const unsigned char *userkey, void *key) {
 	__m128i x0, x1, x2;
 	__m128i *kp = (__m128i *) key;
 	kp[0] = x0 = _mm_loadu_si128((__m128i *) userkey);
@@ -100,7 +135,23 @@ inline void AES_128_Key_Expansion(const unsigned char *userkey, void *key) {
 	kp[10] = x0;
 }
 
-inline void AES_192_Key_Expansion(const unsigned char *userkey, void *key) {
+int AES_set_encrypt_key (const unsigned char *userKey, const int bits, AES_KEY_J *key){
+	if (bits == 128) {
+		AES_128_Key_Expansion(userKey, key);
+	} else if (bits == 192) {
+		AES_192_Key_Expansion(userKey, key);
+	} else if (bits == 256) {
+		AES_256_Key_Expansion(userKey, key);
+	}
+#if (OCB_KEY_LEN == 0)
+	key->rounds = 6 + bits / 32;
+#else
+	key->rounds = 10;
+#endif
+	return 0;
+}
+
+void AES_192_Key_Expansion(const unsigned char *userkey, void *key) {
 	__m128i x0, x1, x2, x3, tmp, *kp = (__m128i *) key;
 	kp[0] = x0 = _mm_loadu_si128((__m128i *) userkey);
 	tmp = x3 = _mm_loadu_si128((__m128i *) (userkey + 16));
@@ -111,7 +162,7 @@ inline void AES_192_Key_Expansion(const unsigned char *userkey, void *key) {
 	EXPAND192_STEP(10, 64);
 }
 
-inline void AES_256_Key_Expansion(const unsigned char *userkey, void *key) {
+void AES_256_Key_Expansion(const unsigned char *userkey, void *key) {
 	__m128i x0, x1, x2, x3, *kp = (__m128i *) key;
 	kp[0] = x0 = _mm_loadu_si128((__m128i *) userkey);
 	kp[1] = x3 = _mm_loadu_si128((__m128i *) (userkey + 16));
@@ -144,22 +195,8 @@ inline void AES_256_Key_Expansion(const unsigned char *userkey, void *key) {
 	kp[14] = x0;
 }
 
-inline int AES_set_encrypt_key(const unsigned char *userKey, const int bits,
-		AES_KEY_J *key) {
-	if (bits == 128) {
-		AES_128_Key_Expansion(userKey, key);
-	} else if (bits == 192) {
-		AES_192_Key_Expansion(userKey, key);
-	} else if (bits == 256) {
-		AES_256_Key_Expansion(userKey, key);
-	}
-#if (OCB_KEY_LEN == 0)
-	key->rounds = 6 + bits / 32;
-#endif
-	return 0;
-}
 
-inline void AES_set_decrypt_key_fast(AES_KEY_J *dkey, const AES_KEY_J *ekey) {
+void AES_set_decrypt_key_fast(AES_KEY_J *dkey, const AES_KEY_J *ekey) {
 	int j = 0;
 	int i = ROUNDS(ekey);
 #if (OCB_KEY_LEN == 0)
@@ -171,7 +208,7 @@ inline void AES_set_decrypt_key_fast(AES_KEY_J *dkey, const AES_KEY_J *ekey) {
 	dkey->rd_key[i] = ekey->rd_key[j];
 }
 
-inline int AES_set_decrypt_key(const unsigned char *userKey, const int bits,
+int AES_set_decrypt_key(const unsigned char *userKey, const int bits,
 		AES_KEY_J *key) {
 	AES_KEY_J temp_key;
 	AES_set_encrypt_key(userKey, bits, &temp_key);
@@ -179,7 +216,7 @@ inline int AES_set_decrypt_key(const unsigned char *userKey, const int bits,
 	return 0;
 }
 
-inline void AES_encrypt(const unsigned char *in, unsigned char *out,
+void AES_encrypt(const unsigned char *in, unsigned char *out,
 		const AES_KEY_J *key) {
 	int j, rnds = ROUNDS(key);
 	const __m128i *sched = ((__m128i *) (key->rd_key));
@@ -191,7 +228,7 @@ inline void AES_encrypt(const unsigned char *in, unsigned char *out,
 	_mm_store_si128((__m128i *) out, tmp);
 }
 
-inline void AES_decrypt(const unsigned char *in, unsigned char *out,
+void AES_decrypt(const unsigned char *in, unsigned char *out,
 		const AES_KEY_J *key) {
 	int j, rnds = ROUNDS(key);
 	const __m128i *sched = ((__m128i *) (key->rd_key));
@@ -203,7 +240,7 @@ inline void AES_decrypt(const unsigned char *in, unsigned char *out,
 	_mm_store_si128((__m128i *) out, tmp);
 }
 
-inline void AES_ecb_encrypt_blks(block *blks, unsigned nblks, AES_KEY_J *key) {
+void AES_ecb_encrypt_blks(block *blks, unsigned nblks, AES_KEY_J *key) {
 	unsigned i, j, rnds = ROUNDS(key);
 	const __m128i *sched = ((__m128i *) (key->rd_key));
 	for (i = 0; i < nblks; ++i)
@@ -215,7 +252,7 @@ inline void AES_ecb_encrypt_blks(block *blks, unsigned nblks, AES_KEY_J *key) {
 		blks[i] = _mm_aesenclast_si128(blks[i], sched[j]);
 }
 
-inline void AES_ecb_encrypt_blks_4(block *blks, AES_KEY_J *key) {
+void AES_ecb_encrypt_blks_4(block *blks, AES_KEY_J *key) {
 	unsigned i, j, rnds = ROUNDS(key);
 	const __m128i *sched = ((__m128i *) (key->rd_key));
 	blks[0] = _mm_xor_si128(blks[0], sched[0]);
@@ -236,7 +273,7 @@ inline void AES_ecb_encrypt_blks_4(block *blks, AES_KEY_J *key) {
 }
 
 
-inline void AES_ecb_decrypt_blks(block *blks, unsigned nblks, AES_KEY_J *key) {
+void AES_ecb_decrypt_blks(block *blks, unsigned nblks, AES_KEY_J *key) {
 	unsigned i, j, rnds = ROUNDS(key);
 	const __m128i *sched = ((__m128i *) (key->rd_key));
 	for (i = 0; i < nblks; ++i)
@@ -248,9 +285,13 @@ inline void AES_ecb_decrypt_blks(block *blks, unsigned nblks, AES_KEY_J *key) {
 		blks[i] = _mm_aesdeclast_si128(blks[i], sched[j]);
 }
 
+#ifdef __CPLUSPLUS
+};
+#endif
+
 
 #else
-
+#error No AES_NI
 //
 // If none of the above is available, KDF(key, in) = H(key) = SHA-256(key),
 // where key = X||Y.

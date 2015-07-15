@@ -132,7 +132,7 @@ void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys
   // for now, use zeroes and the aes key
   __m128i aes_key = m_const_wire[0];
   aes_key = _mm_xor_si128(aes_key,aes_key);
-  set_AES_key(&aes_key);
+  init_circuit_AES_key(aes_key);
 
 }
 
@@ -182,7 +182,7 @@ void GarbledCircuit::init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys
   // for now, let the fixed aes key be zeroes.
   __m128i aes_key = m_const_wire[0];
   aes_key = _mm_xor_si128(aes_key,aes_key);
-  set_AES_key(&aes_key);
+  init_circuit_AES_key(aes_key);
 
 }
 
@@ -190,12 +190,10 @@ void GarbledCircuit::init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys
    this function sets our AES key for constant-key garbling
    the key must be fed to the function
  */
-void GarbledCircuit::set_AES_Key(__m128i &key){
+void GarbledCircuit::init_circuit_AES_key(__m128i &key){
 
-  AES_set_encrypt_key(&key, 128, &m_fixed_key);
-  // const __m128i *sched = ((__m128i *)(KR.rd_key));
-  
-  
+  AES_set_encrypt_key((unsigned char*)&key, 128, &m_fixed_key);  
+
 }
 
 
@@ -837,7 +835,7 @@ void Double(__m128i & key, __m128i & clear_mask){
    it is destructive of key so must make copies of the inputs first
    it returns H(K) = pi(L) xor L where L = 2key ^ tweak
  */
-void H_Pi(__m128i & destination, __m128i &key, __m128i & tweak, __m128i & clear_mask){
+void H_Pi(__m128i & destination, __m128i &key, __m128i & tweak, __m128i & clear_mask, AES_KEY_J & fixed_key){
   __m128i K; // ,K1;
 
   Double(key, clear_mask);
@@ -845,7 +843,7 @@ void H_Pi(__m128i & destination, __m128i &key, __m128i & tweak, __m128i & clear_
 
   //K1 = K;
 
-  KDF128_Fixed_Key((uint8_t*)&destination,(uint8_t*)&K, m_fixed_key);
+  KDF128_Fixed_Key((uint8_t*)&destination,(uint8_t*)&K, &fixed_key);
   destination = _mm_xor_si128(destination, K);
   destination = _mm_and_si128(destination,clear_mask);
   
@@ -891,10 +889,10 @@ void GarbledCircuit::genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i &
   Wb1 = _mm_xor_si128(Wb0,m_R);
 
   __m128i H_Wa0j1, H_Wa1j1, H_Wb0j2, H_Wb1j2;
-  H_Pi(H_Wa0j1, Wa0, j1_128, m_clear_mask);
-  H_Pi(H_Wa1j1, Wa1, j1_128, m_clear_mask);
-  H_Pi(H_Wb0j2, Wb0, j2_128, m_clear_mask);
-  H_Pi(H_Wb1j2, Wb1, j2_128, m_clear_mask);
+  H_Pi(H_Wa0j1, Wa0, j1_128, m_clear_mask,m_fixed_key);
+  H_Pi(H_Wa1j1, Wa1, j1_128, m_clear_mask,m_fixed_key);
+  H_Pi(H_Wb0j2, Wb0, j2_128, m_clear_mask,m_fixed_key);
+  H_Pi(H_Wb1j2, Wb1, j2_128, m_clear_mask,m_fixed_key);
   
 
   // first half gate
@@ -978,8 +976,8 @@ void GarbledCircuit::evlHalfGatePair(__m128i &current_key, __m128i & key1, __m12
   Wb = key2;
 
   __m128i H_Waj1,H_Wbj2; // output of hashes
-  H_Pi(H_Waj1, Wa, j1_128, m_clear_mask);
-  H_Pi(H_Wbj2, Wb, j2_128, m_clear_mask);
+  H_Pi(H_Waj1, Wa, j1_128, m_clear_mask, m_fixed_key);
+  H_Pi(H_Wbj2, Wb, j2_128, m_clear_mask, m_fixed_key);
 
   __m128i Wg, We,tmp,tmpwe;
   __m128i xorTeKey1;

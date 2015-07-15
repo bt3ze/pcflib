@@ -123,8 +123,7 @@ protected:
     // Access to which input Gen or Eval chose
     uint32_t get_Input_Parity(uint32_t idx); 
 
-
-    void set_AES_Key(__m128i & key);
+    void init_circuit_AES_key(__m128i & key);
 
     // things to help with garbling
     void generate_Random_Key(__m128i & destination);
