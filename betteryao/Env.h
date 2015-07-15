@@ -3,7 +3,7 @@
 
 #include <cassert>
 
-//#include "Algebra.h"
+#include "Algebra.h"
 #include "Bytes.h"
 //#include "ClawFree.h"
 // #include "Circuit.h"
@@ -57,9 +57,9 @@ class Env
 {
 	Env (EnvParams &params) : m_params(params)
 	{
-          //exp_length = Z().length_in_bytes();
-          //elm_length = G().length_in_bytes();
-          //key_length = (params.secu_param+7)/8;
+          exp_length = Z().length_in_bytes();
+          elm_length = G().length_in_bytes();
+          key_length = (params.secu_param+7)/8;
 	}
 
 	// prohibited member functions
@@ -113,16 +113,16 @@ public:
 
 	static size_t exp_size_in_bytes()
 	{
-          //assert(instance != 0);
-		//return instance->exp_length;
-          return k()/8;
+          assert(instance != 0);
+          return instance->exp_length;
+          //return k()/8;
 	}
 
 	static size_t elm_size_in_bytes()
 	{
-          //assert(instance != 0);
-          //return instance->elm_length;
-          return k()/8;
+          assert(instance != 0);
+          return instance->elm_length;
+          //return k()/8;
 	}
 
         /*

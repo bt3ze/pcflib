@@ -12,6 +12,7 @@
 #include "Env.h"
 #include "NetIO.h"
 #include "Commitment.h"
+#include "Algebra.h"
 
 #include "../pcflib.h"
 
@@ -77,8 +78,8 @@ protected:
 
         // variables for IKNP03 OT-extension implementation
         // or SS11 committing OT implementation
-	//G                               m_ot_g[2];
-	//G                               m_ot_h[2];
+	G                               m_ot_g[2];
+	G                               m_ot_h[2];
         std::vector<std::vector<Bytes> > m_ot_keys; // ot output
 
         // variables for input counts

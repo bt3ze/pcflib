@@ -3,9 +3,9 @@ CXX        = g++
 MPI_CXX    = mpicxx
 CC = cc
 LIBS       = -lpbc -lgmp -lcrypto -llog4cxx -lpthread -lgmpxx
-HEADERS    = Aes.h Bytes.h Env.h NetIO.h Prng.h Commitment.h \
-	 #  Algebra.h  Circuit.h 	GarbledBase.h GarbledHBC.h GarbledMal.h   ClawFree.h  garbled_circuit.h garbled_circuit_hbc.h garbled_circuit_m.h
-OBJS       =  Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o Commitment.o # Algebra.o
+HEADERS    =  Algebra.h Aes.h Bytes.h Env.h NetIO.h Prng.h Commitment.h \
+	 #   Circuit.h 	GarbledBase.h GarbledHBC.h GarbledMal.h   ClawFree.h  garbled_circuit.h garbled_circuit_hbc.h garbled_circuit_m.h
+OBJS       =  Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o Commitment.o 
 OLDGARB	   = garbled_circuit.o garbled_circuit_hbc.o garbled_circuit_m.o  # Circuit.o GarbledCct3.o
 GARBLES    = GarbledCircuit.o #GarbledBase.o GarbledHBC.o GarbledMal.o 
 OTEXTENSION = ot-ot.o otextension.o
@@ -34,9 +34,13 @@ betteryao: $(MAINS) $(OBJS) $(OLDGARB)
 	$(MPI_CXX) -o evl -DEVL_CODE $(CXX_CFLAGS) $^ $(LIBS)
 	$(MPI_CXX) -o gen -DGEN_CODE $(CXX_CFLAGS) $^ $(LIBS)
 
-betteryao5: $(MAINS5) $(OBJS) $(GARBLES) $(MACROS) $(OTX) $(OT-ALSZ) $(OT-UTILS) $(OT-CRYPTO)
-	$(MPI_CXX) -o evl5 -DEVL_CODE -DYAO5 $(CXX_CFLAGS) $^ -I. $(OBJECTS_MIRACL) $(MIRACL_PATH) $(MIRACL_LIB) $(LIBS)
-	$(MPI_CXX) -o gen5 -DGEN_CODE -DYAO5 $(CXX_CFLAGS) $^ -I. $(OBJECTS_MIRACL) $(MIRACL_PATH) $(MIRACL_LIB) $(LIBS)
+#betteryao5: $(MAINS5) $(OBJS) $(GARBLES) $(MACROS) $(OTX) $(OT-ALSZ) $(OT-UTILS) $(OT-CRYPTO)
+#	$(MPI_CXX) -o evl5 -DEVL_CODE -DYAO5 $(CXX_CFLAGS) $^ -I. $(OBJECTS_MIRACL) $(MIRACL_PATH) $(MIRACL_LIB) $(LIBS) 
+#	$(MPI_CXX) -o gen5 -DGEN_CODE -DYAO5 $(CXX_CFLAGS) $^ -I. $(OBJECTS_MIRACL) $(MIRACL_PATH) $(MIRACL_LIB) $(LIBS)
+
+betteryao5: $(MAINS5) $(OBJS) $(GARBLES) $(MACROS)
+	$(MPI_CXX) -o evl5 -DEVL_CODE -DYAO5 $(CXX_CFLAGS) $^ $(LIBS) 
+	$(MPI_CXX) -o gen5 -DGEN_CODE -DYAO5 $(CXX_CFLAGS) $^ $(LIBS)
 
 pcflib: pcflib.o
 	gcc -shared -fPIC pcflib.o -o pcflib.so
@@ -107,14 +111,14 @@ server : ipserver.cpp Bytes.o Env.o NetIO.o
 GarbledCircuit.o: Aes.h Bytes.h Env.h Prng.h GarbledCircuit.h GarbledCircuit.cpp
 	$(MPI_CXX) -msse2 $(CXX_CFLAGS) -c GarbledCircuit.cpp
 
-Env.o : Bytes.h ClawFree.h NetIO.h Env.h Env.cpp #Circuit.h  Algebra.h 
+Env.o : Algebra.h Bytes.h ClawFree.h NetIO.h Env.h Env.cpp  #Circuit.h   
 	$(CXX) $(CXX_CFLAGS) -c Env.cpp 
 
 NetIO.o : Bytes.h NetIO.h NetIO.cpp
 	$(CXX) $(CXX_CFLAGS) -c NetIO.cpp
 
-#Algebra.o: Bytes.h Prng.h Algebra.h Algebra.cpp
-#	$(CXX) $(CXX_CFLAGS) -c Algebra.cpp
+Algebra.o: Bytes.h Prng.h Algebra.h Algebra.cpp
+	$(CXX) $(CXX_CFLAGS) -c Algebra.cpp
 
 #Circuit.o : Bytes.h Circuit.h Circuit.cpp
 #	$(CXX) $(CXX_CFLAGS) -c Circuit.cpp
