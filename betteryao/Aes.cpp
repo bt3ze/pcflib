@@ -27,8 +27,6 @@
 void KDF128(uint8_t *out, const uint8_t * in, const AES_KEY_J * key){
   // TODO: this needs to be made such that it is actually
   // a fixed key AES permutation
-  // this is just for testing purposes
-  //  KDF128(in, out, in);
   AES_encrypt(in, out, key);
 }
 
@@ -36,6 +34,7 @@ void KDF128(uint8_t *out, const uint8_t * in, const AES_KEY_J * key){
 // WE SHOULDN'T BE USING KDF256 IF AES_NI IS AVAILABLE (OR REALLY AT ALL)
 // but it is here nonetheless for completeness
 // TODO: might want to generate a KDF256 version as above
+/*
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 
@@ -47,34 +46,47 @@ void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key)
 	SHA256_Update(&sha256, key, 32);
 	SHA256_Final(out, &sha256);
 }
+*/
 
 
-/*
+#ifdef __CPLUSPLUS
+extern "C"
+{
+#endif
+
+
+
+#include <openssl/aes.h>
+
 // these functions didn't actually have support
 // they are left over from an old version of PCF
-void KDF128(const uint8_t *in, uint8_t *out, const uint8_t *key)
-{
-    ALIGN16 uint8_t KEY[16*11];
-    ALIGN16 uint8_t PLAINTEXT[64];
-    ALIGN16 uint8_t CIPHERTEXT[64];
+// KDF256 might be useful, (but not with key derivation
+// according to Bellare/JustGarble) so we might think
+// about reimplementing it
 
-    AES_128_Key_Expansion(key, KEY);
-    _mm_storeu_si128(&((__m128i*)PLAINTEXT)[0],*(__m128i*)in);
-    AES_ECB_encrypt(PLAINTEXT, CIPHERTEXT, 64, KEY, 10);
-    _mm_storeu_si128((__m128i*)out,((__m128i*)CIPHERTEXT)[0]);
-}
+//void KDF128(const uint8_t *in, uint8_t *out, const uint8_t *key)
+//{
+//    ALIGN16 uint8_t KEY[16*11];
+//    ALIGN16 uint8_t PLAINTEXT[64];
+//    ALIGN16 uint8_t CIPHERTEXT[64];
+//
+//    AES_128_Key_Expansion(key, KEY);
+//    _mm_storeu_si128(&((__m128i*)PLAINTEXT)[0],*(__m128i*)in);
+//    AES_ECB_encrypt(PLAINTEXT, CIPHERTEXT, 64, KEY, 10);
+//    _mm_storeu_si128((__m128i*)out,((__m128i*)CIPHERTEXT)[0]);
+//}
 
-void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key)
-{
-    ALIGN16 uint8_t KEY[16*15];
-    ALIGN16 uint8_t PLAINTEXT[64];
-    ALIGN16 uint8_t CIPHERTEXT[64];
-    AES_256_Key_Expansion(key, KEY);
-    _mm_storeu_si128(&((__m128i*)PLAINTEXT)[0],*(__m128i*)in);
-    AES_ECB_encrypt(PLAINTEXT, CIPHERTEXT, 64, KEY, 14);
-    _mm_storeu_si128((__m128i*)out,((__m128i*)CIPHERTEXT)[0]);
-}
-*/
+//void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key)
+//{
+//    ALIGN16 uint8_t KEY[16*15];
+//    ALIGN16 uint8_t PLAINTEXT[64];
+//    ALIGN16 uint8_t CIPHERTEXT[64];
+//    AES_256_Key_Expansion(key, KEY);
+//    _mm_storeu_si128(&((__m128i*)PLAINTEXT)[0],*(__m128i*)in);
+//    AES_ECB_encrypt(PLAINTEXT, CIPHERTEXT, 64, KEY, 14);
+//    _mm_storeu_si128((__m128i*)out,((__m128i*)CIPHERTEXT)[0]);
+//}
+
 
 // the following functions are copied from the JustGarble project
 /*
@@ -94,10 +106,6 @@ void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key)
     along with JustGarble.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifdef __CPLUSPLUS
-extern "C"
-{
-#endif
 
 #define ROUNDS(ctx) ((ctx)->rounds)
 
@@ -341,28 +349,3 @@ void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key)
 }
 #endif
 
-
-// the following two functions are obsolete
-/*
-Bytes KDF128(const Bytes &msg, const Bytes &key)
-{
-	assert(msg.size() == 16);
-	assert(key.size() == 16);
-
-	static Bytes out(32);
-        //        Bytes out(32); -- because why should this be static?
-        KDF128(&msg[0], &out[0], &key[0]);
-	return out;
-}
-
-Bytes KDF256(const Bytes &msg, const Bytes &key)
-{
-	assert(msg.size() == 16);
-	assert(key.size() == 32);
-
-	static Bytes out(32);
-        //Bytes out(32); -- because why should this be static?
-        KDF256(&msg[0], &out[0], &key[0]);
-	return out;
-}
-*/

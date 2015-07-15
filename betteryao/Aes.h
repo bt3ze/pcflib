@@ -62,6 +62,7 @@
 
 #include <xmmintrin.h>              /* SSE instructions and _mm_malloc */
 #include <emmintrin.h>              /* SSE2 instructions               */
+#include <openssl/aes.h>
 
 #include "Bytes.h"
 
@@ -71,18 +72,11 @@ typedef __m128i block;
     
 typedef struct { __m128i rd_key[15]; int rounds; } AES_KEY_J;
 
-//void KDF128_Fixed_Key(const uint8_t *in, uint8_t * out);
-//AES
+//AES (fixed key)
 void KDF128(uint8_t *out, const uint8_t * in, const AES_KEY_J * key);
 
-// obsolete
-//Bytes KDF128(const Bytes &in, const Bytes &key);
-//Bytes KDF256(const Bytes &in, const Bytes &key);
-
-//void KDF128(const uint8_t *in, uint8_t *out, const uint8_t *key);
-
-//SHA
-void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key);
+// SHA (TODO: reimplement (perhaps))
+// void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key);
 
 #ifdef __CPLUSPLUS
 extern "C"
@@ -90,29 +84,29 @@ extern "C"
 #endif
 
   // old KSS AES encryption code
-  // these functions were not actually supported
-  // no one ever turned the AESNI flag on (with aes support)
-//void AES_128_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
+  //void AES_128_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
   //void AES_192_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
   //void AES_256_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
-
   //void AES_ECB_decrypt (const uint8_t *in, uint8_t *out, unsigned long length, const uint8_t *KS, int nr);
   //void AES_ECB_encrypt (const uint8_t *in, uint8_t *out, unsigned long length, const uint8_t *KS, int nr);
 
 
-void AES_128_fixed_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
-void AES_192_fixed_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
-void AES_256_fixed_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
+  // encryption functions (copied from JustGarble encryption)
+  void AES_128_fixed_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
+  void AES_192_fixed_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
+  void AES_256_fixed_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
 
+  
+  int AES_set_encrypt_key(const unsigned char *userKey, const int bits, AES_KEY_J *key);
+  void AES_encrypt(const unsigned char *in, unsigned char *out, const AES_KEY_J *key);
 
-int AES_set_encrypt_key(const unsigned char *userKey, const int bits, AES_KEY_J *key);
-void AES_set_decrypt_key_fast(AES_KEY_J *dkey, const AES_KEY_J *ekey);
-int AES_set_decrypt_key(const unsigned char *userKey, const int bits, AES_KEY_J *key);
-
-void AES_encrypt(const unsigned char *in, unsigned char *out, const AES_KEY_J *key);
-void AES_decrypt(const unsigned char *in, unsigned char *out, const AES_KEY_J *key);
-void AES_ecb_encrypt_blks(block *blks, unsigned nblks, AES_KEY_J *key);
-void AES_ecb_decrypt_blks(block *blks, unsigned nblks, AES_KEY_J *key);
+  // the rest are included for posterity
+  void AES_set_decrypt_key_fast(AES_KEY_J *dkey, const AES_KEY_J *ekey);
+  int AES_set_decrypt_key(const unsigned char *userKey, const int bits, AES_KEY_J *key);
+  
+  void AES_decrypt(const unsigned char *in, unsigned char *out, const AES_KEY_J *key);
+  void AES_ecb_encrypt_blks(block *blks, unsigned nblks, AES_KEY_J *key);
+  void AES_ecb_decrypt_blks(block *blks, unsigned nblks, AES_KEY_J *key);
 
 #ifdef __CPLUSPLUS
 };
