@@ -109,7 +109,7 @@ server : ipserver.cpp Bytes.o Env.o NetIO.o
 	$(CXX) -pthread -o server $(CXX_CFLAGS) $(CXX_LFLAGS) $^ $(LIBS)
 
 GarbledCircuit.o: Aes.h Bytes.h Env.h Prng.h GarbledCircuit.h GarbledCircuit.cpp
-	$(MPI_CXX) -msse2 -maes $(CXX_CFLAGS) -c GarbledCircuit.cpp
+	$(MPI_CXX) -msse2 -maes -DAES_NI $(CXX_CFLAGS) -c GarbledCircuit.cpp
 
 Env.o : Algebra.h Bytes.h ClawFree.h NetIO.h Env.h Env.cpp  #Circuit.h   
 	$(CXX) $(CXX_CFLAGS) -c Env.cpp 

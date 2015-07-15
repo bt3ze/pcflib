@@ -32,6 +32,8 @@ void KDF128(uint8_t *out, const uint8_t * in, const AES_KEY_J * key){
   AES_encrypt(in, out, key);
 }
 
+/*
+  // WE SHOULDN'T BE USING KDF256 IF AES_NI IS AVAILABLE (OR REALLY AT ALL)
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 
@@ -43,7 +45,7 @@ void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key)
 	SHA256_Update(&sha256, key, 32);
 	SHA256_Final(out, &sha256);
 }
-
+*/
 
 /*
 //these functions didn't actually have support
