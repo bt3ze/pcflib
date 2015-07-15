@@ -32,8 +32,10 @@ void KDF128(uint8_t *out, const uint8_t * in, const AES_KEY_J * key){
   AES_encrypt(in, out, key);
 }
 
-/*
-  // WE SHOULDN'T BE USING KDF256 IF AES_NI IS AVAILABLE (OR REALLY AT ALL)
+
+// WE SHOULDN'T BE USING KDF256 IF AES_NI IS AVAILABLE (OR REALLY AT ALL)
+// but it is here nonetheless for completeness
+// TODO: might want to generate a KDF256 version as above
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 
@@ -45,10 +47,11 @@ void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key)
 	SHA256_Update(&sha256, key, 32);
 	SHA256_Final(out, &sha256);
 }
-*/
+
 
 /*
-//these functions didn't actually have support
+// these functions didn't actually have support
+// they are left over from an old version of PCF
 void KDF128(const uint8_t *in, uint8_t *out, const uint8_t *key)
 {
     ALIGN16 uint8_t KEY[16*11];
@@ -60,8 +63,7 @@ void KDF128(const uint8_t *in, uint8_t *out, const uint8_t *key)
     AES_ECB_encrypt(PLAINTEXT, CIPHERTEXT, 64, KEY, 10);
     _mm_storeu_si128((__m128i*)out,((__m128i*)CIPHERTEXT)[0]);
 }
-*/
-/*
+
 void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key)
 {
     ALIGN16 uint8_t KEY[16*15];

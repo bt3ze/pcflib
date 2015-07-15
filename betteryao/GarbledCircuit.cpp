@@ -690,7 +690,7 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
       
 
       // now run the key derivation function using the keys and the gate index
-#ifndef AES_NI
+#ifndef AESNI
 // THIS IS THE OLD KDF, REPLACED WITH THE NEW FASTER ONE
       KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);     
       // clear extra bits at the front
@@ -753,7 +753,7 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
       aes_key[0] = _mm_xor_si128(aes_key[0], m_R);
       
       // and run through the KDF
-#ifndef AES_NI
+#ifndef AESNI
 // THIS IS THE OLD KDF, REPLACED WITH THE NEW FASTER ONE
       KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);     
       // clear extra bits at the front
@@ -778,7 +778,7 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
       aes_key[0] = _mm_xor_si128(aes_key[0], m_R);
       aes_key[1] = _mm_xor_si128(aes_key[1], m_R);
     
-#ifndef AES_NI
+#ifndef AESNI
 // THIS IS THE OLD KDF, REPLACED WITH THE NEW FASTER ONE
       KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);     
       // clear extra bits at the front
@@ -800,7 +800,7 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
       // encrypt the 3rd entry : (X[1-x], Y[1-y])
       aes_key[0] = _mm_xor_si128(aes_key[0], m_R);
       
-#ifndef AES_NI
+#ifndef AESNI
       // THIS IS THE OLD KDF, REPLACED WITH THE NEW FASTER ONE
       KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
       // clear extra bits at the front
@@ -877,7 +877,7 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
     //print128_num(aes_key[1]);
     
 
-#ifndef AES_NI
+#ifndef AESNI
 // THIS IS THE OLD KDF, REPLACED WITH THE NEW FASTER ONE
       KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);     
       // clear extra bits at the front

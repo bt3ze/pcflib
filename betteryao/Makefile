@@ -1,28 +1,28 @@
-CXX_CFLAGS = -I$(HOME)/lccyao2/pcflib/ -I$(HOME)/include/ -I$(HOME)/local/include -g -L $(HOME)/lib -L$(HOME)/local/lib -Wno-deprecated -D__STDC_LIMIT_MACROS -DFREE_XOR -DRAND_SEED -DGRR  -D_BETTERYAO -DBETTERYAO -O0
+CXX_CFLAGS = -I$(HOME)/lccyao2/pcflib/ -I$(HOME)/include/ -I$(HOME)/local/include -g -L $(HOME)/lib -L$(HOME)/local/lib -Wno-deprecated -D__STDC_LIMIT_MACROS -DFREE_XOR -DRAND_SEED -DGRR  -D_BETTERYAO -DBETTERYAO -O0  -maes -march=native
 CXX        = g++
 MPI_CXX    = mpicxx
 CC = cc
-LIBS       =  -maes -lpbc -lgmp -lcrypto -llog4cxx -lpthread -lgmpxx #-march=native
+LIBS       =  -lpbc -lgmp -lcrypto -llog4cxx -lpthread -lgmpxx 
+AESNI = -DAESNI #turn this flag on/off for encryption modes
 HEADERS    =  Algebra.h Aes.h Bytes.h Env.h NetIO.h Prng.h Commitment.h \
-	 #   Circuit.h 	GarbledBase.h GarbledHBC.h GarbledMal.h   ClawFree.h  garbled_circuit.h garbled_circuit_hbc.h garbled_circuit_m.h
+	 #   Circuit.h ClawFree.h  
 OBJS       =  Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o Commitment.o 
-OLDGARB	   = garbled_circuit.o garbled_circuit_hbc.o garbled_circuit_m.o  # Circuit.o GarbledCct3.o
-GARBLES    = GarbledCircuit.o #GarbledBase.o GarbledHBC.o GarbledMal.o 
+OLDGARB	   = garbled_circuit.o garbled_circuit_hbc.o garbled_circuit_m.o  # 
+GARBLES    = GarbledCircuit.o # 
 OTEXTENSION = ot-ot.o otextension.o
 OT-UTILS =  parse_options.o cbitvector.o
 OT-CRYPTO = crypto.o ecc-pk-crypto.o gmp-pk-crypto.o
 OT-ALSZ =  alsz-ot-ext-rec.o alsz-ot-ext-snd.o ot-ext-rec.o ot-ext-snd.o simpleot.o ot-ext.o 
 OTX = otextension.o
 #OT-OBJS = cbitvector.o crypto.o ecc-pk-crypto.o gmp-pk-crypto.o
+
 MAINS      = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp
 SPLITMAINS = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp splityao/BetterYao5.cpp splityao/BetterYaoEvl.cpp splityao/BetterYaoGen.cpp 
 MAINS5   = protocol.cpp YaoBase.cpp BetterYao5.cpp
 MACROS    = macros.cpp
 OTE = OTExtension
 OTOT = OTExtension/ot
-#OT-UTIL = OTExtension/util
-#OT-CRYPTO = OTExtension/util/crypto
-#OT-OT = OTExtension/ot
+
 OBJECTS_MIRACL= $(OTE)/util/Miracl/*.o
 MIRACL_PATH= -I$(OTE)/util/Miracl
 MIRACL_LIB = -lpthread $(OTE)/util/Miracl/miracl.a -lssl
@@ -109,7 +109,7 @@ server : ipserver.cpp Bytes.o Env.o NetIO.o
 	$(CXX) -pthread -o server $(CXX_CFLAGS) $(CXX_LFLAGS) $^ $(LIBS)
 
 GarbledCircuit.o: Aes.h Bytes.h Env.h Prng.h GarbledCircuit.h GarbledCircuit.cpp
-	$(MPI_CXX) -msse2 -maes -DAES_NI $(CXX_CFLAGS) -c GarbledCircuit.cpp
+	$(MPI_CXX) -msse2 -maes $(AESNI) $(CXX_CFLAGS) -c GarbledCircuit.cpp
 
 Env.o : Algebra.h Bytes.h ClawFree.h NetIO.h Env.h Env.cpp  #Circuit.h   
 	$(CXX) $(CXX_CFLAGS) -c Env.cpp 
@@ -127,7 +127,7 @@ Prng.o: Bytes.h Prng.h Prng.cpp
 	$(CXX) $(CXX_CFLAGS) -c Prng.cpp
 
 Aes.o: Bytes.h Aes.h Aes.cpp
-	$(CXX) $(CXX_CFLAGS) -c -DAESNI Aes.cpp -lm -lrt -lpthread -maes -msse4 -march=native
+	$(CXX) $(CXX_CFLAGS) -c $(AESNI) Aes.cpp -lm -lrt -lpthread -maes -msse4 -march=native
 
 Bytes.o: Bytes.h Hash.h Bytes.cpp
 	$(CXX) $(CXX_CFLAGS) -c Bytes.cpp
