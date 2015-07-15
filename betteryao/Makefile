@@ -127,7 +127,7 @@ Prng.o: Bytes.h Prng.h Prng.cpp
 	$(CXX) $(CXX_CFLAGS) -c Prng.cpp
 
 Aes.o: Bytes.h Aes.h Aes.cpp
-	$(CXX) $(CXX_CFLAGS) -DAESNI -c Aes.cpp -lm -lrt -lpthread -maes -msse4 -march=native
+	$(CXX) $(CXX_CFLAGS) -c -DAESNI Aes.cpp -lm -lrt -lpthread -maes -msse4 -march=native
 
 Bytes.o: Bytes.h Hash.h Bytes.cpp
 	$(CXX) $(CXX_CFLAGS) -c Bytes.cpp

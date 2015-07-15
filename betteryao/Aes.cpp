@@ -108,7 +108,7 @@ extern "C"
 
 
 
-void AES_128_Key_Expansion(const unsigned char *userkey, void *key) {
+void AES_128_native_Key_Expansion(const unsigned char *userkey, void *key) {
 	__m128i x0, x1, x2;
 	__m128i *kp = (__m128i *) key;
 	kp[0] = x0 = _mm_loadu_si128((__m128i *) userkey);
@@ -136,7 +136,7 @@ void AES_128_Key_Expansion(const unsigned char *userkey, void *key) {
 }
 
 
-void AES_192_Key_Expansion(const unsigned char *userkey, void *key) {
+void AES_192_native_Key_Expansion(const unsigned char *userkey, void *key) {
 	__m128i x0, x1, x2, x3, tmp, *kp = (__m128i *) key;
 	kp[0] = x0 = _mm_loadu_si128((__m128i *) userkey);
 	tmp = x3 = _mm_loadu_si128((__m128i *) (userkey + 16));
@@ -147,7 +147,7 @@ void AES_192_Key_Expansion(const unsigned char *userkey, void *key) {
 	EXPAND192_STEP(10, 64);
 }
 
-void AES_256_Key_Expansion(const unsigned char *userkey, void *key) {
+void AES_256_native_Key_Expansion(const unsigned char *userkey, void *key) {
 	__m128i x0, x1, x2, x3, *kp = (__m128i *) key;
 	kp[0] = x0 = _mm_loadu_si128((__m128i *) userkey);
 	kp[1] = x3 = _mm_loadu_si128((__m128i *) (userkey + 16));
@@ -184,11 +184,11 @@ void AES_256_Key_Expansion(const unsigned char *userkey, void *key) {
 
 int AES_set_encrypt_key (const unsigned char *userKey, const int bits, AES_KEY_J *key){
 	if (bits == 128) {
-	  AES_128_Key_Expansion(userKey, key);
+	  AES_128_native_Key_Expansion(userKey, key);
 	} else if (bits == 192) {
-	  AES_192_Key_Expansion(userKey, key);
+	  AES_192_native_Key_Expansion(userKey, key);
 	} else if (bits == 256) {
-	  AES_256_Key_Expansion(userKey, key);
+	  AES_256_native_Key_Expansion(userKey, key);
 	}
 #if (OCB_KEY_LEN == 0)
 	key->rounds = 6 + bits / 32;
