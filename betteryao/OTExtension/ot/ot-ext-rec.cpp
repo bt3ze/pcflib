@@ -8,17 +8,24 @@
 
 BOOL OTExtRec::receive(uint64_t numOTs, uint64_t bitlength, CBitVector& choices, CBitVector& ret,
 		snd_ot_flavor stype, rec_ot_flavor rtype, uint32_t numThreads, MaskingFunction* unmaskfct) {
+  fprintf(stdout,"receive?\n");
 	m_nOTs = numOTs;
+
+        fprintf(stdout,"num OTS\n");
 	m_nBitLength = bitlength;
+        fprintf(stdout,"bitlength\n");
 	m_vChoices = choices;
+        fprintf(stdout,"after choices");
 	m_vRet = ret;
 	m_eSndOTFlav = stype;
 	m_eRecOTFlav = rtype;
 	m_fMaskFct = unmaskfct;
 
+        fprintf(stdout,"start receive\n");
+
 	return start_receive(numThreads);
 }
-;
+
 
 //Initialize and start numThreads OTSenderThread
 BOOL OTExtRec::start_receive(uint32_t numThreads) {
@@ -29,6 +36,8 @@ BOOL OTExtRec::start_receive(uint32_t numThreads) {
 		cerr << "Decreasing nthreads from " << numThreads << " to " << m_nOTs / m_nBlockSizeBits << " to fit window size" << endl;
 		numThreads = m_nOTs / m_nBlockSizeBits;
 	}
+
+        fprintf(stdout,"started receive\n");
 
 	//The total number of OTs that is performed has to be a multiple of numThreads*Z_REGISTER_BITS
 	uint64_t wd_size_bits = m_nBlockSizeBits;//1 << (ceil_log2(m_nBaseOTs));

@@ -32,7 +32,7 @@ public:
 		BOOL success = false;
 		BOOL bOptVal = true;
 		int bOptLen = sizeof(BOOL);
-
+                fprintf(stdout,"Socket()\n");
 #ifdef WIN32
 		static BOOL s_bInit = FALSE;
 
@@ -47,7 +47,7 @@ public:
 #endif
 
 		Close();
-
+                fprintf(stdout,"try h sock:\n");
 		success = (m_hSock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) != INVALID_SOCKET;
 
 		return success;
@@ -55,6 +55,7 @@ public:
 	}
 
 	void Close() {
+          fprintf(stdout,"socket close!\n");
 		if (m_hSock == INVALID_SOCKET)
 			return;
 

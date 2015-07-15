@@ -44,7 +44,7 @@ YaoBase::YaoBase(EnvParams &params)
 	EVL_BEGIN
 		LOG4CXX_INFO(logger, "EVL (" << Env::group_rank() << ") is at " << get_IP());
 	EVL_END
-
+xo
 	GEN_BEGIN
 		LOG4CXX_INFO(logger, "GEN (" << Env::group_rank() << ") is at " << get_IP());
 	GEN_END

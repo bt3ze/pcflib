@@ -19,9 +19,9 @@ BOOL OT_Cleanup()
   //	delete rcvthread;
 
   //cout << "Cleaning" << endl;
-  //	delete m_vSocket;
-	//cout << "done" << endl;
-	return true;
+  //  delete m_vSocket;
+  //cout << "done" << endl;
+  return true;
 }
 
 
@@ -30,46 +30,52 @@ BOOL OT_Connect(const char* m_nAddr, USHORT m_nPort, CSocket* m_vSocket)
 	bool bFail = FALSE;
 	uint64_t lTO = CONNECT_TIMEO_MILISEC;
 
+        fprintf(stdout,"Connecting to party: %s : %x \n", m_nAddr, m_nPort);
 #ifndef BATCH
 	//cout << "Connecting to party "<< !m_nPID << ": " << m_nAddr << ", " << m_nPort << endl;
 #endif
 	for(int k = 0; k >= 0 ; k--)
 	{
+          fprintf(stdout, "connect? %x\n",k);
 		for( int i=0; i<RETRY_CONNECT; i++ )
 		{
-			if( !m_vSocket->Socket() )
-			{	
-				printf("Socket failure: ");
-				goto connect_failure; 
-			}
-			
-			if( m_vSocket->Connect( m_nAddr, m_nPort, lTO))
-			{
-				// send pid when connected
-				m_vSocket->Send( &k, sizeof(int) );
-		#ifndef BATCH
-				//cout << " (" << !m_nPID << ") (" << k << ") connected" << endl;
-		#endif
-				if(k == 0) 
-				{
-					//cout << "connected" << endl;
-					return TRUE;
-				}
-				else
-				{
-					break;
-				}
-				SleepMiliSec(10);
-				m_vSocket->Close();
-			}
-			SleepMiliSec(20);
-			if(i+1 == RETRY_CONNECT)
-				goto server_not_available;
+                  fprintf(stdout,"check 1\n");
+                  if( !m_vSocket->Socket() )
+                    {	
+                      printf("Socket failure: ");
+                      goto connect_failure; 
+                    }
+                  
+                  fprintf(stdout,"check 2\n");
+                  if( m_vSocket->Connect( m_nAddr, m_nPort, lTO))
+                    {
+                      fprintf(stdout,"Send: \n");
+                      // send pid when connected
+                      m_vSocket->Send( &k, sizeof(int) );
+#ifndef BATCH
+                      //cout << " (" << !m_nPID << ") (" << k << ") connected" << endl;
+#endif
+                      if(k == 0) 
+                        {
+                          //cout << "connected" << endl;
+                          return TRUE;
+                        }
+                      else
+                        {
+                          break;
+                        }
+                      SleepMiliSec(10);
+                      m_vSocket->Close();
+                    }
+                  fprintf(stdout,"done check\n");
+                  SleepMiliSec(20);
+                  if(i+1 == RETRY_CONNECT)
+                    goto server_not_available;
 		}
 	}
-server_not_available:
+ server_not_available:
 	printf("Server not available: ");
-connect_failure:
+ connect_failure:
 	//cout << " (" << !m_nPID << ") connection failed" << endl;
 	return FALSE;
 }
@@ -78,6 +84,7 @@ connect_failure:
 
 BOOL OT_Listen(const char* m_nAddr, USHORT m_nPort, CSocket * m_vSocket)
 {
+  fprintf(stdout,"Listening %s : %x\n", m_nAddr, m_nPort);
 #ifndef BATCH
 	cout << "Listening: " << m_nAddr << ":" << m_nPort << ", with size: " << m_nNumOTThreads << endl;
 #endif
@@ -133,6 +140,9 @@ listen_failure:
 
 void InitOTSender(const char* address, int port, crypto* crypt, OTExtSnd * sender, bool m_bUseMinEntCorAssumption, uint32_t m_nBaseOTs, uint32_t m_nChecks, field_type m_eFType, CSocket * m_vSocket)
 {
+
+  fprintf(stdout,"Init OT Sender\n");
+
 	int nSndVals = 2;
 #ifdef OTTiming
 	timeval np_begin, np_end;
@@ -141,11 +151,14 @@ void InitOTSender(const char* address, int port, crypto* crypt, OTExtSnd * sende
 	const char * m_nAddr = address;
 
         //Initialize values
-	OT_Init(crypt, m_vSocket);
+	//OT_Init(crypt, m_vSocket);
 	
+        fprintf(stdout,"initialized");
+        
 	//Server listen
 	OT_Listen(m_nAddr, m_nPort, m_vSocket);
-
+        fprintf(stdout,"Listened\n");
+        
 	SndThread* sndthread = new SndThread(m_vSocket);
 	RcvThread* rcvthread = new RcvThread(m_vSocket);
 
@@ -168,20 +181,28 @@ void InitOTSender(const char* address, int port, crypto* crypt, OTExtSnd * sende
 
 void InitOTReceiver(const char* address, int port, crypto* crypt, OTExtRec * receiver, bool m_bUseMinEntCorAssumption, uint32_t m_nBaseOTs, uint32_t m_nChecks, field_type m_eFType, CSocket * m_vSocket)
 {
+  fprintf(stdout,"Init OT Receiver\n");
+
 	int nSndVals = 2;
 
 	USHORT m_nPort = (USHORT) port;
 	const char* m_nAddr = address;
-
+        
+        fprintf(stdout,"Receiver OT Init\n");
         //Initialize values
-	OT_Init(crypt, m_vSocket);
+	//OT_Init(crypt, m_vSocket);
 	
+        
+        fprintf(stdout,"Receiver OT Connect\n");
 	//Client connect
 	OT_Connect(m_nAddr, m_nPort, m_vSocket);
 
+
+        fprintf(stdout,"Receiver new threads.\n");
 	SndThread* sndthread = new SndThread(m_vSocket);
 	RcvThread* rcvthread = new RcvThread(m_vSocket);
 	
+        fprintf(stdout,"Receiver begin threads\n");
 	rcvthread->Start();
 	sndthread->Start();
 
@@ -190,11 +211,14 @@ void InitOTReceiver(const char* address, int port, crypto* crypt, OTExtRec * rec
 	//	case IKNP: receiver = new IKNPOTExtRec(nSndVals, crypt, rcvthread, sndthread); break;
 	//	case NNOB: receiver = new NNOBOTExtRec(nSndVals, crypt, rcvthread, sndthread); break;
 	//	default:
+
+        fprintf(stdout,"Receiver new ALSZ\n");
         receiver = new ALSZOTExtRec(nSndVals, crypt, rcvthread, sndthread, m_nBaseOTs, m_nChecks);
         //break;
 	//}
 
 
+        fprintf(stdout,"Receiver compute base OTs.\n");
 	if(m_bUseMinEntCorAssumption)
 		receiver->EnableMinEntCorrRobustness();
 	receiver->ComputeBaseOTs(m_eFType);
@@ -206,17 +230,23 @@ BOOL ObliviouslySend(CBitVector& X1, CBitVector& X2, int numOTs, int bitlength,
 {
 	bool success = FALSE;
 
+        fprintf(stdout,"Obliviously Send\n");
+
 	m_vSocket->reset_bytes_sent();
 	m_vSocket->reset_bytes_received();
 	int nSndVals = 2; //Perform 1-out-of-2 OT
 	timeval ot_begin, ot_end;
 
+        fprintf(stdout,"after reset");
 	
 	gettimeofday(&ot_begin, NULL);
+        fprintf(stdout,"execute send!\n");
 	// Execute OT sender routine 	
 	success = sender->send((uint32_t) numOTs, (uint32_t) bitlength, X1, X2, stype, rtype, m_nNumOTThreads, m_fMaskFct);
 	gettimeofday(&ot_end, NULL);
 
+        fprintf(stdout,"sent?\n");
+        
 #ifndef BATCH
 	printf("Time spent:\t%f\n", getMillies(ot_begin, ot_end) + rndgentime);
 	cout << "Sent:\t\t" << m_vSocket->get_bytes_sent() << " bytes" << endl;
@@ -231,17 +261,23 @@ BOOL ObliviouslySend(CBitVector& X1, CBitVector& X2, int numOTs, int bitlength,
 
 BOOL ObliviouslyReceive(CBitVector& choices, CBitVector& ret, int numOTs, int bitlength,snd_ot_flavor stype, rec_ot_flavor rtype, crypto* crypt, OTExtRec * receiver, uint32_t m_nNumOTThreads, CSocket * m_vSocket,  MaskingFunction * m_fMaskFct)
 {
-	bool success = FALSE;
+  fprintf(stdout,"Obliviously Receive\n");
 
-	m_vSocket->reset_bytes_sent();
-	m_vSocket->reset_bytes_received();
+  bool success = FALSE;
+  
+  m_vSocket->reset_bytes_sent();
+  m_vSocket->reset_bytes_received();
 
+  fprintf(stdout,"after reset\n");
 
-	timeval ot_begin, ot_end;
-	gettimeofday(&ot_begin, NULL);
-	// Execute OT receiver routine 	
-	success = receiver->receive(numOTs, bitlength, choices, ret, stype, rtype, m_nNumOTThreads, m_fMaskFct);
-	gettimeofday(&ot_end, NULL);
+  timeval ot_begin, ot_end;
+  gettimeofday(&ot_begin, NULL);
+  fprintf(stdout,"execute receive!\n");
+  // Execute OT receiver routine 	
+  success = receiver->receive(numOTs, bitlength, choices, ret, stype, rtype, m_nNumOTThreads, m_fMaskFct);
+  gettimeofday(&ot_end, NULL);
+
+  fprintf(stdout,"received?");
 
 #ifndef BATCH
 	printf("Time spent:\t%f\n", getMillies(ot_begin, ot_end) + rndgentime);
@@ -263,7 +299,7 @@ void OT_alsz_send(const char* addr, unsigned short port, uint64_t numOTs, uint32
   rec_ot_flavor rtype = Rec_OT;
 
   OTExtSnd *sender;
-  CSocket * m_vSocket;
+  CSocket * m_vSocket = new CSocket();
 	
 
   uint32_t m_nBaseOTs = 10;
@@ -285,8 +321,13 @@ void OT_alsz_send(const char* addr, unsigned short port, uint64_t numOTs, uint32
   // now, initialize the sender
   //  InitOTSender(addr->c_str(), port, crypt);
   // addr is already a char*
-  InitOTSender(addr, port, crypt, sender, m_bUseMinEntCorAssumption, m_nBaseOTs, m_nChecks, m_eFType, m_vSocket);
+  //InitOTSender(addr, port, crypt, sender, m_bUseMinEntCorAssumption, m_nBaseOTs, m_nChecks, m_eFType, m_vSocket);
+  string * newaddr = new string("127.0.0.1");
+  port = 7766;
+  InitOTSender(newaddr->c_str(), port, crypt, sender, m_bUseMinEntCorAssumption, m_nBaseOTs, m_nChecks, m_eFType, m_vSocket);
+  //  InitOTSender(addr, port, crypt, sender, m_bUseMinEntCorAssumption, m_nBaseOTs, m_nChecks, m_eFType, m_vSocket);
   
+
   CBitVector delta, X1, X2;
 
 
@@ -298,13 +339,13 @@ void OT_alsz_send(const char* addr, unsigned short port, uint64_t numOTs, uint32
   delta.Create(numOTs, bitlength, crypt);
   
   //Create X1 and X2 as two arrays with "numOTs" entries of "bitlength" bit-values and resets them to 0
-  //X1.Create(numOTs, bitlength, crypt);
-  //X2.Create(numOTs, bitlength, crypt);
+  X1.Create(numOTs, bitlength, crypt);
+  X2.Create(numOTs, bitlength, crypt);
   // 
-  X1.Create(numOTs, bitlength);
-  X2.Create(numOTs, bitlength);
-  X1.Copy(send_vals1);
-  X2.Copy(send_vals2);
+  //X1.Create(numOTs, bitlength);
+  //X2.Create(numOTs, bitlength);
+  //X1.Copy(send_vals1);
+  //X2.Copy(send_vals2);
 
 
 
@@ -325,13 +366,14 @@ void OT_alsz_send(const char* addr, unsigned short port, uint64_t numOTs, uint32
 
 void OT_alsz_recv(const char* addr, unsigned short port, uint64_t numOTs, uint32_t bitlength, uint32_t sec_param, Bytes select_bits, std::vector<Bytes> & result_bytes){
 
+  fprintf(stdout,"OT Receive!\n");
+
   snd_ot_flavor stype = Snd_OT;
   rec_ot_flavor rtype = Rec_OT;
-
+  
   OTExtRec *receiver;
-  CSocket * m_vSocket;
-	
-
+  CSocket * m_vSocket = new CSocket();
+  
   uint32_t m_nBaseOTs = 10;
   uint32_t m_nChecks = 10;
   
@@ -348,9 +390,13 @@ void OT_alsz_recv(const char* addr, unsigned short port, uint64_t numOTs, uint32
   crypto *crypt = new crypto(sec_param, (uint8_t*) m_cConstSeed[0]);
 
   //  InitOTReceiver(addr->c_str(), port, crypt);
-  InitOTReceiver(addr, port, crypt, receiver, m_bUseMinEntCorAssumption, m_nBaseOTs, m_nChecks, m_eFType, m_vSocket);
+  string * newaddr = new string("127.0.0.1");
+  port = 7766;
+  InitOTReceiver(newaddr->c_str(), port, crypt, receiver, m_bUseMinEntCorAssumption, m_nBaseOTs, m_nChecks, m_eFType, m_vSocket);
+  //  InitOTReceiver(addr, port, crypt, receiver, m_bUseMinEntCorAssumption, m_nBaseOTs, m_nChecks, m_eFType, m_vSocket);
   
-
+  
+  
   CBitVector choices, response;
   
   //The masking function with which the values that are sent in the last communication step are processed

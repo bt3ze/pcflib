@@ -29,6 +29,24 @@ BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
 // old start function
 void BetterYao5::start()
 {
+
+  if(Env::group_rank()==0){
+    fprintf(stdout,"trying to OT\n");
+    GEN_BEGIN
+    std::vector<Bytes> tst;
+    tst.resize(2,Bytes(0));
+    ot_send(tst);
+    GEN_END
+
+    EVL_BEGIN
+      Bytes b = Bytes(0);
+     std::vector<Bytes> rc;
+     rc.resize(2,Bytes(0));
+      ot_receive(b,rc);
+      EVL_END
+  }
+
+
   SS13();
 }
 
@@ -716,7 +734,6 @@ void BetterYao5::eval_input_OT(){
 
   GEN_BEGIN
   assert(m_evl_inp_keys.size() == Env::node_load());
-  
   
   ot_send_batch(m_evl_inp_keys);
   
@@ -1520,14 +1537,14 @@ uint32_t ceil_log_base_2(uint32_t k){
  */
 
 void BetterYao5::ot_send(std::vector<Bytes> & sender_inputs){
-  //OT_alsz_send(Env::ip_server(), Env::IP_SERVER_PORT, sender_inputs.size(), Env::k(), Env::s(), sender_inputs, sender_inputs);
+  OT_alsz_send(Env::ip_server(), Env::IP_SERVER_PORT + Env::node_amnt() + Env::group_rank(), sender_inputs.size(), Env::k(), Env::s(), sender_inputs, sender_inputs);
 
   //ot_send_init();
   //  ot_send_random(sender_inputs);
 }
 
 void BetterYao5::ot_receive(Bytes selection_bits, std::vector<Bytes> & results_container){
-  // OT_alsz_recv(Env::ip_server(), Env::IP_SERVER_PORT, results_container.size(), Env::k(), Env::s(), selection_bits, results_container);
+  OT_alsz_recv(Env::ip_server(), Env::IP_SERVER_PORT + Env::node_amnt() + Env::group_rank(), results_container.size(), Env::k(), Env::s(), selection_bits, results_container);
   //ot_receive_init();
   //ot_receive_random(selection_bits, results_container);
 }

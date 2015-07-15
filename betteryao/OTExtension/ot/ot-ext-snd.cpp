@@ -9,6 +9,7 @@
 
 BOOL OTExtSnd::send(uint32_t numOTs, uint32_t bitlength, CBitVector& x0, CBitVector& x1, snd_ot_flavor stype,
 		rec_ot_flavor rtype, uint32_t numThreads, MaskingFunction* maskfct) {
+  fprintf(stdout,"send?");
 	m_nOTs = numOTs;
 	m_nBitLength = bitlength;
 	m_vValues[0] = x0;
@@ -22,35 +23,37 @@ BOOL OTExtSnd::send(uint32_t numOTs, uint32_t bitlength, CBitVector& x0, CBitVec
 
 //Initialize and start numThreads OTSenderThread
 BOOL OTExtSnd::start_send(uint32_t numThreads) {
-	if (m_nOTs == 0)
-		return true;
+	
+  fprintf(stdout,"starting send\n");
+  if (m_nOTs == 0)
+    return true;
+  
+  if(numThreads * m_nBlockSizeBits > m_nOTs) {
+    cerr << "Decreasing nthreads from " << numThreads << " to " << m_nOTs / m_nBlockSizeBits << " to fit window size" << endl;
+    numThreads = m_nOTs / m_nBlockSizeBits;
+  }
+  
+  //The total number of OTs that is performed has to be a multiple of numThreads*Z_REGISTER_BITS
+  uint32_t wd_size_bits = m_nBlockSizeBits;//pad_to_power_of_two(m_nBaseOTs);//1 << (ceil_log2(m_nBaseOTs));
+  //uint64_t numOTs = ceil_divide(PadToMultiple(m_nOTs, wd_size_bits), numThreads);
+  uint64_t internal_numOTs = PadToMultiple(ceil_divide(m_nOTs, numThreads), wd_size_bits);
+  vector<OTSenderThread*> sThreads(numThreads);
+  
+  for (uint32_t i = 0; i < numThreads; i++) {
+    sThreads[i] = new OTSenderThread(i, internal_numOTs, this);
+    sThreads[i]->Start();
+  }
+  
+  for (uint32_t i = 0; i < numThreads; i++) {
+    sThreads[i]->Wait();
+  }
+  
+  m_nCounter += m_nOTs;
 
-	if(numThreads * m_nBlockSizeBits > m_nOTs) {
-		cerr << "Decreasing nthreads from " << numThreads << " to " << m_nOTs / m_nBlockSizeBits << " to fit window size" << endl;
-		numThreads = m_nOTs / m_nBlockSizeBits;
-	}
-
-	//The total number of OTs that is performed has to be a multiple of numThreads*Z_REGISTER_BITS
-	uint32_t wd_size_bits = m_nBlockSizeBits;//pad_to_power_of_two(m_nBaseOTs);//1 << (ceil_log2(m_nBaseOTs));
-	//uint64_t numOTs = ceil_divide(PadToMultiple(m_nOTs, wd_size_bits), numThreads);
-	uint64_t internal_numOTs = PadToMultiple(ceil_divide(m_nOTs, numThreads), wd_size_bits);
-	vector<OTSenderThread*> sThreads(numThreads);
-
-	for (uint32_t i = 0; i < numThreads; i++) {
-		sThreads[i] = new OTSenderThread(i, internal_numOTs, this);
-		sThreads[i]->Start();
-	}
-
-	for (uint32_t i = 0; i < numThreads; i++) {
-		sThreads[i]->Wait();
-	}
-
-	m_nCounter += m_nOTs;
-
-	for (uint32_t i = 0; i < numThreads; i++) {
-		delete sThreads[i];
-	}
-
+  for (uint32_t i = 0; i < numThreads; i++) {
+    delete sThreads[i];
+  }
+  
 #ifdef VERIFY_OT
 	verifyOT(m_nOTs);
 #endif
