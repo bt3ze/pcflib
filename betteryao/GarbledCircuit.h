@@ -124,6 +124,8 @@ protected:
     uint32_t get_Input_Parity(uint32_t idx); 
 
 
+    void set_AES_Key(__m128i & key);
+
     // things to help with garbling
     void generate_Random_Key(__m128i & destination);
  
@@ -182,6 +184,8 @@ protected:
     uint32_t m_in_bufr_ix;
     uint32_t m_alice_out_ix;
     uint32_t m_bob_out_ix;
+
+    AES_KEY_J m_fixed_key;
 };
 
 

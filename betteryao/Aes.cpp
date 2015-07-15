@@ -22,11 +22,12 @@
 
 #include <wmmintrin.h>
 
-void KDF128_Fixed_Key(const uint8_t *out, uint8_t * in){
+inline void KDF128_Fixed_Key(uint8_t *out, const uint8_t * in, const AES_KEY * key){
   // TODO: this needs to be made such that it is actually
   // a fixed key AES permutation
   // this is just for testing purposes
-  KDF128(in, out, in);
+  //  KDF128(in, out, in);
+  AES_encrypt(in, out, *key);
 }
 
 void KDF128(const uint8_t *in, uint8_t *out, const uint8_t *key)
@@ -258,8 +259,10 @@ inline void AES_ecb_decrypt_blks(block *blks, unsigned nblks, AES_KEY_J *key) {
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 
-void KDF128_Fixed_Key(const uint8_t *in, uint8_t * out){
+
+void KDF128_Fixed_Key(uint8_t *out, const uint8_t * in, const AES_KEY_J * key){
   KDF128(in,out,in);
+  //  KDF128(in,out,key);
 }
 
 

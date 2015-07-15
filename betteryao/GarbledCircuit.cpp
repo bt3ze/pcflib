@@ -129,6 +129,11 @@ void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys
   // set the input keys
   set_Input_Keys(gen_keys, evl_keys);
 
+  // for now, use zeroes and the aes key
+  __m128i aes_key = m_const_wire[0];
+  aes_key = _mm_xor_si128(aes_key,aes_key);
+  set_AES_key(&aes_key);
+
 }
 
 void GarbledCircuit::set_Gen_Circuit_Functions(){
@@ -174,6 +179,23 @@ void GarbledCircuit::init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys
   m_const_wire[1] = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&tmp[0]));
 
 
+  // for now, let the fixed aes key be zeroes.
+  __m128i aes_key = m_const_wire[0];
+  aes_key = _mm_xor_si128(aes_key,aes_key);
+  set_AES_key(&aes_key);
+
+}
+
+/**
+   this function sets our AES key for constant-key garbling
+   the key must be fed to the function
+ */
+void GarbledCircuit::set_AES_Key(__m128i &key){
+
+  AES_set_encrypt_key(&key, 128, &m_fixed_key);
+  // const __m128i *sched = ((__m128i *)(KR.rd_key));
+  
+  
 }
 
 
@@ -816,13 +838,15 @@ void Double(__m128i & key, __m128i & clear_mask){
    it returns H(K) = pi(L) xor L where L = 2key ^ tweak
  */
 void H_Pi(__m128i & destination, __m128i &key, __m128i & tweak, __m128i & clear_mask){
-  __m128i K,K1;
-  
+  __m128i K; // ,K1;
+
   Double(key, clear_mask);
   K = _mm_xor_si128(key,tweak);
-  K1 = K;
-  KDF128((uint8_t*)&K,(uint8_t*)&destination, (uint8_t*)&K1);
-  destination = _mm_xor_si128(destination, K1);
+
+  //K1 = K;
+
+  KDF128_Fixed_Key((uint8_t*)&destination,(uint8_t*)&K, m_fixed_key);
+  destination = _mm_xor_si128(destination, K);
   destination = _mm_and_si128(destination,clear_mask);
   
 }

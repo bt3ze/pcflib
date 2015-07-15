@@ -1,6 +1,9 @@
 // aes.hs
 // note that some of this file is borrowed from the JustGarble project, which borrows from openssl.
-// the following copyright is included
+// this library links to openssl anyway, but some of the declarations here are different
+// so we include both (TODO: clean this up)
+
+// the following copyright from openssl is included
 
 /* crypto/aes/aes.h -*- mode:C; c-file-style: "eay" -*- */
 /* ====================================================================
