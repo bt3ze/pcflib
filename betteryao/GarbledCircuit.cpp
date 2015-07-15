@@ -284,6 +284,64 @@ void print128_num(__m128i var)
 }
 
 
+
+ 
+/**
+   This function doubles in GF2 by shifting "key" left one bit.
+   the clear mask is included to ensure that all keys remain the same length
+   (we don't want a key boundary overflowing!)
+ */
+void Double(__m128i & key, __m128i & clear_mask){
+  
+  uint64_t * modifier = (uint64_t*) &key;
+  uint64_t carry = modifier[0] & ((uint64_t) 0x8000000000000000) > 0 ? 1 : 0;
+  modifier[0] = modifier[0]<<1;
+  modifier[1] = (modifier[1]<<1) | carry;
+  key = _mm_and_si128(key, clear_mask);
+
+}
+
+
+/**
+   This function computes the permutation on an input key
+   it is destructive of key so must make copies of the inputs first
+   it returns H(K) = pi(L) xor L where L = 2key ^ tweak
+ */
+void H_Pi(__m128i & destination, __m128i &key, __m128i & tweak, __m128i & clear_mask, AES_KEY_J & fixed_key){
+  __m128i K; // ,K1;
+  //  __m128i keycpy = key;
+
+  Double(key, clear_mask);
+  K = _mm_xor_si128(key,tweak);
+
+  //K1 = K;
+
+  KDF128((uint8_t*)&destination,(uint8_t*)&K, &fixed_key);
+  destination = _mm_xor_si128(destination, K);
+  destination = _mm_and_si128(destination,clear_mask);
+  
+}
+
+/**
+   remember to copy the keys before they enter this function, because it's destructive to key1, key2, and destination
+ */
+void H_Pi256(__m128i & destination, __m128i &key1, __m128i &key2, __m128i & tweak, __m128i & clear_mask, AES_KEY_J & fixed_key){
+  // takes two keys and computes a ciphertest, A la JustGarble
+  __m128i K;
+  
+  Double(key1,clear_mask);
+  Double(key2,clear_mask);
+  Double(key2,clear_mask);
+  
+  K = _mm_xor_si128(key1,key2);
+  K = _mm_xor_si128(K,tweak);
+
+  KDF128((uint8_t*)&destination,(uint8_t*)&K, &fixed_key);
+  destination = _mm_xor_si128(destination, K);
+  destination = _mm_and_si128(destination,clear_mask);
+
+}
+
 /**
   throughout garbling, Gen will maintain the zero-semantic keys for each wire
   and use them to generate all of the ciphertexts (find the 1-semantics by XOR with R)
@@ -630,12 +688,26 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
       aes_key[0] = _mm_load_si128(X+perm_x);
       aes_key[1] = _mm_load_si128(Y+perm_y);
       
+
       // now run the key derivation function using the keys and the gate index
+#ifndef AES_NI
+// THIS IS THE OLD KDF, REPLACED WITH THE NEW FASTER ONE
       KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);     
       // clear extra bits at the front
       aes_ciphertext = _mm_and_si128(aes_ciphertext, m_clear_mask);
       // aes_ciphertext now contains the encryption of both zero-keys
-      
+#else
+      uint32_t j1;
+      j1 = increment_index();
+
+      __m128i tweak;
+      tweak = _mm_set1_epi64x(j1);
+
+      __m128i key1 = aes_key[0];
+      __m128i key2 = aes_key[1];
+      H_Pi256(aes_ciphertext, key1, key2, tweak, m_clear_mask, m_fixed_key);
+#endif
+
       // this bit discovers what the semantics of the next wire will be
       bit = (current_gate->truth_table >> (3-de_garbled_ix)) & 0x01;
       
@@ -681,11 +753,18 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
       aes_key[0] = _mm_xor_si128(aes_key[0], m_R);
       
       // and run through the KDF
-      // key derivation function
-      KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
-      // and mask to remove unnecessary bits
+#ifndef AES_NI
+// THIS IS THE OLD KDF, REPLACED WITH THE NEW FASTER ONE
+      KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);     
+      // clear extra bits at the front
       aes_ciphertext = _mm_and_si128(aes_ciphertext, m_clear_mask);
-      
+      // aes_ciphertext now contains the encryption of both zero-keys
+#else
+      key1 = aes_key[0];
+      key2 = aes_key[1];
+      H_Pi256(aes_ciphertext, key1, key2, tweak, m_clear_mask, m_fixed_key);
+#endif
+
       // recover the permutation bit
       bit = (current_gate->truth_table>>(3-(0x01^de_garbled_ix)))&0x01;
       // encrypt the key using the ciphertext and load it into tmp to send
@@ -699,8 +778,18 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
       aes_key[0] = _mm_xor_si128(aes_key[0], m_R);
       aes_key[1] = _mm_xor_si128(aes_key[1], m_R);
     
-      KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
+#ifndef AES_NI
+// THIS IS THE OLD KDF, REPLACED WITH THE NEW FASTER ONE
+      KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);     
+      // clear extra bits at the front
       aes_ciphertext = _mm_and_si128(aes_ciphertext, m_clear_mask);
+      // aes_ciphertext now contains the encryption of both zero-keys
+#else
+      key1 = aes_key[0];
+      key2 = aes_key[1];
+      H_Pi256(aes_ciphertext, key1, key2, tweak, m_clear_mask, m_fixed_key);
+#endif
+
       bit = (current_gate->truth_table>>(3-(0x02^de_garbled_ix)))&0x01;
       aes_ciphertext = _mm_xor_si128(aes_ciphertext, Z[bit]);
       
@@ -711,8 +800,19 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
       // encrypt the 3rd entry : (X[1-x], Y[1-y])
       aes_key[0] = _mm_xor_si128(aes_key[0], m_R);
       
+#ifndef AES_NI
+      // THIS IS THE OLD KDF, REPLACED WITH THE NEW FASTER ONE
       KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
+      // clear extra bits at the front
       aes_ciphertext = _mm_and_si128(aes_ciphertext, m_clear_mask);
+      // aes_ciphertext now contains the encryption of both zero-keys
+#else
+      key1 = aes_key[0];
+      key2 = aes_key[1];
+      H_Pi256(aes_ciphertext, key1, key2, tweak, m_clear_mask, m_fixed_key);
+#endif
+      
+
       bit = (current_gate->truth_table>>(3-(0x03^de_garbled_ix)))&0x01;
       aes_ciphertext = _mm_xor_si128(aes_ciphertext, Z[bit]);
       _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), aes_ciphertext);
@@ -777,8 +877,25 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
     //print128_num(aes_key[1]);
     
 
-    KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);
-    aes_ciphertext = _mm_and_si128(aes_ciphertext, m_clear_mask);
+#ifndef AES_NI
+// THIS IS THE OLD KDF, REPLACED WITH THE NEW FASTER ONE
+      KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&aes_ciphertext, (uint8_t*)aes_key);     
+      // clear extra bits at the front
+      aes_ciphertext = _mm_and_si128(aes_ciphertext, m_clear_mask);
+      // aes_ciphertext now contains the encryption of both zero-keys
+#else
+      uint32_t j1;
+      j1 = increment_index();
+      
+      __m128i tweak;
+      tweak = _mm_set1_epi64x(j1);
+      
+      __m128i key1 = aes_key[0];
+      __m128i key2 = aes_key[1];
+      H_Pi256(aes_ciphertext, key1, key2, tweak, m_clear_mask, m_fixed_key);
+#endif
+
+
     uint8_t garbled_ix = (perm_y<<1)|perm_x;
     
 #ifdef GRR
@@ -812,42 +929,6 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
 }
 
 
-
- 
-/**
-   This function doubles in GF2 by shifting "key" left one bit.
-   the clear mask is included to ensure that all keys remain the same length
-   (we don't want a key boundary overflowing!)
- */
-void Double(__m128i & key, __m128i & clear_mask){
-  
-  uint64_t * modifier = (uint64_t*) &key;
-  uint64_t carry = modifier[0] & ((uint64_t) 0x8000000000000000) > 0 ? 1 : 0;
-  modifier[0] = modifier[0]<<1;
-  modifier[1] = (modifier[1]<<1) | carry;
-  key = _mm_and_si128(key, clear_mask);
-
-}
-
-
-/**
-   This function computes the permutation on an input key
-   it is destructive of key so must make copies of the inputs first
-   it returns H(K) = pi(L) xor L where L = 2key ^ tweak
- */
-void H_Pi(__m128i & destination, __m128i &key, __m128i & tweak, __m128i & clear_mask, AES_KEY_J & fixed_key){
-  __m128i K; // ,K1;
-
-  Double(key, clear_mask);
-  K = _mm_xor_si128(key,tweak);
-
-  //K1 = K;
-
-  KDF128((uint8_t*)&destination,(uint8_t*)&K, &fixed_key);
-  destination = _mm_xor_si128(destination, K);
-  destination = _mm_and_si128(destination,clear_mask);
-  
-}
 
 
 void GarbledCircuit::genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, byte a1, byte a2, byte a3){
