@@ -25,12 +25,12 @@
 #include <emmintrin.h>
 
 
-inline void KDF128_Fixed_Key(uint8_t *out, const uint8_t * in, const AES_KEY_J * key){
+void KDF128_Fixed_Key(uint8_t *out, const uint8_t * in, const AES_KEY_J * key){
   // TODO: this needs to be made such that it is actually
   // a fixed key AES permutation
   // this is just for testing purposes
   //  KDF128(in, out, in);
-  AES_encrypt(in, out, *key);
+  AES_encrypt(in, out, key);
 }
 
 void KDF128(const uint8_t *in, uint8_t *out, const uint8_t *key)
@@ -135,21 +135,6 @@ void AES_128_Key_Expansion(const unsigned char *userkey, void *key) {
 	kp[10] = x0;
 }
 
-int AES_set_encrypt_key (const unsigned char *userKey, const int bits, AES_KEY_J *key){
-	if (bits == 128) {
-		AES_128_Key_Expansion(userKey, key);
-	} else if (bits == 192) {
-		AES_192_Key_Expansion(userKey, key);
-	} else if (bits == 256) {
-		AES_256_Key_Expansion(userKey, key);
-	}
-#if (OCB_KEY_LEN == 0)
-	key->rounds = 6 + bits / 32;
-#else
-	key->rounds = 10;
-#endif
-	return 0;
-}
 
 void AES_192_Key_Expansion(const unsigned char *userkey, void *key) {
 	__m128i x0, x1, x2, x3, tmp, *kp = (__m128i *) key;
@@ -195,6 +180,23 @@ void AES_256_Key_Expansion(const unsigned char *userkey, void *key) {
 	kp[14] = x0;
 }
 
+
+
+int AES_set_encrypt_key (const unsigned char *userKey, const int bits, AES_KEY_J *key){
+	if (bits == 128) {
+	  AES_128_Key_Expansion(userKey, key);
+	} else if (bits == 192) {
+	  AES_192_Key_Expansion(userKey, key);
+	} else if (bits == 256) {
+	  AES_256_Key_Expansion(userKey, key);
+	}
+#if (OCB_KEY_LEN == 0)
+	key->rounds = 6 + bits / 32;
+#else
+	key->rounds = 10;
+#endif
+	return 0;
+}
 
 void AES_set_decrypt_key_fast(AES_KEY_J *dkey, const AES_KEY_J *ekey) {
 	int j = 0;

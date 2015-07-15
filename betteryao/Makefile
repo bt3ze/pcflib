@@ -2,7 +2,7 @@ CXX_CFLAGS = -I$(HOME)/lccyao2/pcflib/ -I$(HOME)/include/ -I$(HOME)/local/includ
 CXX        = g++
 MPI_CXX    = mpicxx
 CC = cc
-LIBS       = -lpbc -lgmp -lcrypto -llog4cxx -lpthread -lgmpxx
+LIBS       =  -maes -lpbc -lgmp -lcrypto -llog4cxx -lpthread -lgmpxx #-march=native
 HEADERS    =  Algebra.h Aes.h Bytes.h Env.h NetIO.h Prng.h Commitment.h \
 	 #   Circuit.h 	GarbledBase.h GarbledHBC.h GarbledMal.h   ClawFree.h  garbled_circuit.h garbled_circuit_hbc.h garbled_circuit_m.h
 OBJS       =  Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o Commitment.o 
@@ -127,7 +127,7 @@ Prng.o: Bytes.h Prng.h Prng.cpp
 	$(CXX) $(CXX_CFLAGS) -c Prng.cpp
 
 Aes.o: Bytes.h Aes.h Aes.cpp
-	$(CXX) $(CXX_CFLAGS) -c Aes.cpp
+	$(CXX) $(CXX_CFLAGS) -DAESNI -c Aes.cpp -lm -lrt -lpthread -maes -msse4 -march=native
 
 Bytes.o: Bytes.h Hash.h Bytes.cpp
 	$(CXX) $(CXX_CFLAGS) -c Bytes.cpp
