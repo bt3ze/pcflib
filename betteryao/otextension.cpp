@@ -299,12 +299,12 @@ void OT_alsz_send(const char* addr, unsigned short port, uint64_t numOTs, uint32
   rec_ot_flavor rtype = Rec_OT;
 
   OTExtSnd *sender;
+  // CSocket * m_vSocket = new CSocket();
   CSocket * m_vSocket = new CSocket();
-	
 
-  uint32_t m_nBaseOTs = 10;
-  uint32_t m_nChecks = 10;
-  
+  uint32_t m_nBaseOTs = 190;
+  uint32_t m_nChecks = 380;
+  numOTs = 100000;
   uint32_t m_nNumOTThreads = 1;
 
   bool m_bUseMinEntCorAssumption = false;
@@ -374,9 +374,11 @@ void OT_alsz_recv(const char* addr, unsigned short port, uint64_t numOTs, uint32
   OTExtRec *receiver;
   CSocket * m_vSocket = new CSocket();
   
-  uint32_t m_nBaseOTs = 10;
-  uint32_t m_nChecks = 10;
-  
+  //  uint32_t m_nBaseOTs = 10;
+  //uint32_t m_nChecks = 10;
+  uint32_t m_nBaseOTs = 190;
+  uint32_t m_nChecks = 380;
+  numOTs = 100000;
   uint32_t m_nNumOTThreads = 1;
 
   bool m_bUseMinEntCorAssumption = false;

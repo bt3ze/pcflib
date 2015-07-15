@@ -46,6 +46,10 @@ void InitOTReceiver(const char* address, int port, crypto* crypt);
 BOOL ObliviouslyReceive(CBitVector& choices, CBitVector& ret, int numOTs, int bitlength, snd_ot_flavor stype, rec_ot_flavor rtype, crypto* crypt);
 BOOL ObliviouslySend(CBitVector& X1, CBitVector& X2, int numOTs, int bitlength, snd_ot_flavor stype, rec_ot_flavor rtype, crypto* crypt);
 
+void OT_alsz_send(const char* addr, unsigned short port, uint64_t num_OTs, uint32_t bitlength, uint32_t sec_param, std::vector<Bytes>& send_vals1, std::vector<Bytes> & send_vals2);
+void OT_alsz_recv(const char* addr, unsigned short port, uint64_t num_OTs, uint32_t bitlength, uint32_t sec_param, Bytes selection_bits, std::vector<Bytes> &result_bytes);
+
+
 // Network Communication
 //CSocket* m_vSocket; 
 //uint32_t m_nPID; // thread id// unnecessary
@@ -74,9 +78,6 @@ int32_t read_test_options(int32_t* argcp, char*** argvp, uint32_t* role, uint64_
 		uint32_t* secparam, string* address, uint16_t* port, ot_ext_prot* protocol, snd_ot_flavor* sndflav,
 		rec_ot_flavor* rcvflav, uint32_t* nthreads, uint32_t* nbaseots, uint32_t* nchecks, bool* usemecr, uint32_t* runs);
 
-
-void OT_alsz_send(const char* addr, unsigned short port, uint64_t num_OTs, uint32_t bitlength, uint32_t sec_param, std::vector<Bytes>& send_vals1, std::vector<Bytes> & send_vals2);
-void OT_alsz_recv(const char* addr, unsigned short port, uint64_t num_OTs, uint32_t bitlength, uint32_t sec_param, Bytes selection_bits, std::vector<Bytes> &result_bytes);
 
 
 #endif

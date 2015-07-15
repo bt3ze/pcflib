@@ -6,24 +6,22 @@
  */
 #include "ot-ext-rec.h"
 
-BOOL OTExtRec::receive(uint64_t numOTs, uint64_t bitlength, CBitVector& choices, CBitVector& ret,
-		snd_ot_flavor stype, rec_ot_flavor rtype, uint32_t numThreads, MaskingFunction* unmaskfct) {
-  fprintf(stdout,"receive?\n");
-	m_nOTs = numOTs;
-
-        fprintf(stdout,"num OTS\n");
-	m_nBitLength = bitlength;
-        fprintf(stdout,"bitlength\n");
-	m_vChoices = choices;
-        fprintf(stdout,"after choices");
-	m_vRet = ret;
-	m_eSndOTFlav = stype;
-	m_eRecOTFlav = rtype;
-	m_fMaskFct = unmaskfct;
-
-        fprintf(stdout,"start receive\n");
-
-	return start_receive(numThreads);
+BOOL OTExtRec::receive(uint64_t numOTs, uint64_t bitlength, CBitVector& choices, CBitVector& ret, snd_ot_flavor stype, rec_ot_flavor rtype, uint32_t numThreads, MaskingFunction* unmaskfct) {
+  fprintf(stdout,"receive? %lx\n", numOTs);
+  m_nOTs = numOTs;
+  fprintf(stdout,"num OTS\n");
+  m_nBitLength = bitlength;
+  fprintf(stdout,"bitlength\n");
+  m_vChoices = choices;
+  fprintf(stdout,"after choices");
+  m_vRet = ret;
+  m_eSndOTFlav = stype;
+  m_eRecOTFlav = rtype;
+  m_fMaskFct = unmaskfct;
+  
+  fprintf(stdout,"start receive\n");
+  
+  return start_receive(numThreads);
 }
 
 

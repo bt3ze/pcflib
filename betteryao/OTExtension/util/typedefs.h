@@ -8,7 +8,7 @@
 
 #define two_pow(e) (((uint64_t) 1) << (e))
 
-static int ceil_log2(int bits) {
+inline static int ceil_log2(int bits) {
 	if (bits == 1)
 		return 1;
 	int targetlevel = 0, bitstemp = bits;
@@ -17,7 +17,7 @@ static int ceil_log2(int bits) {
 	return targetlevel + ((1 << targetlevel) < bits);
 }
 
-static int floor_log2(int bits) {
+inline static int floor_log2(int bits) {
 	if (bits == 1)
 		return 1;
 	int targetlevel = 0;
@@ -27,7 +27,7 @@ static int floor_log2(int bits) {
 }
 #define pad_to_power_of_two(e) ( ((uint64_t) 1) << (ceil_log2(e)) )
 
-static double getMillies(timeval timestart, timeval timeend) {
+inline static double getMillies(timeval timestart, timeval timeend) {
 	long time1 = (timestart.tv_sec * 1000000) + (timestart.tv_usec);
 	long time2 = (timeend.tv_sec * 1000000) + (timeend.tv_usec);
 

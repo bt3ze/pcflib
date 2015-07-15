@@ -10,14 +10,15 @@
 BOOL OTExtSnd::send(uint32_t numOTs, uint32_t bitlength, CBitVector& x0, CBitVector& x1, snd_ot_flavor stype,
 		rec_ot_flavor rtype, uint32_t numThreads, MaskingFunction* maskfct) {
   fprintf(stdout,"send?");
-	m_nOTs = numOTs;
-	m_nBitLength = bitlength;
-	m_vValues[0] = x0;
-	m_vValues[1] = x1;
-	m_eSndOTFlav = stype;
-	m_eRecOTFlav = rtype;
-	m_fMaskFct = maskfct;
+  this->m_nOTs = numOTs;
+  this->m_nBitLength = bitlength;
+  this->m_vValues[0] = x0;
+  this->m_vValues[1] = x1;
+  this->m_eSndOTFlav = stype;
+  this->m_eRecOTFlav = rtype;
+  this->m_fMaskFct = maskfct;
 
+        fprintf(stdout,"set variables.");
 	return start_send(numThreads);
 }
 
@@ -28,17 +29,29 @@ BOOL OTExtSnd::start_send(uint32_t numThreads) {
   if (m_nOTs == 0)
     return true;
   
-  if(numThreads * m_nBlockSizeBits > m_nOTs) {
+  fprintf(stdout,"checked m_nOTs\n");
+
+  if(numThreads * this->m_nBlockSizeBits > this->m_nOTs) {
     cerr << "Decreasing nthreads from " << numThreads << " to " << m_nOTs / m_nBlockSizeBits << " to fit window size" << endl;
-    numThreads = m_nOTs / m_nBlockSizeBits;
+    numThreads = this->m_nOTs / this->m_nBlockSizeBits;
   }
+
+  fprintf(stdout,"checked num threads.\n");
   
   //The total number of OTs that is performed has to be a multiple of numThreads*Z_REGISTER_BITS
   uint32_t wd_size_bits = m_nBlockSizeBits;//pad_to_power_of_two(m_nBaseOTs);//1 << (ceil_log2(m_nBaseOTs));
+
+  fprintf(stdout,"got m_nBlockSizeBits");
+
   //uint64_t numOTs = ceil_divide(PadToMultiple(m_nOTs, wd_size_bits), numThreads);
-  uint64_t internal_numOTs = PadToMultiple(ceil_divide(m_nOTs, numThreads), wd_size_bits);
+  uint64_t internal_numOTs = PadToMultiple(ceil_divide((this->m_nOTs), numThreads), wd_size_bits);
+
+  fprintf(stdout,"padded to multiple\n");
+
   vector<OTSenderThread*> sThreads(numThreads);
   
+  fprintf(stdout,"internal padding\n");
+
   for (uint32_t i = 0; i < numThreads; i++) {
     sThreads[i] = new OTSenderThread(i, internal_numOTs, this);
     sThreads[i]->Start();

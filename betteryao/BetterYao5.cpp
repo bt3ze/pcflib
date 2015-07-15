@@ -1,5 +1,6 @@
 #include "BetterYao5.h"
 #include <algorithm>
+#include "otextension.h"
 
 #include <unistd.h>
 
