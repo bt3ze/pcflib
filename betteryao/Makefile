@@ -111,7 +111,7 @@ server : ipserver.cpp Bytes.o Env.o NetIO.o
 GarbledCircuit.o: Aes.h Bytes.h Env.h Prng.h GarbledCircuit.h GarbledCircuit.cpp
 	$(MPI_CXX) -msse2 -maes $(AESNI) $(CXX_CFLAGS) -c GarbledCircuit.cpp
 
-Env.o : Algebra.h Bytes.h ClawFree.h NetIO.h Env.h Env.cpp  #Circuit.h   
+Env.o : Algebra.h Bytes.h NetIO.h Env.h Env.cpp  #Circuit.h   ClawFree.h 
 	$(CXX) $(CXX_CFLAGS) -c Env.cpp 
 
 NetIO.o : Bytes.h NetIO.h NetIO.cpp

@@ -131,7 +131,7 @@ void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys
 
   // for now, use zeroes and the aes key
   __m128i aes_key = m_const_wire[0];
-  aes_key = _mm_xor_si128(aes_key,aes_key);
+  //aes_key = _mm_xor_si128(aes_key,aes_key);
   init_circuit_AES_key(aes_key);
 
 }
@@ -181,7 +181,7 @@ void GarbledCircuit::init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys
 
   // for now, let the fixed aes key be zeroes.
   __m128i aes_key = m_const_wire[0];
-  aes_key = _mm_xor_si128(aes_key,aes_key);
+  //  aes_key = _mm_xor_si128(aes_key,aes_key);
   init_circuit_AES_key(aes_key);
 
 }
