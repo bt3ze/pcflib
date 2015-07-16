@@ -135,7 +135,9 @@ protected:
         Bytes get_gen_full_input();
 
         uint32_t get_gen_full_input_size();
-
+        uint32_t get_gen_inp_size();
+        // for now, the following just calles get_gen_inp_size()
+        uint32_t get_gen_output_size();
 
         
         /**

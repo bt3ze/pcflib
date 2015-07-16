@@ -230,6 +230,7 @@ Bytes BetterYao5::get_gen_full_input(){
   GEN_END
 
     EVL_BEGIN
+    //assert(0);
     return m_prng.rand_bits(get_gen_full_input_size());
     EVL_END
 }
@@ -245,9 +246,19 @@ Bytes BetterYao5::get_gen_input_randomness(){
 uint32_t BetterYao5::get_gen_full_input_size(){
   // assume Gen's output mask is the same size as his input mask
   // returns the number of bits of gen's fill input size
-  return m_gen_inp_cnt + m_gen_inp_cnt + 2*Env::k() + ceil_log_base_2(Env::k()); 
+  return 2*get_gen_inp_size() + 2*Env::k() + ceil_log_base_2(Env::k()); 
 }
 
+uint32_t BetterYao5::get_gen_inp_size(){
+  std::cout << "gen input size: "<<m_gen_inp_cnt << std::endl;
+  return m_gen_inp_cnt;
+  
+}
+
+// assume output size = input size for sake of number of keys
+uint32_t BetterYao5::get_gen_output_size(){
+  return get_gen_inp_size();
+}
 
 void BetterYao5::choose_k_probe_resistant_matrix(){
   // this algorithm is given by SS13
@@ -459,7 +470,14 @@ void BetterYao5::collaboratively_choose_2UHF(){
         
   // create m rows of length k
   m_2UHF_matrix = bufr.split(bufr.size()/Env::k());
-  
+  /*
+  if(Env::group_rank() ==0){
+    std::cout<<"k probe matrix: "<< std::endl;
+    for(int i = 0; i < bufr.size();i++){
+      std::cout << m_2UHF_matrix[i].to_hex() << std::endl;
+    }
+  }
+  */
   // m_timer_evl += MPI_Wtime() - start;
   // m_timer_gen += MPI_Wtime() - start;
 
@@ -1360,7 +1378,13 @@ void BetterYao5::evaluate_circuit(){
       // begin with one, just to make debugging easier
       for(int ix = 0; ix < m_gcs.size();ix++){
 
-        m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],&m_evl_hashed_inp_keys[ix],m_key_generation_seeds[ix],m_gen_inp_permutation_bits[ix],m_R[ix], m_const_0_keys[ix], m_const_1_keys[ix]);
+        m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],// gen input keys
+                                          &m_evl_hashed_inp_keys[ix], // evl input keys
+                                          get_gen_inp_size(),// gen input size
+                                          m_key_generation_seeds[ix], // random seed
+                                          m_gen_inp_permutation_bits[ix], // permutation bits
+                                          m_R[ix], // circuit XOR offset
+                                          m_const_0_keys[ix], m_const_1_keys[ix]);// constant keys
         
         m_gcs[ix].m_st = 
           load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
@@ -1402,7 +1426,12 @@ void BetterYao5::evaluate_circuit(){
          else if(!m_chks[ix]){
            
            // if evaluation circuit, we will evaluate it
-           m_gcs[ix].init_Evaluation_Circuit(&m_gen_inp_keys[ix],&m_evl_received_keys[ix],m_private_input,m_const_0_keys[ix], m_const_1_keys[ix]);
+           m_gcs[ix].init_Evaluation_Circuit(&m_gen_inp_keys[ix],// gen keys
+                                             &m_evl_received_keys[ix],//evl keys
+                                             get_gen_inp_size(),// gen inp size
+                                             m_private_input, // private input
+                                             m_const_0_keys[ix], //output keys
+                                             m_const_1_keys[ix]);
            
            m_gcs[ix].m_st = 
              load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
@@ -1444,7 +1473,13 @@ void BetterYao5::retrieve_outputs(){
     GEN_SEND(alice_out_parity);
     
     Bytes bob_out_parity = m_gcs[i].get_bob_out();
-    GEN_SEND(bob_out_parity);
+    Bytes bob_evaluated_out = GEN_RECV();
+    Bytes bob_out = bob_out_parity ^ bob_evaluated_out;
+    //GEN_SEND(bob_out_parity);
+    std::cout << "bob out (masked): " << bob_evaluated_out.to_hex() << std::endl;
+    std::cout << "bob out (parity): " << bob_out_parity.to_hex() << std::endl;
+    //    bob_out = bob_out ^ bob_out_parity;
+    std::cout << "bob out  (final):" << bob_out.to_hex() << std::endl;
 
     }
     
@@ -1460,17 +1495,16 @@ void BetterYao5::retrieve_outputs(){
 
     Bytes alice_out = m_gcs[i].get_alice_out();
     Bytes alice_out_parity = EVL_RECV();
+    
+    Bytes bob_out = m_gcs[i].get_bob_out();
+    EVL_SEND(bob_out);
+    //    Bytes bob_out_parity = EVL_RECV();
+   
     std::cout << "alice out (masked): " << alice_out.to_hex() << std::endl;
     std::cout << "alice out (parity): " << alice_out_parity.to_hex() << std::endl;
     alice_out = alice_out ^ alice_out_parity;
     std::cout << "alice out  (final): " << alice_out.to_hex() << std::endl;
-    
-    Bytes bob_out = m_gcs[i].get_bob_out();
-    Bytes bob_out_parity = EVL_RECV();
-    std::cout << "bob out (masked): " << bob_out.to_hex() << std::endl;
-    std::cout << "bob out (parity): " << bob_out_parity.to_hex() << std::endl;
-    bob_out = bob_out ^ bob_out_parity;
-    std::cout << "bob out  (final):" << bob_out.to_hex() << std::endl;
+   
   }
 
 

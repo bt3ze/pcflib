@@ -50,6 +50,7 @@ public:
     // should also include permutation bits in this one?
     void init_Generation_Circuit(const std::vector<Bytes> * gen_keys,
                                  const std::vector<Bytes> * evl_keys,
+                                 const uint32_t gen_inp_size,
                                  Bytes & rand_seed,
                                  const Bytes & permutation_bits,
                                  const Bytes R,
@@ -57,6 +58,7 @@ public:
                                  const Bytes & one_key);
     void init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys,
                                  const std::vector<Bytes> * evl_keys,
+                                 const uint32_t gen_inp_size,
                                  const Bytes & evl_input,
                                  const Bytes & zero_key,
                                  const Bytes & one_key);
@@ -100,7 +102,7 @@ protected:
     // as well as the hash on Gen's inputs
     // TODO: implement these 
     void evaluate_K_Probe_Matrix();
-    void evalute_Gen_Inp_Hash();
+    void evaluate_Gen_Inp_Hash(std::vector<Bytes> &matrix);
 
     // high-level call to garble a gate 
     void garble_Gate();
@@ -118,7 +120,8 @@ protected:
     Bytes get_Gen_Key(uint32_t idx, uint32_t parity);
     Bytes get_Evl_Key(uint32_t idx, uint32_t parity);
     // Access to current wire table
-    //Bytes get_Wire_Value(uint32_t idx);
+
+    //    Bytes get_Gen_Output_Mask(uint32_t idx);
     
     // Access to which input Gen or Eval chose
     uint32_t get_Input_Parity(uint32_t idx); 
@@ -143,7 +146,10 @@ protected:
     void genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, byte a1, byte a2, byte a3); 
     void evlHalfGatePair(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr, byte a1); 
     
-    void xor_Gate(PCFGate* current_gate, __m128i &current_key);
+    void genStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & out_bufr,uint8_t truth_table);
+    void evlStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr);
+
+    void xor_Gate(__m128i & key1, __m128i & key2, __m128i &current_key);
 
 
     uint32_t increment_index();
@@ -183,6 +189,8 @@ protected:
     uint32_t m_in_bufr_ix;
     uint32_t m_alice_out_ix;
     uint32_t m_bob_out_ix;
+
+    uint32_t m_gen_inp_size; //important for accessing output mask keys and hash keys
 
     AES_KEY_J m_fixed_key;
 };
