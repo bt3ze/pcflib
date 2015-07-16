@@ -74,6 +74,8 @@ public:
     void generate_K_Probe_Matrix(std::vector<Bytes> &matrix);
     void evaluate_Gen_Inp_Hash(std::vector<Bytes> &matrix);
     void generate_Gen_Inp_Hash(std::vector<Bytes> &matrix);
+    void evl_next_hash_row(Bytes & row, Bytes & in_bufr);
+    void gen_next_hash_row(Bytes & row, Bytes & out_bufr);
 
 
     void * gen_Next_Gate(PCFGate *current_gate);
@@ -189,7 +191,8 @@ protected:
     uint32_t m_bob_out_ix;
 
     Bytes m_hash_out; // stores the hash function output
-
+    uint32_t m_hash_row_idx;
+    
     uint32_t m_gen_inp_size; //important for accessing output mask keys and hash keys
 
     AES_KEY_J m_fixed_key;

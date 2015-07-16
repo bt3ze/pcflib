@@ -470,14 +470,15 @@ void BetterYao5::collaboratively_choose_2UHF(){
         
   // create m rows of length k
   m_2UHF_matrix = bufr.split(bufr.size()/Env::k());
-  /*
-  if(Env::group_rank() ==0){
-    std::cout<<"k probe matrix: "<< std::endl;
-    for(int i = 0; i < bufr.size();i++){
-      std::cout << m_2UHF_matrix[i].to_hex() << std::endl;
-    }
-  }
-  */
+  
+  //if(Env::group_rank() ==0){
+  //  std::cout<<"k probe matrix: "<< std::endl;
+  //  for(int i = 0; i < m_2UHF_matrix.size();i++){
+  //    std::cout << m_2UHF_matrix[i].to_hex() << std::endl;
+  //  }
+  //}
+  
+  
   // m_timer_evl += MPI_Wtime() - start;
   // m_timer_gen += MPI_Wtime() - start;
 
@@ -1208,6 +1209,16 @@ void BetterYao5::garble_and_check_circuits(){
     // now that checks are done, we can garble!
     
     initialize_circuits();
+  
+  GEN_BEGIN
+    generate_2UHF();
+  GEN_END
+
+  EVL_BEGIN
+    evaluate_2UHF();
+
+  EVL_END
+    
     evaluate_circuits();
   
 
@@ -1426,7 +1437,7 @@ void BetterYao5::initialize_circuits(){
                                           &m_evl_received_keys[ix],//evl keys
                                           get_gen_inp_size(),// gen inp size
                                           m_private_input, // private input
-                                          m_const_0_keys[ix], //output keys
+                                          m_const_0_keys[ix], //constant keys
                                           m_const_1_keys[ix]);
         
         m_gcs[ix].m_st = 
@@ -1448,18 +1459,30 @@ void BetterYao5::initialize_circuits(){
 }
 
 void BetterYao5::generate_2UHF(){
-  if(Env::group_rank()==0){
+  //if(Env::group_rank()==0){
+    Bytes hash_bufr;
     for(int ix = 0; ix < Env::node_load();ix++){
-      m_gcs[ix].generate_Gen_Inp_Hash(m_2UHF_matrix);
+      for(int j = 0; j < m_2UHF_matrix.size(); j++){
+        m_gcs[ix].gen_next_hash_row(m_2UHF_matrix[j],hash_bufr);
+        GEN_SEND(hash_bufr);
+      } 
+      
+      //      m_gcs[ix].generate_Gen_Inp_Hash(m_2UHF_matrix);
       GEN_SEND(m_gcs[ix].get_hash_out());
     }
-  }
+    // }
+       
 }
 
 void BetterYao5::evaluate_2UHF(){
   if(Env::group_rank()==0){
+    Bytes hash_bufr;
     for(int ix = 0; ix < Env::node_load();ix++){
-      m_gcs[ix].evaluate_Gen_Inp_Hash(m_2UHF_matrix);
+      for(int j =0; j < m_2UHF_matrix.size();j++){
+        hash_bufr = EVL_RECV();
+        m_gcs[ix].evl_next_hash_row(m_2UHF_matrix[j],hash_bufr);
+      }
+      //m_gcs[ix].evaluate_Gen_Inp_Hash(m_2UHF_matrix);
       Bytes hash_parity = EVL_RECV();
       m_2UHF_hashes[ix] = hash_parity ^ m_gcs[ix].get_hash_out();
     }
@@ -1550,6 +1573,8 @@ void BetterYao5::retrieve_outputs(){
     std::cout << "alice out (parity): " << alice_out_parity.to_hex() << std::endl;
     alice_out = alice_out ^ alice_out_parity;
     std::cout << "alice out  (final): " << alice_out.to_hex() << std::endl;
+
+    std::cout << "alice check hash: " << m_2UHF_hashes[i].to_hex() << std::endl;
    
   }
 

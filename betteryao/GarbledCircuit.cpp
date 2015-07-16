@@ -26,7 +26,7 @@ void delete_key(void *key)
 }
 
   
-GarbledCircuit::GarbledCircuit(): m_gate_index(0), m_bob_out_ix(0),m_alice_out_ix(0) {
+GarbledCircuit::GarbledCircuit(): m_gate_index(0), m_bob_out_ix(0),m_alice_out_ix(0),m_hash_row_idx(0) {
 
   // initialize the key Mask
   Bytes tmp(16);
@@ -1142,7 +1142,6 @@ void GarbledCircuit::evaluate_Gen_Inp_Hash(std::vector<Bytes> & matrix){
     
     for(int i = 0; i < m_gen_inputs->size(); i++){
       // should be approximately same size as row*8
-      
       next_key = get_Gen_Input(i);
       save_Key_to_128bit(next_key, next_key_128);
       if(row.get_ith_bit(i)==1){
@@ -1204,6 +1203,7 @@ void GarbledCircuit::generate_Gen_Inp_Hash(std::vector<Bytes> & matrix){
     
     __m128i output_key;
     Bytes out_bufr;
+
     // we use 5 for output keys
     // must get information into in_bufr
     genStandardGate(output_key, row_key, row_key, out_bufr, 5);
@@ -1217,6 +1217,91 @@ void GarbledCircuit::generate_Gen_Inp_Hash(std::vector<Bytes> & matrix){
     
   }
   m_hash_out = hash_out;
+}
+
+void GarbledCircuit::gen_next_hash_row(Bytes & row, Bytes & hash_bufr){
+  
+
+  if(m_hash_out.size()*8 <= m_hash_row_idx){
+    m_hash_out.resize((m_hash_out.size()+1)*2,0);
+  }
+  
+
+  // starter value for our row's key
+  __m128i row_key;
+  row_key = _mm_set_epi64x(0,0);
+  
+  Bytes next_key;
+  __m128i next_key_128;
+  
+  __m128i output_key;
+
+  
+  // assert(m_gen_inputs->size()/2 >=row.size()*8);
+  for(int i = 0; i < m_gen_inputs->size()/2; i++){
+    // should be approximately same size as row*8
+    
+    next_key = get_Gen_Input(2*i + get_Input_Parity(i));
+    save_Key_to_128bit(next_key, next_key_128);
+    if(row.get_ith_bit(i)==1){
+      row_key = _mm_xor_si128(row_key, next_key_128);
+    }
+    
+    
+  }
+  
+  Bytes out_bufr;
+  // we use 5 for output keys
+  genStandardGate(output_key, row_key, row_key, hash_bufr, 5);
+  // GEN_SEND(out_bufr);   
+  
+
+  // now get output bit
+  // we probably need to garble our output gate for this
+  if(_mm_extract_epi8(output_key,0)&0x01 == 1 ){
+    m_hash_out.set_ith_bit(m_hash_row_idx,1);
+  }
+
+  m_hash_row_idx++;
+ 
+}
+
+void GarbledCircuit::evl_next_hash_row(Bytes & row, Bytes & in_bufr){
+
+  if(m_hash_out.size()*8 <= m_hash_row_idx){
+    m_hash_out.resize((m_hash_out.size()+1)*2,0);
+  }
+
+  __m128i row_key;
+  row_key = _mm_set_epi64x(0,0);
+  
+  Bytes next_key;
+  __m128i next_key_128;
+  
+  //assert(m_gen_inputs->size()>=row.size()*8);
+  for(int i = 0; i < m_gen_inputs->size(); i++){
+    // should be approximately same size as row*8
+    next_key = get_Gen_Input(i);
+    save_Key_to_128bit(next_key, next_key_128);
+    if(row.get_ith_bit(i)==1){
+      row_key = _mm_xor_si128(row_key, next_key_128);
+    }
+  }
+    
+  __m128i output_key;
+  // Bytes in_bufr;
+  //Bytes in_bufr = EVL_RECV();
+  // must get information into in_bufr
+  evlStandardGate(output_key, row_key, row_key, in_bufr);
+  
+  // now get output bit
+  // we probably need to garble our output gate for this
+  if(_mm_extract_epi8(output_key,0)&0x01 == 1 ){
+    m_hash_out.set_ith_bit(m_hash_row_idx,1);
+  }
+
+  m_hash_row_idx++;
+  
 }
 
 
