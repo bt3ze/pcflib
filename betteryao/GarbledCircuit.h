@@ -26,8 +26,7 @@ void *evl_next_gate(struct PCFState *st, struct PCFGate *gate);
 #ifdef __CPLUSPLUS
 }
 #endif
-
-// #include "macros.h"
+ 
 
 #define  _mm_extract_epi8(x, imm) \
         ((((imm) & 0x1) == 0) ?   \
@@ -68,12 +67,14 @@ public:
     void generate_Circuit();
     void evaluate_Circuit();
 
-// functions to:
-// - transform Eval's input w/ k-probe matrix?
-// - evaluate Gen's input consistency?
+    // Gen and Eval must properly evaluate the k-probe matrix
+    // as well as the hash on Gen's inputs
+    // TODO: implement these 
+    void evaluate_K_Probe_Matrix(std::vector<Bytes> &matrix);
+    void generate_K_Probe_Matrix(std::vector<Bytes> &matrix);
+    void evaluate_Gen_Inp_Hash(std::vector<Bytes> &matrix);
+    void generate_Gen_Inp_Hash(std::vector<Bytes> &matrix);
 
-//    void * gen_Next_Gate(PCFState *st, PCFGate *current_gate);
-//  void * evl_Next_Gate(PCFState *st, PCFGate *current_gate);
 
     void * gen_Next_Gate(PCFGate *current_gate);
     void * evl_Next_Gate(PCFGate *current_gate);
@@ -91,6 +92,7 @@ public:
     void clear_garbling_bufr();
     Bytes get_bob_out();
     Bytes get_alice_out();
+    Bytes get_hash_out(); // get output of 2UHF hash
 
     void trim_output_buffers();
 protected:
@@ -98,11 +100,7 @@ protected:
 
     void set_Input_Keys(const std::vector<Bytes> * gen_keys, const std::vector<Bytes> * evl_keys);
 
-    // Gen and Eval must properly evaluate the k-probe matrix
-    // as well as the hash on Gen's inputs
-    // TODO: implement these 
-    void evaluate_K_Probe_Matrix();
-    void evaluate_Gen_Inp_Hash(std::vector<Bytes> &matrix);
+
 
     // high-level call to garble a gate 
     void garble_Gate();
@@ -189,6 +187,8 @@ protected:
     uint32_t m_in_bufr_ix;
     uint32_t m_alice_out_ix;
     uint32_t m_bob_out_ix;
+
+    Bytes m_hash_out; // stores the hash function output
 
     uint32_t m_gen_inp_size; //important for accessing output mask keys and hash keys
 

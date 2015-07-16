@@ -39,6 +39,7 @@ void send_data(int dst_node, const Bytes &data);
 
 #else
 
+/*
 	// Simulation mode
 	#define GEN_BEGIN     if (!Env::is_evl()) {
 	#define GEN_END       }
@@ -48,6 +49,13 @@ void send_data(int dst_node, const Bytes &data);
 	#define EVL_END       }
 	#define EVL_SEND(d)   send_data(Env::world_rank()-1, (d))
 	#define EVL_RECV()    recv_data(Env::world_rank()-1)
+*/
+/*
+	#define GEN_SEND(d)   Env::remote()->write_bytes(d)
+	#define EVL_RECV()    Env::remote()->read_bytes()
+	#define EVL_SEND(d)   Env::remote()->write_bytes(d)
+	#define GEN_RECV()    Env::remote()->read_bytes()
+*/
 
 #endif
 

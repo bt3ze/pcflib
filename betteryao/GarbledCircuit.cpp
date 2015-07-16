@@ -568,7 +568,7 @@ void GarbledCircuit::evaluate_Alice_Output(PCFGate* current_gate, __m128i &curre
     uint8_t out_bit = _mm_extract_epi8(current_key, 0) & 0x01;
     m_alice_out.set_ith_bit(m_alice_out_ix, out_bit);
     m_alice_out_ix++;
-
+    
 }
 
 // these are Gen's outputs
@@ -704,12 +704,14 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
       evlStandardGate(current_key, key1, key2, m_garbling_bufr);
       
       
-      // current_key will be returned
     
     }
 #ifdef FREE_XOR
   }
 #endif
+
+  // current_key will be available to the calling function
+
 }
 
 void GarbledCircuit::genStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, uint8_t truth_table){
@@ -801,7 +803,6 @@ void GarbledCircuit::genStandardGate(__m128i& current_key, __m128i & key1, __m12
       // now we encrypt the next several truth table entries before sending them to Eval
       // the first entry is (X[1-x],Y[y])
       // so we take the XOR-offset of X
-      // Bytes tmp;
       tmp.resize(16,0);
       
       // we just used X[0] as aex_key[0],
@@ -873,7 +874,9 @@ void GarbledCircuit::genStandardGate(__m128i& current_key, __m128i & key1, __m12
       _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), aes_ciphertext);
       
       out_bufr.insert(out_bufr.end(), tmp.begin(), tmp.begin()+Env::key_size_in_bytes());
-
+      
+      // current_key holds our output key, and it will be available to our calling function
+      // the calling function will also be able to send the information in out_bufr
 }
 
 void GarbledCircuit::evlStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr){
@@ -884,16 +887,12 @@ void GarbledCircuit::evlStandardGate(__m128i& current_key, __m128i & key1, __m12
     
     aes_plaintext = _mm_set1_epi64x(m_gate_index);
     
-    aes_key[0] =  key1; //*reinterpret_cast<__m128i*>(get_wire_key(m_st,current_gate->wire1));
-    aes_key[1] =  key2; // *reinterpret_cast<__m128i*>(get_wire_key(m_st,current_gate->wire2));
+    aes_key[0] =  key1;
+    aes_key[1] =  key2;
     
     const uint8_t perm_x = _mm_extract_epi8(aes_key[0], 0) & 0x01;
     const uint8_t perm_y = _mm_extract_epi8(aes_key[1], 0) & 0x01;
-    
-    //fprintf(stdout,"garbling input keys: %i %i (parity %i %i)\n",current_gate->wire1, current_gate->wire2,perm_x, perm_x);
-    //print128_num(aes_key[0]);
-    //print128_num(aes_key[1]);
-    
+        
 
 #ifndef AESNI
     // THIS IS THE OLD KDF, REPLACED WITH THE NEW FASTER ONE
@@ -937,6 +936,7 @@ void GarbledCircuit::evlStandardGate(__m128i& current_key, __m128i & key1, __m12
     current_key = _mm_xor_si128(current_key, aes_ciphertext);
 #endif
     
+    // current key holds our output key, and it will be available to the calling function
 }
 
 
@@ -1109,6 +1109,15 @@ void GarbledCircuit::clear_garbling_bufr(){
   m_garbling_bufr.clear();
 }
 
+
+
+// this function computes the 2-uhf matrix given by matrix
+// including output gates
+// collaboratively with Gen
+// Evl does not learn the parity of the outputs though
+// either i need to do output gates differently or 
+// Eval needs that info from Gen
+
 void GarbledCircuit::evaluate_Gen_Inp_Hash(std::vector<Bytes> & matrix){
   
   Bytes hash_out(matrix.size(),0); // this might be too big
@@ -1141,44 +1150,100 @@ void GarbledCircuit::evaluate_Gen_Inp_Hash(std::vector<Bytes> & matrix){
       }
     }
     
+    __m128i output_key;
+    Bytes in_bufr;
+    //Bytes in_bufr = EVL_RECV();
+    // must get information into in_bufr
+    evlStandardGate(output_key, row_key, row_key, in_bufr);
+    
     // now get output bit
     // we probably need to garble our output gate for this
-    if(_mm_extract_epi8(row_key,0)&0x01 == 1 ){
+    if(_mm_extract_epi8(output_key,0)&0x01 == 1 ){
       hash_out.set_ith_bit(j,1);
-    }
-
+    } 
   }
+
+  m_hash_out = hash_out;
 }
 
-// TODO: figure out what this is intended to do
-/*
-const Bytes GarbledCircuit::get_const_key(byte c, byte b)
-{
-  assert(c == 0 || c == 1); // wire for constant 0 or 1
-  assert(b == 0 || b == 1); // with bit value 0 or 1
-  Bytes tmp(16);
-  
-  tmp.resize(16);
-  if (b)
-    {
-      _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), _mm_xor_si128(m_R, m_const_wire[c]));
-    }
-  else
-    {
-      _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]), m_const_wire[c]);
-    }
-  
-  tmp.resize(Env::key_size_in_bytes());
-  return tmp;
-}
-*/
 
- Bytes GarbledCircuit::get_alice_out(){
+// this function computes the 2-uhf given by matrix 
+// (including output gates)
+// collaboratively with Eval
+void GarbledCircuit::generate_Gen_Inp_Hash(std::vector<Bytes> & matrix){
+  
+  Bytes hash_out(matrix.size(),0); // this might be too big
+  
+  assert(matrix.size() == Env::k());
+
+  for(int j = 0; j < matrix.size(); j++){
+    // this is each row of the 2-UHF matrix
+    // the rows of the matrix are the size of gen's full input
+    // (which is input_size + output_size + 2K + lg(K)
+    // and there are k rows (meaning column length is k)
+    
+    // info for when to XOR
+    Bytes row = matrix[j];
+    
+    // starter value for our row's key
+    __m128i row_key;
+    row_key = _mm_set_epi64x(0,0);
+
+    Bytes next_key;
+    __m128i next_key_128;
+    
+    for(int i = 0; i < m_gen_inputs->size(); i++){
+      // should be approximately same size as row*8
+      
+      next_key = get_Gen_Input(2*i + get_Input_Parity(i));
+      save_Key_to_128bit(next_key, next_key_128);
+      if(row.get_ith_bit(i)==1){
+        row_key = _mm_xor_si128(row_key, next_key_128);
+      }
+    }
+    
+    __m128i output_key;
+    Bytes out_bufr;
+    // we use 5 for output keys
+    // must get information into in_bufr
+    genStandardGate(output_key, row_key, row_key, out_bufr, 5);
+    // GEN_SEND(out_bufr);
+    
+    // now get output bit
+    // we probably need to garble our output gate for this
+    if(_mm_extract_epi8(output_key,0)&0x01 == 1 ){
+      hash_out.set_ith_bit(j,1);
+    }    
+    
+  }
+  m_hash_out = hash_out;
+}
+
+
+void evaluate_K_Probe_Matrix(std::vector<Bytes> &matrix){
+  // here, Eval derives keys with the proper semantics
+  // to use as her inputs
+
+}
+
+void generate_K_Probe_Matrix(std::vector<Bytes> &matrix){
+  // here, Gen derives keys for Eval with the proper semantics
+  // that will be her "new" input keys
+
+}
+
+
+
+Bytes GarbledCircuit::get_alice_out(){
   return m_alice_out;
 }
 
  Bytes GarbledCircuit::get_bob_out(){
   return m_bob_out;
+}
+
+Bytes GarbledCircuit::get_hash_out(){
+  return m_hash_out;
 }
 
  void GarbledCircuit::trim_output_buffers(){

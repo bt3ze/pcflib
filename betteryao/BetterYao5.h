@@ -218,7 +218,11 @@ protected:
 
         void evl_inputs_transform(std::vector<Bytes> &source, std::vector<Bytes> &dest);
 
-        void evaluate_circuit();
+
+        void generate_2UHF();
+        void evaluate_2UHF();
+        void initialize_circuits();
+        void evaluate_circuits();
 
 
         /**
@@ -398,6 +402,8 @@ protected:
         // each entry in the array is a row (or column?)
         std::vector<Bytes>                   m_2UHF_matrix;
         
+        // this vector holds all of Evl's input hashes
+        std::vector<Bytes>                   m_2UHF_hashes;
         
         // this vector tracks Gen's permutation bits
         std::vector<Bytes>     m_gen_inp_permutation_bits;
@@ -429,7 +435,7 @@ protected:
         // i think this was used for 
         // permutation bits
         // it is replaced with m_gen_inp_permutation_bits
-        std::vector<Bytes>              m_gen_inp_masks;
+        //  std::vector<Bytes>              m_gen_inp_masks;
         
 
 };
