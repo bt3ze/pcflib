@@ -39,7 +39,11 @@ void print128_num(__m128i var);
 
 void Double(__m128i & k, __m128i & mask);
 void H_Pi(__m128i & destination, __m128i &key, __m128i & tweak, __m128i & clear_mask);
-                        
+             
+void save_Key_to_128bit(Bytes & key, __m128i & destination);
+void append_m128i_to_Bytes(__m128i & num, Bytes & buf);
+
+          
 class GarbledCircuit {
 
 public:
@@ -92,6 +96,8 @@ public:
     Bytes get_hash_out(); // get output of 2UHF hash
 
     void trim_output_buffers();
+
+    Bytes get_Gen_Output_Label(uint32_t idx);
 protected:
 
 
@@ -189,6 +195,8 @@ protected:
     uint32_t m_in_bufr_ix;
     uint32_t m_alice_out_ix;
     uint32_t m_bob_out_ix;
+
+    std::vector<Bytes> m_gen_output_labels;
 
     Bytes m_hash_out; // stores the hash function output
     uint32_t m_hash_row_idx;

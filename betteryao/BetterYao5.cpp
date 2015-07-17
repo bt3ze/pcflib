@@ -1571,13 +1571,13 @@ void BetterYao5::retrieve_outputs(){
     GEN_SEND(alice_out_parity);
     
     Bytes bob_out_parity = m_gcs[i].get_bob_out();
-    Bytes bob_evaluated_out = GEN_RECV();
-    Bytes bob_out = bob_out_parity ^ bob_evaluated_out;
-    //GEN_SEND(bob_out_parity);
-    std::cout << "bob out (masked): " << bob_evaluated_out.to_hex() << std::endl;
+    //Bytes bob_evaluated_out = GEN_RECV();
+    //Bytes bob_out = bob_out_parity ^ bob_evaluated_out;
+    GEN_SEND(bob_out_parity);
+    //std::cout << "bob out (masked): " << bob_evaluated_out.to_hex() << std::endl;
     std::cout << "bob out (parity): " << bob_out_parity.to_hex() << std::endl;
     //    bob_out = bob_out ^ bob_out_parity;
-    std::cout << "bob out  (final):" << bob_out.to_hex() << std::endl;
+    //std::cout << "bob out  (final):" << bob_out.to_hex() << std::endl;
 
     }
     
@@ -1602,8 +1602,8 @@ void BetterYao5::retrieve_outputs(){
       Bytes alice_out_parity = EVL_RECV();
       
       Bytes bob_out = m_gcs[i].get_bob_out();
-      EVL_SEND(bob_out);
-      //Bytes bob_out_parity = EVL_RECV();
+      // EVL_SEND(bob_out);
+      Bytes bob_out_parity = EVL_RECV();
       
       std::cout << "alice out (masked): " << alice_out.to_hex() << std::endl;
       std::cout << "alice out (parity): " << alice_out_parity.to_hex() << std::endl;
@@ -1611,6 +1611,9 @@ void BetterYao5::retrieve_outputs(){
       std::cout << "alice out  (final): " << alice_out.to_hex() << std::endl;
       
       std::cout << "alice check hash: " << m_2UHF_hashes[i].to_hex() << std::endl;
+      bob_out = bob_out ^ bob_out_parity;
+      std::cout << "bob out  (final):" << bob_out.to_hex() << std::endl;
+
     }
   }
 
