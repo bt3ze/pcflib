@@ -568,16 +568,16 @@ void GarbledCircuit::evaluate_Bob_Output(PCFGate* current_gate, __m128i &current
       }
     
     // at this point, we mask Bob's output with his output masking key
-    //Bytes output_mask = get_Gen_Input(m_gen_inp_size + m_bob_out_ix);
+    Bytes output_mask = get_Gen_Input(m_gen_inp_size + m_bob_out_ix);
     //fprintf(stdout,"output mask idx: %i %i\n",m_gen_inp_size, m_bob_out_ix);
     
-    //__m128i output_mask_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&output_mask[0]));
+    __m128i output_mask_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&output_mask[0]));
     //print128_num(output_mask_key);
-    //__m128i output_key = _mm_xor_si128(output_mask_key, current_key);
+    __m128i output_key = _mm_xor_si128(output_mask_key, current_key);
     
-    //uint8_t out_bit = _mm_extract_epi8(output_key, 0) & 0x01;
+    uint8_t out_bit = _mm_extract_epi8(output_key, 0) & 0x01;
     
-    uint8_t out_bit = _mm_extract_epi8(current_key,0)& 0x01;
+    //uint8_t out_bit = _mm_extract_epi8(current_key,0)& 0x01;
     
     m_bob_out.set_ith_bit(m_bob_out_ix, out_bit);
     m_bob_out_ix++;
@@ -608,17 +608,17 @@ void GarbledCircuit::generate_Bob_Output(PCFGate* current_gate, __m128i &current
    }
   
   
-  //Bytes output_mask = get_Gen_Input(2*(m_gen_inp_size + m_bob_out_ix) + get_Input_Parity(m_gen_inp_size + m_bob_out_ix));
+  Bytes output_mask = get_Gen_Input(2*(m_gen_inp_size + m_bob_out_ix) + get_Input_Parity(m_gen_inp_size + m_bob_out_ix));
   //Bytes output_mask = get_Gen_Input(2*(m_gen_inp_size + m_bob_out_ix));
 
   //fprintf(stdout,"output mask idx: %i %i %i\n",m_gen_inp_size, m_bob_out_ix, 2*(m_gen_inp_size+m_bob_out_ix)+get_Input_Parity(m_gen_inp_size+m_bob_out_ix));
 
-  //__m128i output_mask_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&output_mask[0]));
+  __m128i output_mask_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&output_mask[0]));
   //print128_num(output_mask_key);
-  //__m128i output_key = _mm_xor_si128(output_mask_key, current_key);
+  __m128i output_key = _mm_xor_si128(output_mask_key, current_key);
 
-  //uint8_t out_bit = _mm_extract_epi8(output_key, 0) & 0x01;
-  uint8_t out_bit = _mm_extract_epi8(current_key, 0) & 0x01;
+  uint8_t out_bit = _mm_extract_epi8(output_key, 0) & 0x01;
+  //uint8_t out_bit = _mm_extract_epi8(current_key, 0) & 0x01;
   
   m_bob_out.set_ith_bit(m_bob_out_ix, out_bit );
   m_bob_out_ix++;

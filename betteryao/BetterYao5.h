@@ -230,6 +230,9 @@ protected:
          */
 
 
+
+        void post_evaluation_checks();
+
         // Eval proves Gen's output authenticity
         void gen_output_auth_proof();
         
@@ -285,8 +288,6 @@ protected:
          */
 
         std::vector<std::vector<Bytes> > m_gen_inp_keys;
-        std::vector<std::vector<Bytes> > m_gen_selected_inputs;
-
         std::vector<std::vector<Bytes> > m_evl_inp_keys;
         //        std::vector<std::vector<G> > m_evl_inp_ot_keys;
         std::vector<std::vector<Bytes> > m_evl_inp_ot_keys;

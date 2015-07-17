@@ -1175,27 +1175,6 @@ void BetterYao5::evl_ignore_masked_info(uint32_t len){
 
 void BetterYao5::garble_and_check_circuits(){
   std::cout << "garble and check circuits" << std::endl;
-  
-
-  GEN_BEGIN
-    // gen will select those input keys which we actually uses
-    // and put them into a container that makes the actual circuit garbling easier
-    // remember, all of the other keys are just XOR-offsets
-    // so they are easy to recover
-    /*
-  m_gen_selected_inputs.resize(Env::node_load());
-  for(int i = 0; i < Env::node_load(); i++){
-    for(int j = 0; j < get_gen_full_input_size(); j++){
-      if(m_gen_select_bits[i].get_ith_bit(j) == 0 ){
-        m_gen_selected_inputs[i].push_back(m_gen_inp_keys[i][2*j]);
-      } else{
-        m_gen_selected_inputs[i].push_back(m_gen_inp_keys[i][2*j+1]);
-      }
-    }
-  }
-    */
-  GEN_END
-  
 
   EVL_BEGIN
 
@@ -1410,8 +1389,7 @@ void BetterYao5::initialize_circuits(){
       // begin with one, just to make debugging easier
     for(int ix = 0; ix < m_gcs.size();ix++){
       
-      m_gcs[ix].init_Generation_Circuit(//&m_gen_selected_inputs[ix],
-                                        &m_gen_inp_keys[ix],// gen input keys
+      m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],// gen input keys
                                         &m_evl_hashed_inp_keys[ix], // evl input keys
                                         get_gen_inp_size(),// gen input size
                                         m_key_generation_seeds[ix], // random seed
@@ -1502,7 +1480,7 @@ void BetterYao5::generate_2UHF(){
       
       //      m_gcs[ix].generate_Gen_Inp_Hash(m_2UHF_matrix);
       GEN_SEND(m_gcs[ix].get_hash_out());
-      fprintf(stdout,"2uhf hash parity: %s\n",m_gcs[ix].get_hash_out().to_hex().c_str());
+      //fprintf(stdout,"2uhf hash parity: %s\n",m_gcs[ix].get_hash_out().to_hex().c_str());
     }
     // }
 }
@@ -1521,11 +1499,8 @@ void BetterYao5::evaluate_2UHF(){
           hash_bufr = EVL_RECV();
           m_gcs[ix].evl_next_hash_row(m_2UHF_matrix[j],hash_bufr);
         }  
-        //m_gcs[ix].evaluate_Gen_Inp_Hash(m_2UHF_matrix);
         Bytes hash_parity = EVL_RECV();
         m_2UHF_hashes[ix] = hash_parity ^ m_gcs[ix].get_hash_out();
-        fprintf(stdout,"2uhf hash parity: %s\n",hash_parity.to_hex().c_str());
-        fprintf(stdout,"2uhf hash: %s\n",m_2UHF_hashes[ix].to_hex().c_str());
       }
     }
     // }
@@ -1596,13 +1571,13 @@ void BetterYao5::retrieve_outputs(){
     GEN_SEND(alice_out_parity);
     
     Bytes bob_out_parity = m_gcs[i].get_bob_out();
-    // Bytes bob_evaluated_out = GEN_RECV();
-    //Bytes bob_out = bob_out_parity ^ bob_evaluated_out;
-    GEN_SEND(bob_out_parity);
-    //std::cout << "bob out (masked): " << bob_evaluated_out.to_hex() << std::endl;
+    Bytes bob_evaluated_out = GEN_RECV();
+    Bytes bob_out = bob_out_parity ^ bob_evaluated_out;
+    //GEN_SEND(bob_out_parity);
+    std::cout << "bob out (masked): " << bob_evaluated_out.to_hex() << std::endl;
     std::cout << "bob out (parity): " << bob_out_parity.to_hex() << std::endl;
     //    bob_out = bob_out ^ bob_out_parity;
-    //std::cout << "bob out  (final):" << bob_out.to_hex() << std::endl;
+    std::cout << "bob out  (final):" << bob_out.to_hex() << std::endl;
 
     }
     
@@ -1617,6 +1592,7 @@ void BetterYao5::retrieve_outputs(){
 
     if(m_chks[i]){
       EVL_RECV();
+      EVL_SEND(Bytes(0));
       EVL_RECV();
       
     } else if(!m_chks[i]) {
@@ -1626,8 +1602,8 @@ void BetterYao5::retrieve_outputs(){
       Bytes alice_out_parity = EVL_RECV();
       
       Bytes bob_out = m_gcs[i].get_bob_out();
-      // EVL_SEND(bob_out);
-      Bytes bob_out_parity = EVL_RECV();
+      EVL_SEND(bob_out);
+      //Bytes bob_out_parity = EVL_RECV();
       
       std::cout << "alice out (masked): " << alice_out.to_hex() << std::endl;
       std::cout << "alice out (parity): " << alice_out_parity.to_hex() << std::endl;
@@ -1640,6 +1616,12 @@ void BetterYao5::retrieve_outputs(){
 
 
   EVL_END
+
+}
+
+void BetterYao5::post_evaluation_checks(){
+  
+
 
 }
 
