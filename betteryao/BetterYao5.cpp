@@ -1348,11 +1348,11 @@ void BetterYao5::initialize_circuits(){
       
       m_gcs[ix].set_Gen_Circuit_Functions();
       
-      fprintf(stderr,"Gen Input: \t%s\nGen Full Input: \t%s\nGen Permutation Bits: \t%s\nGen select bits:\t%s\n",
+      
+      fprintf(stderr,"Gen Input: \t%s\nGen Full Input: \t%s\nGen Permutation Bits: \t%s\n",
               m_private_input.to_hex().c_str(),
               get_gen_full_input().to_hex().c_str(),
-              m_gen_inp_permutation_bits[ix].to_hex().c_str(),
-              m_gen_select_bits[ix].to_hex().c_str());
+              m_gen_inp_permutation_bits[ix].to_hex().c_str());
       
       //}
     }

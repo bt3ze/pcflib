@@ -50,7 +50,7 @@ public:
 
     GarbledCircuit();
     ~GarbledCircuit() {}
-    // should also include permutation bits in this one?
+
     void init_Generation_Circuit(const std::vector<Bytes> * gen_keys,
                                  const std::vector<Bytes> * evl_keys,
                                  const uint32_t gen_inp_size,
@@ -65,8 +65,12 @@ public:
                                  const Bytes & evl_input,
                                  const Bytes & zero_key,
                                  const Bytes & one_key);
+
+    // need to set callbacks functions for the PCF interpreter
     void set_Gen_Circuit_Functions();
     void set_Evl_Circuit_Functions();
+    void init_circuit_AES_key(__m128i & key);
+
 
     // Gen and Eval must properly evaluate the k-probe matrix
     // as well as the hash on Gen's inputs
@@ -80,8 +84,6 @@ public:
     void * gen_Next_Gate(PCFGate *current_gate);
     void * evl_Next_Gate(PCFGate *current_gate);
 
-    //void set_const_key(byte c, const Bytes &key);
-    //const Bytes get_const_key(byte c, byte b);
 
     // pointer to the PCF State
     struct PCFState *m_st;
@@ -97,7 +99,9 @@ public:
 
     void trim_output_buffers();
 
+    // for Gen output authenticity proof
     Bytes get_Gen_Output_Label(uint32_t idx);
+
 protected:
 
 
@@ -120,19 +124,15 @@ protected:
     Bytes get_Evl_Input(uint32_t idx);
     Bytes get_Gen_Key(uint32_t idx, uint32_t parity);
     Bytes get_Evl_Key(uint32_t idx, uint32_t parity);
-    //    Bytes get_Gen_Permuted_Key(uint32_t idx, uint32_t parity);
-    // Access to current wire table
-
-    //    Bytes get_Gen_Output_Mask(uint32_t idx);
     
     // Access to which input Gen or Eval chose
     uint32_t get_Input_Parity(uint32_t idx); 
 
 
-    void init_circuit_AES_key(__m128i & key);
 
-    // things to help with garbling
-    void generate_Random_Key(__m128i & destination);
+
+    // these are the individual functions for the types of gates
+    // alice in, alice out, bob in, bob out, and general gate
  
     void generate_Alice_Input(PCFGate* current_Gate, __m128i &current_key);
     void evaluate_Alice_Input(PCFGate* current_Gate, __m128i &current_key);
@@ -196,14 +196,19 @@ protected:
     uint32_t m_alice_out_ix;
     uint32_t m_bob_out_ix;
 
-    std::vector<Bytes> m_gen_output_labels;
 
+    // for Gen output authenticity proof
+    std::vector<Bytes> m_gen_output_labels;
     Bytes m_hash_out; // stores the hash function output
     uint32_t m_hash_row_idx;
     
+
     uint32_t m_gen_inp_size; //important for accessing output mask keys and hash keys
 
+
+    // very important: used for encrypting
     AES_KEY_J m_fixed_key;
+
 };
 
 
