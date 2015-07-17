@@ -40,6 +40,8 @@ void append_m128i_to_Bytes(const __m128i & num, Bytes & dest){
   dest.insert(dest.end(),tmp.begin(),tmp.begin()+Env::key_size_in_bytes());
 }
 
+
+
 /**
    These functions serve as intermediaries
    to get back to the Garbled Circuit object
@@ -1023,16 +1025,6 @@ void GarbledCircuit::evlHalfGatePair(__m128i &current_key, __m128i & key1, __m12
 
 }  
 
-
-/*
-void GarbledCircuit::set_const_key(byte c, const Bytes &key)
-{
-  assert(c == 0 || c == 1); // wire for constant 0 or 1
-  Bytes tmp = key;
-  tmp.resize(16,0);
-  m_const_wire[c] = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
-}
-*/
 
 Bytes GarbledCircuit::get_garbling_bufr(){
   return m_garbling_bufr;

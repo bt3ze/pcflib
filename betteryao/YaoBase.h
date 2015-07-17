@@ -44,7 +44,6 @@ protected:
 	void final_report();
 
         // subroutines for the protocol
-        void oblivious_transfer();
         void get_and_size_inputs();
         void size_inputs();
         void get_inputs(); 
