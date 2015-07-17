@@ -52,6 +52,7 @@ public:
                                  const uint32_t gen_inp_size,
                                  Bytes & rand_seed,
                                  const Bytes & permutation_bits,
+                                 const Bytes & select_bits,
                                  const Bytes R,
                                  const Bytes & zero_key,
                                  const Bytes & one_key);
@@ -64,16 +65,11 @@ public:
     void set_Gen_Circuit_Functions();
     void set_Evl_Circuit_Functions();
 
-    void generate_Circuit();
-    void evaluate_Circuit();
-
     // Gen and Eval must properly evaluate the k-probe matrix
     // as well as the hash on Gen's inputs
     // TODO: implement these 
     void evaluate_K_Probe_Matrix(std::vector<Bytes> &matrix);
     void generate_K_Probe_Matrix(std::vector<Bytes> &matrix);
-    void evaluate_Gen_Inp_Hash(std::vector<Bytes> &matrix);
-    void generate_Gen_Inp_Hash(std::vector<Bytes> &matrix);
     void evl_next_hash_row(Bytes & row, Bytes & in_bufr);
     void gen_next_hash_row(Bytes & row, Bytes & out_bufr);
 
@@ -119,12 +115,16 @@ protected:
     Bytes get_Evl_Input(uint32_t idx);
     Bytes get_Gen_Key(uint32_t idx, uint32_t parity);
     Bytes get_Evl_Key(uint32_t idx, uint32_t parity);
+    //    Bytes get_Gen_Permuted_Key(uint32_t idx, uint32_t parity);
     // Access to current wire table
 
     //    Bytes get_Gen_Output_Mask(uint32_t idx);
     
     // Access to which input Gen or Eval chose
     uint32_t get_Input_Parity(uint32_t idx); 
+    // used for gen's 2uhf hash
+    uint32_t get_Input_Selection(uint32_t idx); 
+
 
     void init_circuit_AES_key(__m128i & key);
 
@@ -156,6 +156,9 @@ protected:
 
     // circuit's free-XOR value
     __m128i  m_R;
+    // convenient copy of m_R
+    Bytes m_R_bytes;
+
     // enforces k-length keys
     __m128i  m_clear_mask;
     
@@ -165,6 +168,8 @@ protected:
     // (they will be secret to evaluation circuits)
     //    const Bytes * m_select_bits;
     Bytes m_select_bits;
+    // useful for Gen's input hashes
+    Bytes m_offset_bits;
 
     // hold values of constant wires 1 and 0
     __m128i m_const_wire[2];

@@ -40,33 +40,6 @@ GarbledCircuit::GarbledCircuit(): m_gate_index(0), m_bob_out_ix(0),m_alice_out_i
 
 }
 
-// the big cahoona
-// this is called by the BetterYao protocol object
-// and runs the circuit till the end.
-void GarbledCircuit::generate_Circuit(){
-  // gen and eval versions
-  
-  /*
-  while(get_next_gate(m_st)){
-    GEN_SEND(garbling_bufr);
-  }
-  */
-}
-
-// the big cahoona
-// this is called by the BetterYao protocol object
-// and runs the circuit till the end.
-void GarbledCircuit::evaluate_Circuit(){
-  // gen and eval versions
-
-  // Bytes bufr;
-  do {
-    // do things?
-    //    garbling_bufr = EVL_RECV();
-  }  
-  while(get_next_gate(m_st));
-
-}
 
 /**
    These functions serve as intermediaries
@@ -93,14 +66,17 @@ void * evl_next_gate(PCFState *st, PCFGate *current_gate){
  }
 
 
-void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys, const std::vector<Bytes> * evl_keys, const uint32_t gen_inp_size, Bytes & circuit_seed, const Bytes & select_bits, const Bytes R, const Bytes & zero_key, const Bytes & one_key){
+void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys, const std::vector<Bytes> * evl_keys, const uint32_t gen_inp_size, Bytes & circuit_seed, const Bytes & perm_bits, const Bytes & select_bits, const Bytes R, const Bytes & zero_key, const Bytes & one_key){
   
   Bytes tmp;
   
   m_prng.seed_rand(circuit_seed);
-  m_select_bits.insert(m_select_bits.begin(),select_bits.begin(),select_bits.begin() + select_bits.size());
 
-  fprintf(stdout, "Gen select bits: %s\n",select_bits.to_hex().c_str());
+  m_select_bits.insert(m_select_bits.begin(),perm_bits.begin(),perm_bits.begin() + perm_bits.size());
+
+  m_offset_bits.insert(m_offset_bits.begin(),select_bits.begin(),select_bits.begin() + select_bits.size());
+  
+  //fprintf(stdout, "Gen select bits: %s\n",select_bits.to_hex().c_str());
 
   // initialize the value of R
   // we initialize tmp with zeros for this so that 
@@ -111,6 +87,11 @@ void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys
   m_R = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&tmp[0]));
   fprintf(stdout,"R value: %s\n",R.to_hex().c_str());
   //  print128_num(m_R);
+  
+  // also initialize the Bytes version of R,
+  // used for returning keys of proper parity for Gen
+  m_R_bytes = R;
+
 
   // initialize the constant wires
   tmp.clear();
@@ -135,6 +116,8 @@ void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys
   //aes_key = _mm_xor_si128(aes_key,aes_key);
   init_circuit_AES_key(aes_key);
 
+  //  m_gen_inputs = gen_inputs;
+  
 }
 
 void GarbledCircuit::set_Gen_Circuit_Functions(){
@@ -162,7 +145,7 @@ void GarbledCircuit::init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys
   //m_select_bits = evl_input;
   m_select_bits.insert(m_select_bits.begin(),evl_input.begin(),evl_input.begin() + evl_input.size());
 
-  fprintf(stdout,"***Eval Input (select bits) *** %s\t%s\n",evl_input.to_hex().c_str(),m_select_bits.to_hex().c_str());
+  // fprintf(stdout,"***Eval Input (select bits) *** %s\t%s\n",evl_input.to_hex().c_str(),m_select_bits.to_hex().c_str());
   //std::cout << "Gen first input key: " << (*gen_keys)[0].to_hex() << std::endl;
 
   Bytes tmp;
@@ -215,8 +198,14 @@ void * GarbledCircuit::get_Const_Wire(uint32_t i){
 Bytes GarbledCircuit::get_Gen_Key(uint32_t input_idx, uint32_t parity){
   assert(parity == 0 || parity == 1);
   //  fprintf(stdout,"Get Gen Key: %u %u\n",input_idx,parity);
+  //  if(parity==1){
+  //  return get_Gen_Input(input_idx) ^ m_R_bytes;
+  //} else {
+  //  return get_Gen_Input(input_idx);
+  //}
   return get_Gen_Input(2*input_idx + parity);
 }
+
 
 Bytes GarbledCircuit::get_Evl_Key(uint32_t input_idx, uint32_t parity){
   assert(parity == 0 || parity == 1);
@@ -257,6 +246,15 @@ uint32_t GarbledCircuit::get_Input_Parity(uint32_t idx){
   // Eval uses this function to figure out what input key to decrpyt
   if(idx < m_select_bits.size()*8){
     return m_select_bits.get_ith_bit(idx);
+  } else{
+    fprintf(stdout,"input out of bounds: %x\n",idx);
+    return 0;
+  }
+}
+
+uint32_t GarbledCircuit::get_Input_Selection(uint32_t idx){
+  if(idx < m_offset_bits.size()*8){
+    return m_offset_bits.get_ith_bit(idx);
   } else{
     fprintf(stdout,"input out of bounds: %x\n",idx);
     return 0;
@@ -372,7 +370,7 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
     // actual gate
     generate_Gate(current_gate,current_key);
     m_gate_index++;
-    return &current_key; // get_Gen_Key or create a random nonce
+    return &current_key; 
   }
 }
 
@@ -388,7 +386,7 @@ void * GarbledCircuit::evl_Next_Gate(PCFGate *current_gate){
     
   } else if (current_gate->tag == TAG_INPUT_B){
     evaluate_Bob_Input(current_gate,current_key);
-    return &current_key; // get_Gen_Key or create a random nonce
+    return &current_key; 
     
   } else if (current_gate->tag == TAG_OUTPUT_A) {
 
@@ -439,7 +437,8 @@ void GarbledCircuit::generate_Bob_Input(PCFGate* current_gate, __m128i &current_
   
   uint32_t gen_input_idx = current_gate->wire1; // wire1 holds the input index
   
-  Bytes gen_input = get_Gen_Input(2*gen_input_idx + get_Input_Parity(gen_input_idx));
+  Bytes gen_input = get_Gen_Key(gen_input_idx,get_Input_Parity(gen_input_idx));
+  //Bytes gen_input = get_Gen_Input(gen_input_idx);
 
   save_Key_to_128bit(gen_input,current_key);
   
@@ -1117,115 +1116,14 @@ void GarbledCircuit::clear_garbling_bufr(){
 // Evl does not learn the parity of the outputs though
 // either i need to do output gates differently or 
 // Eval needs that info from Gen
-
-void GarbledCircuit::evaluate_Gen_Inp_Hash(std::vector<Bytes> & matrix){
-  
-  Bytes hash_out(matrix.size(),0); // this might be too big
-  
-  assert(matrix.size() == Env::k());
-
-  for(int j = 0; j < matrix.size(); j++){
-    // this is each row of the 2-UHF matrix
-    // the rows of the matrix are the size of gen's full input
-    // (which is input_size + output_size + 2K + lg(K)
-    // and there are k rows (meaning column length is k)
-    
-    // info for when to XOR
-    Bytes row = matrix[j];
-    
-    // starter value for our row's key
-    __m128i row_key;
-    row_key = _mm_set_epi64x(0,0);
-
-    Bytes next_key;
-    __m128i next_key_128;
-    
-    for(int i = 0; i < m_gen_inputs->size(); i++){
-      // should be approximately same size as row*8
-      next_key = get_Gen_Input(i);
-      save_Key_to_128bit(next_key, next_key_128);
-      if(row.get_ith_bit(i)==1){
-        row_key = _mm_xor_si128(row_key, next_key_128);
-      }
-    }
-    
-    __m128i output_key;
-    Bytes in_bufr;
-    //Bytes in_bufr = EVL_RECV();
-    // must get information into in_bufr
-    evlStandardGate(output_key, row_key, row_key, in_bufr);
-    
-    // now get output bit
-    // we probably need to garble our output gate for this
-    if(_mm_extract_epi8(output_key,0)&0x01 == 1 ){
-      hash_out.set_ith_bit(j,1);
-    } 
-  }
-
-  m_hash_out = hash_out;
-}
-
-
-// this function computes the 2-uhf given by matrix 
-// (including output gates)
-// collaboratively with Eval
-void GarbledCircuit::generate_Gen_Inp_Hash(std::vector<Bytes> & matrix){
-  
-  Bytes hash_out(matrix.size(),0); // this might be too big
-  
-  assert(matrix.size() == Env::k());
-
-  for(int j = 0; j < matrix.size(); j++){
-    // this is each row of the 2-UHF matrix
-    // the rows of the matrix are the size of gen's full input
-    // (which is input_size + output_size + 2K + lg(K)
-    // and there are k rows (meaning column length is k)
-    
-    // info for when to XOR
-    Bytes row = matrix[j];
-    
-    // starter value for our row's key
-    __m128i row_key;
-    row_key = _mm_set_epi64x(0,0);
-
-    Bytes next_key;
-    __m128i next_key_128;
-    
-    for(int i = 0; i < m_gen_inputs->size(); i++){
-      // should be approximately same size as row*8
-      
-      next_key = get_Gen_Input(2*i + get_Input_Parity(i));
-      save_Key_to_128bit(next_key, next_key_128);
-      if(row.get_ith_bit(i)==1){
-        row_key = _mm_xor_si128(row_key, next_key_128);
-      }
-    }
-    
-    __m128i output_key;
-    Bytes out_bufr;
-
-    // we use 5 for output keys
-    // must get information into in_bufr
-    genStandardGate(output_key, row_key, row_key, out_bufr, 5);
-    // GEN_SEND(out_bufr);
-    
-    // now get output bit
-    // we probably need to garble our output gate for this
-    if(_mm_extract_epi8(output_key,0)&0x01 == 1 ){
-      hash_out.set_ith_bit(j,1);
-    }    
-    
-  }
-  m_hash_out = hash_out;
-}
-
 void GarbledCircuit::gen_next_hash_row(Bytes & row, Bytes & hash_bufr){
   
 
   if(m_hash_out.size()*8 <= m_hash_row_idx){
     m_hash_out.resize((m_hash_out.size()+1)*2,0);
   }
-  
+  //std::cout << row.to_hex() << std::endl;
+  //fprintf(stdout,"%s\n",row.to_hex().c_str());
 
   // starter value for our row's key
   __m128i row_key;
@@ -1235,19 +1133,21 @@ void GarbledCircuit::gen_next_hash_row(Bytes & row, Bytes & hash_bufr){
   __m128i next_key_128;
   
   __m128i output_key;
-
   
+  // fprintf(stdout,"gen input size: %lu\trow length: row.size() %lu\n",m_gen_inputs->size()/2,row.size()*8);
   // assert(m_gen_inputs->size()/2 >=row.size()*8);
   for(int i = 0; i < m_gen_inputs->size()/2; i++){
     // should be approximately same size as row*8
     
-    next_key = get_Gen_Input(2*i + get_Input_Parity(i));
+    next_key = get_Gen_Key(i,get_Input_Selection(i));
+    //next_key = get_Gen_Input(i);
     save_Key_to_128bit(next_key, next_key_128);
+    if(Env::group_rank()==0){
+      print128_num(next_key_128);
+    }
     if(row.get_ith_bit(i)==1){
       row_key = _mm_xor_si128(row_key, next_key_128);
-    }
-    
-    
+    }    
   }
   
   Bytes out_bufr;
@@ -1255,7 +1155,7 @@ void GarbledCircuit::gen_next_hash_row(Bytes & row, Bytes & hash_bufr){
   genStandardGate(output_key, row_key, row_key, hash_bufr, 5);
   // GEN_SEND(out_bufr);   
   
-
+  
   // now get output bit
   // we probably need to garble our output gate for this
   if(_mm_extract_epi8(output_key,0)&0x01 == 1 ){
@@ -1271,7 +1171,10 @@ void GarbledCircuit::evl_next_hash_row(Bytes & row, Bytes & in_bufr){
   if(m_hash_out.size()*8 <= m_hash_row_idx){
     m_hash_out.resize((m_hash_out.size()+1)*2,0);
   }
-
+  
+  /// fprintf(stdout,"%s\n",row.to_hex().c_str());
+  //std::cout << row.to_hex() << std::endl;
+  
   __m128i row_key;
   row_key = _mm_set_epi64x(0,0);
   
@@ -1283,6 +1186,9 @@ void GarbledCircuit::evl_next_hash_row(Bytes & row, Bytes & in_bufr){
     // should be approximately same size as row*8
     next_key = get_Gen_Input(i);
     save_Key_to_128bit(next_key, next_key_128);
+    if(Env::group_rank()==0){
+      print128_num(next_key_128);
+    }
     if(row.get_ith_bit(i)==1){
       row_key = _mm_xor_si128(row_key, next_key_128);
     }

@@ -285,6 +285,8 @@ protected:
          */
 
         std::vector<std::vector<Bytes> > m_gen_inp_keys;
+        std::vector<std::vector<Bytes> > m_gen_selected_inputs;
+
         std::vector<std::vector<Bytes> > m_evl_inp_keys;
         //        std::vector<std::vector<G> > m_evl_inp_ot_keys;
         std::vector<std::vector<Bytes> > m_evl_inp_ot_keys;
@@ -332,20 +334,12 @@ protected:
         std::vector<std::vector<Bytes> >                   m_cc_recv_gen_inp_commitments; 
         std::vector<std::vector<Bytes> >                   m_cc_recv_gen_inp_label_commitments; 
 
-        /**
-           new and old variables
-        */
         // access to the garbled circuits (important!)
-        //std::vector<GarbledMal>             m_gcs;
         std::vector<GarbledCircuit>           m_gcs;
 
         // variables for cut-and-choose
 	Bytes                           m_chks;
 	Bytes                           m_all_chks;
-
-        // Gen's input decommitments (obsolete)
-        // std::vector<std::vector<Bytes> >      m_gen_inp_decom;
-        
         
         // *********************************************************
         // this protocol implementation requires THREE sets of PRNGS
@@ -399,7 +393,8 @@ protected:
         
         // this matrix defines the 2-UHF that is used to enforce
         // Gen's input consistency
-        // each entry in the array is a row (or column?)
+        // each entry in the array is a row the size of gen's inputs
+        // there are K rows (column length = k)
         std::vector<Bytes>                   m_2UHF_matrix;
         
         // this vector holds all of Evl's input hashes
@@ -414,29 +409,6 @@ protected:
         
         std::vector<Bytes> m_const_0_keys;
         std::vector<Bytes> m_const_1_keys;
-
-        /**
-           old variables
-         */
-
-        // m_ot_bit_cnt is the number of circuit OTs that each processor has to do
-        // (set to node_load)
-	size_t                          m_ot_bit_cnt;
-
-        // m_ot_out contains the output of the OTs for Gen and Evl
-        // and serves as the container for the seeds
-        // for the prngs (m_prngs) that will mask the information
-        // that Gen sends to Eval
-        // so that Eval can only decrypt if she chose the seed in the OT
-        // contemplating changing the name to m_seeds
-        std::vector<Bytes>              m_ot_out;
-
-
-        // i think this was used for 
-        // permutation bits
-        // it is replaced with m_gen_inp_permutation_bits
-        //  std::vector<Bytes>              m_gen_inp_masks;
-        
 
 };
 

@@ -10,7 +10,7 @@ static log4cxx::LoggerPtr logger(log4cxx::Logger::getLogger("BetterYao5.cpp"));
 #define debug_evl_fprintf(a,b) if(!m_chks[ix]){ std::cout << a << "  " << b << "\t rank: " << Env::group_rank() << std::endl; }
 
 
-BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params), m_ot_bit_cnt(0)
+BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params)
 {
 
   std::cout << "node load: " << Env::node_load() << std::endl;
@@ -1177,8 +1177,26 @@ void BetterYao5::evl_ignore_masked_info(uint32_t len){
 void BetterYao5::garble_and_check_circuits(){
   std::cout << "garble and check circuits" << std::endl;
   
+
+  GEN_BEGIN
+    // gen will select those input keys which we actually uses
+    // and put them into a container that makes the actual circuit garbling easier
+    // remember, all of the other keys are just XOR-offsets
+    // so they are easy to recover
+    /*
+  m_gen_selected_inputs.resize(Env::node_load());
+  for(int i = 0; i < Env::node_load(); i++){
+    for(int j = 0; j < get_gen_full_input_size(); j++){
+      if(m_gen_select_bits[i].get_ith_bit(j) == 0 ){
+        m_gen_selected_inputs[i].push_back(m_gen_inp_keys[i][2*j]);
+      } else{
+        m_gen_selected_inputs[i].push_back(m_gen_inp_keys[i][2*j+1]);
+      }
+    }
+  }
+    */
+  GEN_END
   
-  //MPI_Barrier(m_mpi_comm);
 
   EVL_BEGIN
 
@@ -1389,15 +1407,19 @@ bool BetterYao5::check_received_commitments_vs_generated(std::vector<Bytes> & re
 void BetterYao5::initialize_circuits(){
   MPI_Barrier(m_mpi_comm);
   GEN_BEGIN
-  if(Env::group_rank() == 0){
+    //if(Env::group_rank() == 0){
       // begin with one, just to make debugging easier
     for(int ix = 0; ix < m_gcs.size();ix++){
       
-      m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],// gen input keys
+      m_gcs[ix].init_Generation_Circuit(//&m_gen_selected_inputs[ix],
+                                        &m_gen_inp_keys[ix],// gen input keys
                                         &m_evl_hashed_inp_keys[ix], // evl input keys
                                         get_gen_inp_size(),// gen input size
                                         m_key_generation_seeds[ix], // random seed
                                         m_gen_inp_permutation_bits[ix], // permutation bits
+                                        //m_private_input,
+                                        m_gen_select_bits[ix],
+                                        //m_gen_inp_permutation_bits[ix],
                                         m_R[ix], // circuit XOR offset
                                         m_const_0_keys[ix], m_const_1_keys[ix]);// constant keys
       
@@ -1416,46 +1438,63 @@ void BetterYao5::initialize_circuits(){
               m_gen_inp_permutation_bits[ix].to_hex().c_str(),
               m_gen_select_bits[ix].to_hex().c_str());
       
+      //}
     }
-  }
   GEN_END
   
   EVL_BEGIN
 
-  if(Env::group_rank() == 0){
-    // begin with one, just to make debugging easier
-    for(int ix = 0; ix < m_gcs.size();ix++){
-      
-      if(m_chks[ix]){
-        // if check circuit, then we will generate it
-        // TODO: implement this
-      }
-      else if(!m_chks[ix]){
+    //  if(Env::group_rank() == 0){
+      // begin with one, just to make debugging easier
+      for(int ix = 0; ix < m_gcs.size();ix++){
         
-        // if evaluation circuit, we will evaluate it
-        m_gcs[ix].init_Evaluation_Circuit(&m_gen_inp_keys[ix],// gen keys
-                                          &m_evl_received_keys[ix],//evl keys
-                                          get_gen_inp_size(),// gen inp size
-                                          m_private_input, // private input
-                                          m_const_0_keys[ix], //constant keys
-                                          m_const_1_keys[ix]);
-        
-        m_gcs[ix].m_st = 
-          load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
-        m_gcs[ix].m_st->alice_in_size = get_gen_full_input_size();
-        m_gcs[ix].m_st->bob_in_size = get_evl_inp_count();
-        
-        set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
-        
+        if(m_chks[ix]){
+          // check circuit
+          m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],// gen input keys
+                                            &m_evl_hashed_inp_keys[ix], // evl input keys
+                                            get_gen_inp_size(),// gen input size
+                                            m_key_generation_seeds[ix], // random seed
+                                            m_gen_inp_permutation_bits[ix], // permutation bits
+                                            
+                                            m_gen_select_bits[ix],
+                                            m_R[ix], // circuit XOR offset
+                                            m_const_0_keys[ix],// constant keys
+                                            m_const_1_keys[ix]
+                                            );
+          
+          m_gcs[ix].m_st = 
+            load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
+          m_gcs[ix].m_st->alice_in_size = get_gen_full_input_size();
+          m_gcs[ix].m_st->bob_in_size = get_evl_inp_count();
+          
+          set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
+          
+          m_gcs[ix].set_Gen_Circuit_Functions();
+          
+        }
+        else if(!m_chks[ix]){
+          // evaluation circuit
+          
+          m_gcs[ix].init_Evaluation_Circuit(&m_gen_inp_keys[ix],// gen keys
+                                            &m_evl_received_keys[ix],//evl keys
+                                            get_gen_inp_size(),// gen inp size
+                                            m_private_input, // private input
+                                            m_const_0_keys[ix], //constant keys
+                                            m_const_1_keys[ix]);
+          
+          m_gcs[ix].m_st = 
+            load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
+          m_gcs[ix].m_st->alice_in_size = get_gen_full_input_size();
+          m_gcs[ix].m_st->bob_in_size = get_evl_inp_count();
+          
+          set_external_circuit(m_gcs[ix].m_st, &m_gcs[ix]);
+          
         m_gcs[ix].set_Evl_Circuit_Functions();
         
-      }
+        }
+        //    }
     }
-  }
-
   EVL_END
-
-
 }
 
 void BetterYao5::generate_2UHF(){
@@ -1469,30 +1508,39 @@ void BetterYao5::generate_2UHF(){
       
       //      m_gcs[ix].generate_Gen_Inp_Hash(m_2UHF_matrix);
       GEN_SEND(m_gcs[ix].get_hash_out());
+      fprintf(stdout,"2uhf hash parity: %s\n",m_gcs[ix].get_hash_out().to_hex().c_str());
     }
     // }
-       
 }
 
 void BetterYao5::evaluate_2UHF(){
-  if(Env::group_rank()==0){
+  //  if(Env::group_rank()==0){
     Bytes hash_bufr;
     for(int ix = 0; ix < Env::node_load();ix++){
-      for(int j =0; j < m_2UHF_matrix.size();j++){
-        hash_bufr = EVL_RECV();
-        m_gcs[ix].evl_next_hash_row(m_2UHF_matrix[j],hash_bufr);
+      if(m_chks[ix]){        
+        for(int j = 0; j < m_2UHF_matrix.size();j++){
+          EVL_RECV();
+        }
+        EVL_RECV();
+      } else {
+        for(int j =0; j < m_2UHF_matrix.size();j++){
+          hash_bufr = EVL_RECV();
+          m_gcs[ix].evl_next_hash_row(m_2UHF_matrix[j],hash_bufr);
+        }  
+        //m_gcs[ix].evaluate_Gen_Inp_Hash(m_2UHF_matrix);
+        Bytes hash_parity = EVL_RECV();
+        m_2UHF_hashes[ix] = hash_parity ^ m_gcs[ix].get_hash_out();
+        fprintf(stdout,"2uhf hash parity: %s\n",hash_parity.to_hex().c_str());
+        fprintf(stdout,"2uhf hash: %s\n",m_2UHF_hashes[ix].to_hex().c_str());
       }
-      //m_gcs[ix].evaluate_Gen_Inp_Hash(m_2UHF_matrix);
-      Bytes hash_parity = EVL_RECV();
-      m_2UHF_hashes[ix] = hash_parity ^ m_gcs[ix].get_hash_out();
     }
-  }
+    // }
 }
 
 void BetterYao5::evaluate_circuits(){
   
   GEN_BEGIN
-    if(Env::group_rank()==0){
+    //if(Env::group_rank()==0){
       for(int ix = 0; ix < Env::node_load();ix++){
         Bytes bufr;
         while(get_next_gate(m_gcs[ix].m_st)){
@@ -1503,22 +1551,31 @@ void BetterYao5::evaluate_circuits(){
         GEN_SEND(Bytes(0)); // redundant value to prevent Evl from hanging
         
       }
-    }
+  // }
 
   GEN_END
     
     EVL_BEGIN
 
-    if(Env::group_rank()==0){
+    // if(Env::group_rank()==0){
       for(int ix = 0; ix < Env::node_load(); ix++){ 
         Bytes bufr;
-        do {
-          bufr = EVL_RECV();
-          m_gcs[ix].set_garbling_bufr(bufr);
-          
-        } while(get_next_gate(m_gcs[ix].m_st));
+        
+        if(m_chks[ix]){
+          Bytes check_bufr = EVL_RECV();
+          bufr = m_gcs[ix].get_garbling_bufr();
+          // check if they're the same
+          m_gcs[ix].clear_garbling_bufr();
+        } else if(!m_chks[ix]){
+          // evaluation circuit
+          do {
+            bufr = EVL_RECV();
+            m_gcs[ix].set_garbling_bufr(bufr);
+            
+          } while(get_next_gate(m_gcs[ix].m_st));
+        }
       }
-    }
+  //  }
     EVL_END
 }
 
@@ -1531,6 +1588,9 @@ void BetterYao5::retrieve_outputs(){
   // this function currently outputs in the clear
   // TODO: gen output authenticity and masking gen's outputs
 
+
+  std::cout <<"retrieve outputs"<<std::endl;
+
   GEN_BEGIN
 
   assert(m_gcs.size()>0);  
@@ -1542,13 +1602,13 @@ void BetterYao5::retrieve_outputs(){
     GEN_SEND(alice_out_parity);
     
     Bytes bob_out_parity = m_gcs[i].get_bob_out();
-    Bytes bob_evaluated_out = GEN_RECV();
-    Bytes bob_out = bob_out_parity ^ bob_evaluated_out;
-    //GEN_SEND(bob_out_parity);
-    std::cout << "bob out (masked): " << bob_evaluated_out.to_hex() << std::endl;
+    // Bytes bob_evaluated_out = GEN_RECV();
+    //Bytes bob_out = bob_out_parity ^ bob_evaluated_out;
+    GEN_SEND(bob_out_parity);
+    //std::cout << "bob out (masked): " << bob_evaluated_out.to_hex() << std::endl;
     std::cout << "bob out (parity): " << bob_out_parity.to_hex() << std::endl;
     //    bob_out = bob_out ^ bob_out_parity;
-    std::cout << "bob out  (final):" << bob_out.to_hex() << std::endl;
+    //std::cout << "bob out  (final):" << bob_out.to_hex() << std::endl;
 
     }
     
@@ -1560,22 +1620,28 @@ void BetterYao5::retrieve_outputs(){
   
   assert(m_gcs.size()>0);
   for(int i = 0; i < m_gcs.size();i++){
-    m_gcs[i].trim_output_buffers();
 
-    Bytes alice_out = m_gcs[i].get_alice_out();
-    Bytes alice_out_parity = EVL_RECV();
-    
-    Bytes bob_out = m_gcs[i].get_bob_out();
-    EVL_SEND(bob_out);
-    //    Bytes bob_out_parity = EVL_RECV();
-   
-    std::cout << "alice out (masked): " << alice_out.to_hex() << std::endl;
-    std::cout << "alice out (parity): " << alice_out_parity.to_hex() << std::endl;
-    alice_out = alice_out ^ alice_out_parity;
-    std::cout << "alice out  (final): " << alice_out.to_hex() << std::endl;
-
-    std::cout << "alice check hash: " << m_2UHF_hashes[i].to_hex() << std::endl;
-   
+    if(m_chks[i]){
+      EVL_RECV();
+      EVL_RECV();
+      
+    } else if(!m_chks[i]) {
+      m_gcs[i].trim_output_buffers();
+      
+      Bytes alice_out = m_gcs[i].get_alice_out();
+      Bytes alice_out_parity = EVL_RECV();
+      
+      Bytes bob_out = m_gcs[i].get_bob_out();
+      // EVL_SEND(bob_out);
+      Bytes bob_out_parity = EVL_RECV();
+      
+      std::cout << "alice out (masked): " << alice_out.to_hex() << std::endl;
+      std::cout << "alice out (parity): " << alice_out_parity.to_hex() << std::endl;
+      alice_out = alice_out ^ alice_out_parity;
+      std::cout << "alice out  (final): " << alice_out.to_hex() << std::endl;
+      
+      std::cout << "alice check hash: " << m_2UHF_hashes[i].to_hex() << std::endl;
+    }
   }
 
 
@@ -1770,11 +1836,7 @@ void BetterYao5::ot_send_random(std::vector<Bytes> & send_inputs){
   
   Z r, s[2], t[2];
   G gr, hr, X[2], Y[2];
-  
-  //  m_ot_out.clear();
-  //  m_ot_out.reserve(2*m_ot_bit_cnt); // the receiver only uses half of it
-
-  
+    
   //  GEN_BEGIN // generator (OT sender)
   for (size_t bix = 0; bix < send_inputs.size()/2; bix++)
     {
