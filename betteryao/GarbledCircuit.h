@@ -52,7 +52,6 @@ public:
                                  const uint32_t gen_inp_size,
                                  Bytes & rand_seed,
                                  const Bytes & permutation_bits,
-                                 const Bytes & select_bits,
                                  const Bytes R,
                                  const Bytes & zero_key,
                                  const Bytes & one_key);
@@ -122,8 +121,6 @@ protected:
     
     // Access to which input Gen or Eval chose
     uint32_t get_Input_Parity(uint32_t idx); 
-    // used for gen's 2uhf hash
-    uint32_t get_Input_Selection(uint32_t idx); 
 
 
     void init_circuit_AES_key(__m128i & key);
@@ -168,8 +165,6 @@ protected:
     // (they will be secret to evaluation circuits)
     //    const Bytes * m_select_bits;
     Bytes m_select_bits;
-    // useful for Gen's input hashes
-    Bytes m_offset_bits;
 
     // hold values of constant wires 1 and 0
     __m128i m_const_wire[2];

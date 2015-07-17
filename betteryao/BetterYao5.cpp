@@ -250,7 +250,6 @@ uint32_t BetterYao5::get_gen_full_input_size(){
 }
 
 uint32_t BetterYao5::get_gen_inp_size(){
-  std::cout << "gen input size: "<<m_gen_inp_cnt << std::endl;
   return m_gen_inp_cnt;
   
 }
@@ -1417,9 +1416,6 @@ void BetterYao5::initialize_circuits(){
                                         get_gen_inp_size(),// gen input size
                                         m_key_generation_seeds[ix], // random seed
                                         m_gen_inp_permutation_bits[ix], // permutation bits
-                                        //m_private_input,
-                                        m_gen_select_bits[ix],
-                                        //m_gen_inp_permutation_bits[ix],
                                         m_R[ix], // circuit XOR offset
                                         m_const_0_keys[ix], m_const_1_keys[ix]);// constant keys
       
@@ -1455,8 +1451,6 @@ void BetterYao5::initialize_circuits(){
                                             get_gen_inp_size(),// gen input size
                                             m_key_generation_seeds[ix], // random seed
                                             m_gen_inp_permutation_bits[ix], // permutation bits
-                                            
-                                            m_gen_select_bits[ix],
                                             m_R[ix], // circuit XOR offset
                                             m_const_0_keys[ix],// constant keys
                                             m_const_1_keys[ix]

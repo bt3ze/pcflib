@@ -66,15 +66,13 @@ void * evl_next_gate(PCFState *st, PCFGate *current_gate){
  }
 
 
-void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys, const std::vector<Bytes> * evl_keys, const uint32_t gen_inp_size, Bytes & circuit_seed, const Bytes & perm_bits, const Bytes & select_bits, const Bytes R, const Bytes & zero_key, const Bytes & one_key){
+void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys, const std::vector<Bytes> * evl_keys, const uint32_t gen_inp_size, Bytes & circuit_seed, const Bytes & perm_bits, const Bytes R, const Bytes & zero_key, const Bytes & one_key){
   
   Bytes tmp;
   
   m_prng.seed_rand(circuit_seed);
 
   m_select_bits.insert(m_select_bits.begin(),perm_bits.begin(),perm_bits.begin() + perm_bits.size());
-
-  m_offset_bits.insert(m_offset_bits.begin(),select_bits.begin(),select_bits.begin() + select_bits.size());
   
   //fprintf(stdout, "Gen select bits: %s\n",select_bits.to_hex().c_str());
 
@@ -246,15 +244,6 @@ uint32_t GarbledCircuit::get_Input_Parity(uint32_t idx){
   // Eval uses this function to figure out what input key to decrpyt
   if(idx < m_select_bits.size()*8){
     return m_select_bits.get_ith_bit(idx);
-  } else{
-    fprintf(stdout,"input out of bounds: %x\n",idx);
-    return 0;
-  }
-}
-
-uint32_t GarbledCircuit::get_Input_Selection(uint32_t idx){
-  if(idx < m_offset_bits.size()*8){
-    return m_offset_bits.get_ith_bit(idx);
   } else{
     fprintf(stdout,"input out of bounds: %x\n",idx);
     return 0;
@@ -1122,8 +1111,6 @@ void GarbledCircuit::gen_next_hash_row(Bytes & row, Bytes & hash_bufr){
   if(m_hash_out.size()*8 <= m_hash_row_idx){
     m_hash_out.resize((m_hash_out.size()+1)*2,0);
   }
-  //std::cout << row.to_hex() << std::endl;
-  //fprintf(stdout,"%s\n",row.to_hex().c_str());
 
   // starter value for our row's key
   __m128i row_key;
@@ -1134,27 +1121,22 @@ void GarbledCircuit::gen_next_hash_row(Bytes & row, Bytes & hash_bufr){
   
   __m128i output_key;
   
-  // fprintf(stdout,"gen input size: %lu\trow length: row.size() %lu\n",m_gen_inputs->size()/2,row.size()*8);
-  // assert(m_gen_inputs->size()/2 >=row.size()*8);
   for(int i = 0; i < m_gen_inputs->size()/2; i++){
     // should be approximately same size as row*8
     
-    next_key = get_Gen_Key(i,get_Input_Selection(i));
+    next_key = get_Gen_Key(i,get_Input_Parity(i));
     //next_key = get_Gen_Input(i);
     save_Key_to_128bit(next_key, next_key_128);
-    if(Env::group_rank()==0){
-      print128_num(next_key_128);
-    }
+    
     if(row.get_ith_bit(i)==1){
       row_key = _mm_xor_si128(row_key, next_key_128);
     }    
   }
   
-  Bytes out_bufr;
-  // we use 5 for output keys
-  genStandardGate(output_key, row_key, row_key, hash_bufr, 5);
-  // GEN_SEND(out_bufr);   
+  hash_bufr.clear();
   
+  // we use 5 for output keys
+  genStandardGate(output_key, row_key, row_key, hash_bufr, 5);  
   
   // now get output bit
   // we probably need to garble our output gate for this
@@ -1171,10 +1153,7 @@ void GarbledCircuit::evl_next_hash_row(Bytes & row, Bytes & in_bufr){
   if(m_hash_out.size()*8 <= m_hash_row_idx){
     m_hash_out.resize((m_hash_out.size()+1)*2,0);
   }
-  
-  /// fprintf(stdout,"%s\n",row.to_hex().c_str());
-  //std::cout << row.to_hex() << std::endl;
-  
+    
   __m128i row_key;
   row_key = _mm_set_epi64x(0,0);
   
@@ -1186,20 +1165,15 @@ void GarbledCircuit::evl_next_hash_row(Bytes & row, Bytes & in_bufr){
     // should be approximately same size as row*8
     next_key = get_Gen_Input(i);
     save_Key_to_128bit(next_key, next_key_128);
-    if(Env::group_rank()==0){
-      print128_num(next_key_128);
-    }
     if(row.get_ith_bit(i)==1){
       row_key = _mm_xor_si128(row_key, next_key_128);
     }
   }
     
   __m128i output_key;
-  // Bytes in_bufr;
-  //Bytes in_bufr = EVL_RECV();
-  // must get information into in_bufr
   evlStandardGate(output_key, row_key, row_key, in_bufr);
-  
+  in_bufr.clear();
+
   // now get output bit
   // we probably need to garble our output gate for this
   if(_mm_extract_epi8(output_key,0)&0x01 == 1 ){
