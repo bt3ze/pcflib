@@ -2,13 +2,8 @@
 #include <log4cxx/propertyconfigurator.h>
 
 //#include "Yao.h"
-//#include "BetterYao.h"
-//#include "BetterYao2.h"
-//#include "BetterYao3.h"
 //#include "BetterYao4.h"
 #include "BetterYao5.h"
-//#include "splityao/BetterYaoEvl.h"
-//#include "splityao/BetterYaoGen.h"
 
 int main(int argc, char **argv)
 {
@@ -16,7 +11,6 @@ int main(int argc, char **argv)
 
 	log4cxx::PropertyConfigurator::configure("log4cxx.conf");
 
-#ifdef _BETTERYAO
 	if (argc < 8)
 	{
 		std::cout << "Usage:" << std::endl
@@ -31,13 +25,11 @@ int main(int argc, char **argv)
 			<< std::endl;
 		exit(EXIT_FAILURE);
 	}
-#endif
 
 	EnvParams params;
 
 	YaoBase *sys = 0;
 
-#ifdef _BETTERYAO
 	params.secu_param   = atoi(argv[1]);
 	params.stat_param   = atoi(argv[2]);
 
@@ -65,26 +57,6 @@ int main(int argc, char **argv)
           MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
           break;
         }
-#else
-
-
-        params.pcf_file = argv[1];
-        params.private_file = argv[2];
-        params.ipserve_addr = argv[3];
-        params.port_base = atoi(argv[4]);
-        params.input_file = argv[2];
-
-#ifndef MALIC
-        params.secu_param = 80;
-        params.stat_param = 1;
-        sys = new Yao(params);
-#else
-        params.secu_param = 80;
-        params.stat_param = atoi(argv[5]);
-        std::cerr << "Here" << std::endl;
-        sys = new BetterYao4(params);
-#endif
-#endif
 
 	sys->start();
 	delete sys; // delete MPI objects before MPI_Finalize()

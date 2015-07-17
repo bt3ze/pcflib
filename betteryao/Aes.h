@@ -64,8 +64,6 @@
 #include <emmintrin.h>              /* SSE2 instructions               */
 #include <openssl/aes.h>
 
-#include "Bytes.h"
-
 
   // new fixed-key AES encryption
 typedef __m128i block;
@@ -75,20 +73,11 @@ typedef struct { __m128i rd_key[15]; int rounds; } AES_KEY_J;
 //AES (fixed key)
 void KDF128(uint8_t *out, const uint8_t * in, const AES_KEY_J * key);
 
-// SHA (TODO: reimplement (perhaps))
-// void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key);
 
 #ifdef __CPLUSPLUS
 extern "C"
 {
 #endif
-
-  // old KSS AES encryption code
-  //void AES_128_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
-  //void AES_192_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
-  //void AES_256_Key_Expansion(const uint8_t *userkey, uint8_t *key_schedule);
-  //void AES_ECB_decrypt (const uint8_t *in, uint8_t *out, unsigned long length, const uint8_t *KS, int nr);
-  //void AES_ECB_encrypt (const uint8_t *in, uint8_t *out, unsigned long length, const uint8_t *KS, int nr);
 
 
   // encryption functions (copied from JustGarble encryption)

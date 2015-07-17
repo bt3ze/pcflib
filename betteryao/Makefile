@@ -98,13 +98,6 @@ alsz-ot-ext-snd.o: $(OTE)/ot/ot-ext.h $(OTE)/ot/ot-ext-snd.h $(OTE)/ot/alsz-ot-e
 otextension.o: $(OTOT)/alsz-ot-ext-rec.h $(OTOT)/alsz-ot-ext-snd.h otextension.h otextension.cpp
 	$(CC) -c $(OT-CFLAGS) otextension.cpp
 
-#parse_options.o: $(OT-UTIL)/parse_options.h  $(OT-UTIL)/parse_options.cpp
-#	$(CC) -c -I$(OT-UTIL) $(OT_CFLAGS) $(OT-UTIL)/parse_options.cpp
-
-#cbitvector.o: $(OT-UTIL)/cbitvector.h  $(OT-UTIL)/cbitvector.cpp $(OT-UTIL)/typedefs.h $(OT-CRYPTO)/crypto.h
-#	$(CC) -c -I$(OT-UTIL) $(OT_CFLAGS) $(OT-UTIL)/cbitvector.cpp
-
-
 server : ipserver.cpp Bytes.o Env.o NetIO.o
 	$(CXX) -pthread -o server $(CXX_CFLAGS) $(CXX_LFLAGS) $^ $(LIBS)
 

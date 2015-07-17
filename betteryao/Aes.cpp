@@ -5,15 +5,6 @@
 #include "Aes.h"
 
 
-#if !defined (ALIGN16)
-# if defined (__GNUC__)
-#  define ALIGN16  __attribute__  ( (aligned (16)))
-# else
-#  define ALIGN16 __declspec (align (16))
-# endif
-#endif
-
-
 #if defined AESNI 
 
 //
@@ -24,6 +15,9 @@
 #include <wmmintrin.h>
 #include <emmintrin.h>
 
+#include <openssl/aes.h>
+
+
 void KDF128(uint8_t *out, const uint8_t * in, const AES_KEY_J * key){
   // TODO: this needs to be made such that it is actually
   // a fixed key AES permutation
@@ -31,61 +25,10 @@ void KDF128(uint8_t *out, const uint8_t * in, const AES_KEY_J * key){
 }
 
 
-// WE SHOULDN'T BE USING KDF256 IF AES_NI IS AVAILABLE (OR REALLY AT ALL)
-// but it is here nonetheless for completeness
-// TODO: might want to generate a KDF256 version as above
-/*
-#include <openssl/evp.h>
-#include <openssl/sha.h>
-
-void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key)
-{
-	SHA256_CTX sha256;
-
-	SHA256_Init(&sha256);
-	SHA256_Update(&sha256, key, 32);
-	SHA256_Final(out, &sha256);
-}
-*/
-
-
 #ifdef __CPLUSPLUS
 extern "C"
 {
 #endif
-
-
-
-#include <openssl/aes.h>
-
-// these functions didn't actually have support
-// they are left over from an old version of PCF
-// KDF256 might be useful, (but not with key derivation
-// according to Bellare/JustGarble) so we might think
-// about reimplementing it
-
-//void KDF128(const uint8_t *in, uint8_t *out, const uint8_t *key)
-//{
-//    ALIGN16 uint8_t KEY[16*11];
-//    ALIGN16 uint8_t PLAINTEXT[64];
-//    ALIGN16 uint8_t CIPHERTEXT[64];
-//
-//    AES_128_Key_Expansion(key, KEY);
-//    _mm_storeu_si128(&((__m128i*)PLAINTEXT)[0],*(__m128i*)in);
-//    AES_ECB_encrypt(PLAINTEXT, CIPHERTEXT, 64, KEY, 10);
-//    _mm_storeu_si128((__m128i*)out,((__m128i*)CIPHERTEXT)[0]);
-//}
-
-//void KDF256(const uint8_t *in, uint8_t *out, const uint8_t *key)
-//{
-//    ALIGN16 uint8_t KEY[16*15];
-//    ALIGN16 uint8_t PLAINTEXT[64];
-//    ALIGN16 uint8_t CIPHERTEXT[64];
-//    AES_256_Key_Expansion(key, KEY);
-//    _mm_storeu_si128(&((__m128i*)PLAINTEXT)[0],*(__m128i*)in);
-//    AES_ECB_encrypt(PLAINTEXT, CIPHERTEXT, 64, KEY, 14);
-//    _mm_storeu_si128((__m128i*)out,((__m128i*)CIPHERTEXT)[0]);
-//}
 
 
 // the following functions are copied from the JustGarble project
@@ -328,7 +271,6 @@ void AES_ecb_decrypt_blks(block *blks, unsigned nblks, AES_KEY_J *key) {
 
 #include <openssl/evp.h>
 #include <openssl/sha.h>
-
 
 void KDF128(uint8_t *out, const uint8_t *in, const uint8_t *key)
 {

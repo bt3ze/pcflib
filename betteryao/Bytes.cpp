@@ -20,7 +20,6 @@ Bytes condense_vector(Bytes vec){
 }
 
 Bytes explode_vector(Bytes vec, int len){
-  std::cout << "explode vector len: " << len << std::endl;
   Bytes ret = Bytes(0);
   for(int i = 0; i < len; i++){
     ret.push_back(vec.get_ith_bit(i));

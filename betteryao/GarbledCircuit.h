@@ -40,8 +40,8 @@ void print128_num(__m128i var);
 void Double(__m128i & k, __m128i & mask);
 void H_Pi(__m128i & destination, __m128i &key, __m128i & tweak, __m128i & clear_mask);
              
-void save_Key_to_128bit(Bytes & key, __m128i & destination);
-void append_m128i_to_Bytes(__m128i & num, Bytes & buf);
+void save_Key_to_128bit(const Bytes & key, __m128i & destination);
+void append_m128i_to_Bytes(const __m128i & num, Bytes & buf);
 
           
 class GarbledCircuit {
@@ -80,8 +80,8 @@ public:
     void * gen_Next_Gate(PCFGate *current_gate);
     void * evl_Next_Gate(PCFGate *current_gate);
 
-    void set_const_key(byte c, const Bytes &key);
-    const Bytes get_const_key(byte c, byte b);
+    //void set_const_key(byte c, const Bytes &key);
+    //const Bytes get_const_key(byte c, byte b);
 
     // pointer to the PCF State
     struct PCFState *m_st;
@@ -147,7 +147,7 @@ protected:
     
  
     void genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, byte a1, byte a2, byte a3); 
-    void evlHalfGatePair(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr, byte a1); 
+    void evlHalfGatePair(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr); 
     
     void genStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & out_bufr,uint8_t truth_table);
     void evlStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr);

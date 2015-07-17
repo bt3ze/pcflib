@@ -963,7 +963,7 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void *(*c
 void finalize(PCFState * st)
 {
 
-  fprintf(stderr, "finalize\n");
+  //  fprintf(stderr, "finalize\n");
   
   uint32_t i = 0;
   
@@ -975,7 +975,7 @@ void finalize(PCFState * st)
   free(st->wires);
   //  free(st);
   
-  fprintf(stderr,"done finalize\n");
+  //  fprintf(stderr,"done finalize\n");
 }
 
 struct PCFGate * get_next_gate(struct PCFState * st)
@@ -1002,7 +1002,7 @@ struct PCFGate * get_next_gate(struct PCFState * st)
   if(st->done != 0)
   {
       // no more gates and the PCFState thinks it's done
-      fprintf(stderr,"enter finalize\n");
+    //      fprintf(stderr,"enter finalize\n");
       finalize(st);
       return 0;
     }

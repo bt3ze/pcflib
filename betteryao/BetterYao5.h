@@ -20,16 +20,7 @@ public:
 	BetterYao5(EnvParams &params);
 	virtual ~BetterYao5() {}
 
-        // old protocol:
 	void start();
-        //void oblivious_transfer();
-        //void cut_and_choose();
-	//void cut_and_choose2();
-	//void consistency_check();
-	//void circuit_evaluate();
-
-        // new protocol:
-        void SS13();
 	
 protected:
         /**
@@ -67,7 +58,6 @@ protected:
         void generate_commitments(Prng & rng, std::vector<Bytes> & keys, std::vector<commitment_t> & commitments);
         
 
-
         /**
          *
          OBLIVIOUS TRANSFER
@@ -100,7 +90,7 @@ protected:
            that is necessary for the 2-UHF
         */
 
-        // generates Gen's output mask (referred to as e)
+        // generates Gen's output mask
         void gen_generate_output_mask(Prng &);
 
         // generates 2k+lg(k) extra random bits
@@ -115,7 +105,7 @@ protected:
         void evl_generate_new_input();
         
         // TODO: change this to account for eval's 
-        // new inpout generation
+        // modified inputs
         uint32_t get_evl_inp_count(){
           return m_evl_inp_cnt; 
         }
@@ -153,10 +143,11 @@ protected:
          */
 
         // Objective Circuit Agreement
+
+        // K Probe
         void eval_announce_k_probe_matrix();
-
+        // choose 2UFH
         void collaboratively_choose_2UHF();
-
         // interactive coin flipping protocol
         Bytes flip_coins(size_t len);
 
@@ -167,10 +158,14 @@ protected:
                  not the labels themselves
          */
 
-        // gen_commit_to_io_labels declared above
+        // these functions take a circuit_num
+        // which is an index to a processor's
+        // list of circuit evaluations
         void generate_eval_input_keys(uint32_t circuit_num);
         void generate_gen_input_label_commitments(uint32_t circuit_num);
-        //void generate_eval_input_label_commitments(uint32_t circuit_num);
+
+        // gen_commit_to_io_labels declared above
+
 
         void commit_to_gen_input_labels();
         void commit_to_eval_input_labels();
@@ -182,6 +177,11 @@ protected:
          */
 
         // Eval uses ot methods here, declared above in auxiliary functions
+        
+        // after Eval receives her input keys
+        // the seeds need to be hashed to the right size
+        // (we use much longer seeds than necessary
+        // because of our old OT)
         void hash_eval_input_keys(std::vector<Bytes> & source, std::vector<Bytes> & destination, uint32_t num_bits);
         
         
@@ -192,17 +192,30 @@ protected:
         // Cut and Choose
         void evl_select_cut_and_choose_circuits();
         void special_circuit_ot();
-        void select_input_decommitments(std::vector<commitment_t>& source, std::vector<commitment_t>& dest, Bytes & perm_bits, Bytes & input_bits);
+        
+        // Gen must select his input decommitments
+        void select_input_decommitments(std::vector<commitment_t>& source, std::vector<commitment_t>& dest, Bytes & select_bits);
+
+        // Gen and Eval transfer information in the "circuit OT"
         void transfer_evaluation_circuit_info();
         void transfer_check_circuit_info();
+
+        // transferred circuit information is masked by Prngs
+        // so that Eval can only decrypt what she asked for
+        // these functions help encrypt and decrypt information
         
-        void gen_decommit_and_send_masked_vector(Prng & mask_generator, std::vector<commitment_t> & vec);// , uint32_t chunk_size);
-        void gen_send_masked_info(Prng & mask_generator, Bytes info, uint32_t chunk_size);
+        // send and receive a whole vector
+        void gen_decommit_and_send_masked_vector(Prng & mask_generator, std::vector<commitment_t> & vec);
         void evl_receive_masked_vector(Prng & mask_generator, std::vector<Bytes> & destination, uint32_t chunk_size, uint32_t len);
+                
+        // send and receive one message
+        void gen_send_masked_info(Prng & mask_generator, Bytes info, uint32_t chunk_size);
         void evl_receive_masked_info(Prng & mask_generator, Bytes & destinatuion, uint32_t chunk_size);
+        
+        // len is passed to tell Evl how many messages to ignore
+        // if Evl cannot decrypt, she ignores
         void evl_ignore_masked_info(uint32_t len);
-        
-        
+                
 
       
         /**
@@ -210,6 +223,8 @@ protected:
            AND CHECK CIRCUIT CONSISTENCY
 
         */
+        
+        // these functions help Evl regenerate her check circuits
         void evl_regenerate_circuits(uint32_t circuit_num);
         void evl_check_garbled_circuit_commitments(uint32_t circuit_num);
         void evl_check_commitment_regeneration(uint32_t circuit_num);
@@ -219,8 +234,11 @@ protected:
         void evl_inputs_transform(std::vector<Bytes> &source, std::vector<Bytes> &dest);
 
 
+        // Gen and Evl compute their 2UHF circuits
         void generate_2UHF();
         void evaluate_2UHF();
+        
+        // and initialize/evaluate circuits
         void initialize_circuits();
         void evaluate_circuits();
 
@@ -230,41 +248,15 @@ protected:
          */
 
 
-
-        void post_evaluation_checks();
+        void post_evaluation_checks(); // TODO
 
         // Eval proves Gen's output authenticity
         void gen_output_auth_proof();
-        
+                  
 
-        
-
-        // these are legacy functions for this 
-	void proc_gen_out();
-	void proc_evl_out();
-        
-      
-        // the following are legacy functions
-        // will need new ones that perform the special OT
-        // where Eval gets seeds for check circuits
-        // and inputs for evaluation circuits
-        //void ot_init();
-        //        void ot_random(); // sender has m pairs of l-bit strings, and receiver has m bits
-        //void seed_m_prngs(size_t num_prngs, std::vector<Bytes> seeds);
-
-        //void cut_and_choose2_ot();
-	//void cut_and_choose2_precomputation();
-	//void cut_and_choose2_evl_circuit(size_t ix);
-	//void cut_and_choose2_chk_circuit(size_t ix);
-        
-        
-  
 
         /**
- 
-          new variables
-
- 
+           PROTOCOL VARIABLES
          */
 
         /**
@@ -278,21 +270,32 @@ protected:
         // to make the output of the 2-UHF appear random
         Bytes m_gen_aux_random_input;
 
-        // Gen also has m_private_input
+        // both parties also have m_private_input
         // both parties have m_gen_inp_cnt
         // and m_evl_inp_cnt
         
         
         /**
-           new variables
+           vectors of keys
          */
 
         std::vector<std::vector<Bytes> > m_gen_inp_keys;
         std::vector<std::vector<Bytes> > m_evl_inp_keys;
-        //        std::vector<std::vector<G> > m_evl_inp_ot_keys;
         std::vector<std::vector<Bytes> > m_evl_inp_ot_keys;
 
         std::vector<std::vector<Bytes> > m_evl_received_keys;
+
+
+        // Gen uses this vector to store Eval's hashed input keys
+        // since he inputs them to the OT in longer form
+        // (size of group element)
+        // and he uses the k-bit hash as the key itself
+        std::vector<std::vector<Bytes> > m_evl_hashed_inp_keys;
+
+
+        /**
+           vectors of commitments
+         */
 
         // these input commitments are used in step 3
         std::vector<std::vector<commitment_t> >   m_gen_inp_commitments;
@@ -305,11 +308,12 @@ protected:
         std::vector<std::vector<commitment_t> >          m_gen_inp_label_commitments;
         std::vector<std::vector<commitment_t> >          m_evl_inp_label_commitments;
         
-        // Gen uses this vector to store Eval's hashed input keys
-        // since he inputs them to the OT in longer form
-        // (size of group element)
-        // and he uses the k-bit hash as the key itself
-        std::vector<std::vector<Bytes> > m_evl_hashed_inp_keys;
+
+
+
+        /**
+           eval's received commitments
+         */
 
         // when Gen sends his input label commitments in Step 4/5,
         // Evl puts them in here
@@ -318,15 +322,8 @@ protected:
         // Gen also commits to a way of generating output labels
         // but that's embedded in the logic of the code
 
-        std::vector<Bytes> m_R;
 
-        // Gen input label decommitments
-        // replaces m_gen_inp_decom
-        //        std::vector<std::vector<Bytes> >          m_gen_inp_label_decommitments;
-        
-        // placeholder for the k-probe-resistant matrix we'll need
-        std::vector<Bytes>                   m_k_probe_resistant_matrix;
-        
+
         
         // Eval puts the decommitments that she receives during the Cut and Choose
         // in these containers
@@ -335,13 +332,8 @@ protected:
         std::vector<std::vector<Bytes> >                   m_cc_recv_gen_inp_commitments; 
         std::vector<std::vector<Bytes> >                   m_cc_recv_gen_inp_label_commitments; 
 
-        // access to the garbled circuits (important!)
-        std::vector<GarbledCircuit>           m_gcs;
 
-        // variables for cut-and-choose
-	Bytes                           m_chks;
-	Bytes                           m_all_chks;
-        
+
         // *********************************************************
         // this protocol implementation requires THREE sets of PRNGS
         // 1) random generators that create Gen's input keys
@@ -378,20 +370,44 @@ protected:
         std::vector<Bytes>                   m_otp_seeds;
         std::vector<Prng>                    m_otp_prngs;
         
-        /**
-           The next set of seeds is for generation circuits
-           the (randomly generated) seed is used to seed the circuit
-           object's PRNG to generate new wire keys.
-           For lack of a better place to put it, these are generated
-           during circuit information transfer
-         */
+        
+        //   The next set of seeds is for generation circuits
+        //   the (randomly generated) seed is used to seed the circuit
+        //   object's PRNG to generate new wire keys.
+        //   For lack of a better place to put it, these are generated
+        //  during circuit information transfer
+        
         std::vector<Bytes>                   m_key_generation_seeds;
 
 
-        // variables for Gen's input check
-        // this contains Gen's input hashes, which must all be consistent
-        std::vector<Bytes>                   m_gen_inp_hash;
+        /**
+           CUT AND CHOOSE
+           these variables track which circuits are 
+           evaluation circuits and which are check circuits
+         */
+	
+        Bytes                           m_chks;
         
+        // the following variable must be a class member
+        // because if it is scoped in a function
+        // it might go away before everyone is done
+        Bytes                           m_all_chks;
+
+
+        /**
+           GARBLED CIRCUIT ACCESSORS
+           and variables that the circuits need
+         */       
+
+        // access to the garbled circuits (important!)
+        std::vector<GarbledCircuit>           m_gcs;
+
+        // R keys
+        std::vector<Bytes> m_R;
+        
+        // placeholder for the k-probe-resistant matrix we'll need
+        std::vector<Bytes>                   m_k_probe_resistant_matrix;
+
         // this matrix defines the 2-UHF that is used to enforce
         // Gen's input consistency
         // each entry in the array is a row the size of gen's inputs
@@ -403,6 +419,7 @@ protected:
         
         // this vector tracks Gen's permutation bits
         std::vector<Bytes>     m_gen_inp_permutation_bits;
+
         // and these will track Gen's select bits
         // which are defined to be the XOR of the permutation and input bits
         // and tell the circuit which alice key represents 0
