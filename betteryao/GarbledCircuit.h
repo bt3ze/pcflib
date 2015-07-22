@@ -199,6 +199,8 @@ protected:
 
     // for Gen output authenticity proof
     std::vector<Bytes> m_gen_output_labels;
+
+    // for Gen input consistency
     Bytes m_hash_out; // stores the hash function output
     uint32_t m_hash_row_idx;
     

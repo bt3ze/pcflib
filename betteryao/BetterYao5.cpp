@@ -12,9 +12,9 @@ static log4cxx::LoggerPtr logger(log4cxx::Logger::getLogger("BetterYao5.cpp"));
 
 BetterYao5::BetterYao5(EnvParams &params) : YaoBase(params)
 {
-
+  
   std::cout << "node load: " << Env::node_load() << std::endl;
-
+  
   // Init variables
   m_gcs.resize(Env::node_load());
   for (size_t ix = 0; ix < m_gcs.size(); ix++)
@@ -103,7 +103,7 @@ void BetterYao5::generate_input_keys(Prng & prng, std::vector<Bytes> & dest, uin
     // generate the key (so that it is the right size)
     key = prng.rand_bits(num_bits);
     // set the permutation bit. evens are 0, odds are 1
-    key.set_ith_bit(0, j%2);
+    //    key.set_ith_bit(0, j%2);
     dest.push_back(key);
   }
 
@@ -1506,14 +1506,28 @@ void BetterYao5::retrieve_outputs(){
 
     Bytes alice_out_parity = m_gcs[i].get_alice_out();
     GEN_SEND(alice_out_parity);
-    
-    // TODO: Gen ultimately won't send this information to Eval
-    Bytes bob_out_parity = m_gcs[i].get_bob_out();
-    GEN_SEND(bob_out_parity);
-    std::cout << "bob out (parity): " << bob_out_parity.to_hex() << std::endl;
 
-    }
+
+    Bytes bob_out_evaluated = GEN_RECV();
     
+    if(bob_out_evaluated.size() > 0){
+      // TODO: Gen ultimately won't send this information to Eval
+      Bytes bob_out_parity = m_gcs[i].get_bob_out();
+      GEN_SEND(bob_out_parity);
+      Bytes bob_out = bob_out_evaluated ^ bob_out_parity;
+      Bytes bob_mask = get_gen_output_mask();
+      bob_mask.resize(bob_out_evaluated.size(),0);
+      Bytes bob_decrypted = bob_mask ^ bob_out;
+      
+      
+      std::cout << "bob out (parity): " << bob_out_parity.to_hex() << std::endl;
+      std::cout << "bob out (parity ^ eval): " << bob_out.to_hex() << std::endl;
+      std::cout << "bob out (mask): " << bob_mask.to_hex() << std::endl;
+      std::cout << "bob out: " << bob_decrypted.to_hex() << std::endl; 
+    }
+
+  }
+  
   GEN_END
 
   EVL_BEGIN
@@ -1535,6 +1549,7 @@ void BetterYao5::retrieve_outputs(){
       // TODO: eval won't receive this info. Gen's outputs will 
       // be commincated properly
       Bytes bob_out = m_gcs[i].get_bob_out();
+      EVL_SEND(bob_out);
       Bytes bob_out_parity = EVL_RECV();
       bob_out = bob_out ^ bob_out_parity;
       

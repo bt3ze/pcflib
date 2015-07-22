@@ -282,7 +282,6 @@ void Double(__m128i & key, __m128i & clear_mask){
  */
 void H_Pi(__m128i & destination, __m128i &key, __m128i & tweak, __m128i & clear_mask, AES_KEY_J & fixed_key){
   __m128i K; // ,K1;
-  //  __m128i keycpy = key;
 
   Double(key, clear_mask);
   K = _mm_xor_si128(key,tweak);
@@ -349,12 +348,6 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
 
     // fprintf(stdout,"Bob Output!\n");
     
-    Bytes output_mask = get_Gen_Key(m_gen_inp_size + m_bob_out_ix,get_Input_Parity(m_gen_inp_size+m_bob_out_ix));
-    
-    __m128i output_mask_key;
-    save_Key_to_128bit(output_mask, output_mask_key);
-    current_key = _mm_xor_si128(output_mask_key, current_key);
-    
     generate_Bob_Output(current_gate, current_key);
     
     Bytes tmp;
@@ -402,12 +395,11 @@ void * GarbledCircuit::evl_Next_Gate(PCFGate *current_gate){
     // fprintf(stdout,"Bob Output!\n");
 
     //mask Bob's output with his output masking key
-    Bytes output_mask = get_Gen_Input(m_gen_inp_size + m_bob_out_ix);
-    __m128i output_mask_key = _mm_loadu_si128(reinterpret_cast<__m128i*>(&output_mask[0]));
-    current_key = _mm_xor_si128(output_mask_key, current_key);
     
     evaluate_Bob_Output(current_gate, current_key);
  
+    // save this for later, when we need to do gen's
+    // output authenticity proof
     Bytes tmp;
     append_m128i_to_Bytes(current_key,tmp);
     m_gen_output_labels.push_back(tmp);
@@ -553,12 +545,19 @@ void GarbledCircuit::evaluate_Alice_Output(PCFGate* current_gate, __m128i &curre
 
 // Gen's outputs
 void GarbledCircuit::evaluate_Bob_Output(PCFGate* current_gate, __m128i &current_key){
-  if (m_bob_out.size()*8 <= m_bob_out_ix)
+  
+
+if (m_bob_out.size()*8 <= m_bob_out_ix)
     {
       // dynamically grow output array by doubling
       m_bob_out.resize((m_bob_out.size()+1)*2, 0);
     }
   
+  Bytes output_mask = get_Gen_Input(m_gen_inp_size + m_bob_out_ix);
+  __m128i output_mask_key;
+  save_Key_to_128bit(output_mask, output_mask_key);
+  current_key = _mm_xor_si128(output_mask_key, current_key);
+
   evaluate_Gate(current_gate, current_key);
   
   uint8_t out_bit = _mm_extract_epi8(current_key,0)& 0x01;
@@ -589,14 +588,22 @@ void GarbledCircuit::generate_Alice_Output(PCFGate* current_gate, __m128i &curre
 
 void GarbledCircuit::generate_Bob_Output(PCFGate* current_gate, __m128i &current_key){
  
-  generate_Gate(current_gate,current_key);
-   
-  
+
   if (m_bob_out.size()*8 <= m_bob_out_ix)
     {
       // dynamically grow output array by doubling
       m_bob_out.resize((m_bob_out.size()+1)*2, 0);
     }
+  
+
+  Bytes output_mask = get_Gen_Key(m_gen_inp_size + m_bob_out_ix,get_Input_Parity(m_gen_inp_size+m_bob_out_ix));
+  fprintf(stdout,"output mask parity :%i\t idx: %i\n",get_Input_Parity(m_gen_inp_size+m_bob_out_ix), m_bob_out_ix);
+
+  __m128i output_mask_key;
+  save_Key_to_128bit(output_mask, output_mask_key);
+  current_key = _mm_xor_si128(output_mask_key, current_key);
+  
+  generate_Gate(current_gate,current_key); 
   
   uint8_t out_bit = _mm_extract_epi8(current_key, 0) & 0x01;
   
