@@ -554,9 +554,13 @@ if (m_bob_out.size()*8 <= m_bob_out_ix)
     }
   
   Bytes output_mask = get_Gen_Input(m_gen_inp_size + m_bob_out_ix);
+  //fprintf(stdout,"bob input size: %x\n", m_gen_inp_size);
   __m128i output_mask_key;
   save_Key_to_128bit(output_mask, output_mask_key);
+  
+  //print128_num(current_key);
   current_key = _mm_xor_si128(output_mask_key, current_key);
+  // print128_num(current_key);
 
   evaluate_Gate(current_gate, current_key);
   
@@ -597,15 +601,23 @@ void GarbledCircuit::generate_Bob_Output(PCFGate* current_gate, __m128i &current
   
 
   Bytes output_mask = get_Gen_Key(m_gen_inp_size + m_bob_out_ix,get_Input_Parity(m_gen_inp_size+m_bob_out_ix));
-  fprintf(stdout,"output mask parity :%i\t idx: %i\n",get_Input_Parity(m_gen_inp_size+m_bob_out_ix), m_bob_out_ix);
-
+  //fprintf(stdout,"output mask parity :%i\t idx: %i\n",get_Input_Parity(m_gen_inp_size+m_bob_out_ix), m_bob_out_ix);
+  //fprintf(stdout,"bob input size: %x\n",m_gen_inp_size);
+  
   __m128i output_mask_key;
   save_Key_to_128bit(output_mask, output_mask_key);
+
+  //print128_num(current_key);
   current_key = _mm_xor_si128(output_mask_key, current_key);
+  //  print128_num(current_key);
+
+
   
   generate_Gate(current_gate,current_key); 
   
-  uint8_t out_bit = _mm_extract_epi8(current_key, 0) & 0x01;
+  uint8_t out_bit = (_mm_extract_epi8(current_key, 0) & 0x01); 
+    // output_mask.get_ith_bit(0) ^ m_select_bits.get_ith_bit(m_gen_inp_size+m_bob_out_ix);
+//get_Input_Parity(m_gen_inp_size+m_bob_out_ix); 
   
   m_bob_out.set_ith_bit(m_bob_out_ix, out_bit );
   m_bob_out_ix++;

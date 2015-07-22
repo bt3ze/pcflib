@@ -45,9 +45,11 @@ int main(int argc, char **argv)
 
 	switch(atoi(argv[7]))
 	{
-          //	case 0:
-          //sys = new Yao(params);
-          //break;
+        case 0:
+          // for now, also building BY5, but it will be compiled
+          // with a different BY5 file (the hbc one)
+          sys = new BetterYao5(params);
+          break;
 	case 1:
           sys = new BetterYao5(params);
 	  break;

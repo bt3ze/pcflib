@@ -1331,6 +1331,9 @@ void BetterYao5::initialize_circuits(){
       // begin with one, just to make debugging easier
     for(int ix = 0; ix < m_gcs.size();ix++){
       
+      // gotta differentiate from the evl key
+      m_const_1_keys[ix] = m_const_1_keys[ix] ^ m_R[ix];
+
       m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],// gen input keys
                                         &m_evl_hashed_inp_keys[ix], // evl input keys
                                         get_gen_inp_size(),// gen input size

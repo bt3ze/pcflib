@@ -19,6 +19,7 @@ OTX = otextension.o
 MAINS      = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp
 SPLITMAINS = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp splityao/BetterYao5.cpp splityao/BetterYaoEvl.cpp splityao/BetterYaoGen.cpp 
 MAINS5   = protocol.cpp YaoBase.cpp BetterYao5.cpp
+MAINS5HBC = protocol.cpp YaoBase.cpp BetterYao5-hbc.cpp
 MACROS    = macros.cpp
 OTE = OTExtension
 OTOT = OTExtension/ot
@@ -41,6 +42,10 @@ betteryao: $(MAINS) $(OBJS) $(OLDGARB)
 betteryao5: $(MAINS5) $(GARBLES) $(OBJS) $(MACROS)
 	$(MPI_CXX) -o evl5 -DEVL_CODE -DYAO5 $(CXX_CFLAGS) $^ $(LIBS) 
 	$(MPI_CXX) -o gen5 -DGEN_CODE -DYAO5 $(CXX_CFLAGS) $^ $(LIBS)
+
+by5-hbc: $(MAINS5HBC) $(GARBLES) $(OBJS) $(MACROS)
+	$(MPI_CXX) -o evl5hbc -DEVL_CODE -DYAO5 $(CXX_CFLAGS) $^ $(LIBS) 
+	$(MPI_CXX) -o gen5hbc -DGEN_CODE -DYAO5 $(CXX_CFLAGS) $^ $(LIBS)
 
 pcflib: pcflib.o
 	gcc -shared -fPIC pcflib.o -o pcflib.so
