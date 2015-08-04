@@ -397,9 +397,10 @@ void BetterYao5::initialize_circuits(){
   
   GEN_BEGIN
     int ix = 0;
-  
-  m_const_1_keys[ix] = m_const_1_keys[ix] ^ m_R[ix];
 
+
+  m_const_1_keys[ix] = m_const_1_keys[ix] ^ m_R[ix];
+  
   m_gcs[ix].init_Generation_Circuit(&m_gen_inp_keys[ix],// gen input keys
                                     &m_evl_hashed_inp_keys[ix], // evl input keys
                                     get_gen_inp_size(),// gen input size
@@ -408,6 +409,8 @@ void BetterYao5::initialize_circuits(){
                                     m_R[ix], // circuit XOR offset
                                     m_const_0_keys[ix], m_const_1_keys[ix]);// constant keys
   
+
+
   m_gcs[ix].m_st = 
     load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
   m_gcs[ix].m_st->alice_in_size = get_gen_full_input_size();
@@ -434,16 +437,17 @@ void BetterYao5::initialize_circuits(){
     int ix = 0;    
        
           // evaluation circuit
-          
-    m_gcs[ix].init_Evaluation_Circuit(&m_gen_inp_keys[ix],// gen keys
-                                      &m_evl_received_keys[ix],//evl keys
-                                      get_gen_inp_size(),// gen inp size
-                                      m_private_input, // private input
-                                      m_const_0_keys[ix], //constant keys
-                                      m_const_1_keys[ix]);
+  
+  m_gcs[ix].init_Evaluation_Circuit(&m_gen_inp_keys[ix],// gen keys
+                                    &m_evl_received_keys[ix],//evl keys
+                                    get_gen_inp_size(),// gen inp size
+                                    m_private_input, // private input
+                                    m_const_0_keys[ix], //constant keys
+                                    m_const_1_keys[ix]);
+  
     
-    m_gcs[ix].m_st = 
-      load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
+  m_gcs[ix].m_st = 
+    load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
     m_gcs[ix].m_st->alice_in_size = get_gen_full_input_size();
     m_gcs[ix].m_st->bob_in_size = get_evl_inp_count();
     

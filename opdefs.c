@@ -143,7 +143,9 @@ void bits_op(struct PCFState * st, struct PCFOP * op)
   assert(st->wires[s_idx].flags == KNOWN_WIRE);
 
   cval = st->wires[s_idx].value;
-
+  
+  fprintf(stdout,"cval: %i\n",cval);
+  
   for(i = 0; i < data->ndests; i++)
     {
       st->wires[data->dests[i] + st->base].value = (cval & 0x01);
@@ -155,6 +157,7 @@ void bits_op(struct PCFState * st, struct PCFOP * op)
       st->wires[data->dests[i] + st->base].keydata = st->copy_key(st->constant_keys[cval & 0x01]);
 
       cval = cval >> 1;
+
     }
 }
 
@@ -228,7 +231,7 @@ void call_op (struct PCFState * st, struct PCFOP * op)
             }
           else 
             { // otherwise, fill with zeros
-              fprintf(stderr,"filling zeros for uninitialized wire");
+              //fprintf(stderr,"filling zeros for uninitialized wire");
               st->wires[st->input_g.reswire].keydata = st->copy_key(st->constant_keys[0]);
             }
           

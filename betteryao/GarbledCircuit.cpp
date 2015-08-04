@@ -124,7 +124,6 @@ void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys
   m_prng.seed_rand(circuit_seed);
 
   m_select_bits.insert(m_select_bits.begin(),perm_bits.begin(),perm_bits.begin() + perm_bits.size());
-  
 
   // initialize the value of R
   // we initialize tmp with zeros for this so that 
@@ -139,18 +138,12 @@ void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys
   m_R_bytes = R;
 
   // initialize the constant wires
-  tmp.clear();
-  tmp.resize(Env::k());
-  tmp.insert(tmp.end(),zero_key.begin(), zero_key.begin()+zero_key.size());
-  tmp.resize(16,0);
-  m_const_wire[0] = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&tmp[0]));
-  
-  tmp.clear();
-  tmp.resize(Env::k());
-  tmp.insert(tmp.end(),one_key.begin(), one_key.begin()+one_key.size());
-  tmp.resize(16,0);
-  m_const_wire[1] = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&tmp[0]));
-  
+  save_Key_to_128bit(zero_key,m_const_wire[0]);
+  save_Key_to_128bit(one_key, m_const_wire[1]);
+    
+  //fprintf(stdout,"constant wires: \n");
+  //print128_num(m_const_wire[0]);
+  //print128_num(m_const_wire[1]);
 
   m_gen_inp_size = gen_inp_size;
   set_Input_Keys(gen_keys, evl_keys);
@@ -168,21 +161,8 @@ void GarbledCircuit::init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys
   //m_select_bits = evl_input;
   m_select_bits.insert(m_select_bits.begin(),evl_input.begin(),evl_input.begin() + evl_input.size());
 
- 
-  Bytes tmp;
-  // initialize the constant wires
-  tmp.clear();
-  tmp.resize(Env::k());
-  tmp.insert(tmp.end(),zero_key.begin(), zero_key.begin()+zero_key.size());
-  tmp.resize(16,0);
-  m_const_wire[0] = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&tmp[0]));
-
-  tmp.clear();
-  tmp.resize(Env::k());
-  tmp.insert(tmp.end(),one_key.begin(), one_key.begin()+one_key.size());
-  tmp.resize(16,0);
-  m_const_wire[1] = _mm_loadu_si128(reinterpret_cast<const __m128i*>(&tmp[0]));
-
+  save_Key_to_128bit(zero_key,m_const_wire[0]);
+  save_Key_to_128bit(one_key, m_const_wire[1]);
 
   m_gen_inp_size = gen_inp_size;
 
@@ -238,7 +218,8 @@ Bytes GarbledCircuit::get_Evl_Input(uint32_t idx){
   } else{
     fprintf(stdout,"Eval uninitialized wire: %i\n",idx);
     Bytes tmp;
-    tmp.resize(Env::k()/8,0);
+    __m128i key = *((__m128i*)get_Const_Wire(0));
+    append_m128i_to_Bytes(key, tmp );
     return tmp;
   }
 }
@@ -532,6 +513,7 @@ void GarbledCircuit::evaluate_Alice_Output(PCFGate* current_gate, __m128i &curre
 
   evaluate_Gate(current_gate,current_key);
 
+  print128_num(current_key);
   
   if(m_alice_out.size()*8 <= m_alice_out_ix){
     m_alice_out.resize((m_alice_out.size()+1)*2,0); // grow by doubling
@@ -554,7 +536,6 @@ if (m_bob_out.size()*8 <= m_bob_out_ix)
     }
   
   Bytes output_mask = get_Gen_Input(m_gen_inp_size + m_bob_out_ix);
-  //fprintf(stdout,"bob input size: %x\n", m_gen_inp_size);
   __m128i output_mask_key;
   save_Key_to_128bit(output_mask, output_mask_key);
   
@@ -574,6 +555,8 @@ if (m_bob_out.size()*8 <= m_bob_out_ix)
 void GarbledCircuit::generate_Alice_Output(PCFGate* current_gate, __m128i &current_key){
   
   generate_Gate(current_gate, current_key);
+
+  print128_num(current_key);
   
   
   // gen moves through all of his output bits and saves the parity of
@@ -601,8 +584,6 @@ void GarbledCircuit::generate_Bob_Output(PCFGate* current_gate, __m128i &current
   
 
   Bytes output_mask = get_Gen_Key(m_gen_inp_size + m_bob_out_ix,get_Input_Parity(m_gen_inp_size+m_bob_out_ix));
-  //fprintf(stdout,"output mask parity :%i\t idx: %i\n",get_Input_Parity(m_gen_inp_size+m_bob_out_ix), m_bob_out_ix);
-  //fprintf(stdout,"bob input size: %x\n",m_gen_inp_size);
   
   __m128i output_mask_key;
   save_Key_to_128bit(output_mask, output_mask_key);
@@ -634,7 +615,6 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
   if(current_gate->truth_table == 0x06){ // if XOR gate
     xor_Gate(key1, key2, current_key);
   } else {
-#endif
     if(current_gate->truth_table == 0x01){ // AND Gate            
       genHalfGatePair(current_key, key1, key2, m_garbling_bufr, 0, 0, 0);
     }
@@ -644,6 +624,8 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
     }
     
     else { 
+
+#endif
       
       // here (most likely) we have a NOT gate or an XNOR gate 
       // the compiler's optimizer should do its best to remove them
@@ -652,8 +634,9 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
 
       genStandardGate(current_key, key1, key2, m_garbling_bufr, current_gate->truth_table);
       
-    }
 #ifdef FREE_XOR
+
+    }
   }
 #endif
 }
@@ -669,7 +652,6 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
     {
       xor_Gate(key1, key2, current_key);
     } else {
-#endif    
     if(current_gate->truth_table == 0x01){ // AND Gate
       // fprintf(stdout,"AND GATE!\n");
       evlHalfGatePair(current_key, key1,key2, m_garbling_bufr);
@@ -683,14 +665,17 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
 
     else { 
 
+#endif
+
       // here (most likely) we have a NOT gate or an XNOR gate 
       // the compiler's optimizer should do its best to remove them
       // but since they can't be garbled with half gates, we garble with GRR
       // we also use this for output gates
       evlStandardGate(current_key, key1, key2, m_garbling_bufr);      
     
-    }
 #ifdef FREE_XOR
+
+    }
   }
 #endif
 
