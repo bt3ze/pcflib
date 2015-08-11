@@ -623,7 +623,7 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
 
   __m128i key1 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire1));
   __m128i key2 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire2));
-  genStandardGate(current_key, key1, key2, m_garbling_bufr, current_gate->truth_table);
+  genStandardGate2(current_key, key1, key2, m_garbling_bufr, current_gate->truth_table);
 }
 
 /*                  
@@ -708,12 +708,11 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
 }
 */
 
-void GarbledCircuit::genStandardGate2(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, uint8_t truth_table){
+void GarbledCircuit::genStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, uint8_t truth_table){
 
   // X and Y are input, Z is output
   __m128i X[2], Y[2], Z[2];
   __m128i garble_ciphertext;
-  __m128i garble_key[2];
   
   uint8_t semantic_bit;
     
@@ -739,20 +738,15 @@ void GarbledCircuit::genStandardGate2(__m128i& current_key, __m128i & key1, __m1
   tweak = _mm_set1_epi64x(j1);
 
 
-    // and load the garbling keys      
-  //garble_key[0] = _mm_load_si128(X[perm_x]); //+perm_x);
-  //garble_key[1] = _mm_load_si128(Y[perm_y]); // +perm_y);
-
   
   // now run the key derivation function using the keys and the gate index  
-  __m128i key1_in = _mm_loadu_si128(X+perm_x); //[perm_x]); //garble_key[0];
-  __m128i key2_in =  _mm_loadu_si128(Y+perm_y); //[perm_y]); //garble_key[1];
+  __m128i key1_in = _mm_loadu_si128(X+perm_x);
+  __m128i key2_in = _mm_loadu_si128(Y+perm_y);
 
   H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
-
   semantic_bit = (truth_table >> (3-de_garbled_ix)) & 0x01;
-
   
+
   // GRR technique: using zero entry's key as one of the output keys
   // the output key is the encrypted gate index
   // this puts the zero key in Z[0] and the one key in Z[1]
@@ -761,38 +755,22 @@ void GarbledCircuit::genStandardGate2(__m128i& current_key, __m128i & key1, __m1
   // and other output is an offset
   _mm_store_si128(Z+semantic_bit, garble_ciphertext);
   Z[1 - semantic_bit] = _mm_xor_si128(Z[semantic_bit], m_R);
-
-  // load it into current_key to return it to the circuit's state container
   current_key = _mm_loadu_si128(Z);
-    
+
   
-  // we just used X[0] as garble_key[0],
-  // so now take the XOR with R to get X[1-x]
-    //  garble_key[0] = _mm_xor_si128(garble_key[0], m_R);
-  
-  // now keys are (key1 xor R, key2)
-  key1_in = _mm_xor_si128(X[1],m_R);
-  key2_in = _mm_loadu_si128(Y); //[0]);
+  // encrypt the first entry: (key1 xor R, key2)
+  key1_in = _mm_loadu_si128(X+1-perm_x); 
+  key2_in = _mm_loadu_si128(Y+perm_y);
   H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
 
-  
-
-  // recover the permutation bit
   semantic_bit = (truth_table>>(3-(0x01^de_garbled_ix)))&0x01;
-  // encrypt the key using the ciphertext
   garble_ciphertext = _mm_xor_si128(garble_ciphertext, Z[semantic_bit]);
   append_m128i_to_Bytes(garble_ciphertext,out_bufr);  
   
 
-
   // encrypt the 2nd entry : (X[x], Y[1-y])
-  garble_key[0] = _mm_xor_si128(garble_key[0], m_R);
-  garble_key[1] = _mm_xor_si128(garble_key[1], m_R);
-  
-
-
-  key1_in = garble_key[0];
-  key2_in = garble_key[1];
+  key1_in = _mm_loadu_si128(X+perm_x);
+  key2_in = _mm_loadu_si128(Y+1-perm_y);
   H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
 
   
@@ -802,11 +780,8 @@ void GarbledCircuit::genStandardGate2(__m128i& current_key, __m128i & key1, __m1
   
   
   // encrypt the 3rd entry : (X[1-x], Y[1-y])
-  garble_key[0] = _mm_xor_si128(garble_key[0], m_R);
-
-
-  key1_in = garble_key[0];
-  key2_in = garble_key[1];
+  key1_in = _mm_loadu_si128(X+1-perm_x);
+  key2_in = _mm_loadu_si128(Y+1-perm_y);
   H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
   
 
@@ -819,7 +794,7 @@ void GarbledCircuit::genStandardGate2(__m128i& current_key, __m128i & key1, __m1
   // the calling function will also be able to send the information in out_bufr
 }
 
-void GarbledCircuit::genStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, uint8_t truth_table){
+void GarbledCircuit::genStandardGate_old(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, uint8_t truth_table){
 
   // X and Y are input, Z is output
   __m128i X[2], Y[2], Z[2];
