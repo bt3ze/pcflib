@@ -144,7 +144,7 @@ void bits_op(struct PCFState * st, struct PCFOP * op)
 
   cval = st->wires[s_idx].value;
   
-  fprintf(stdout,"cval: %i\n",cval);
+  // fprintf(stdout,"cval: %i\treldest: %i\tabsdest: %i\n",cval, data->source, s_idx);
   
   for(i = 0; i < data->ndests; i++)
     {
@@ -231,7 +231,8 @@ void call_op (struct PCFState * st, struct PCFOP * op)
             }
           else 
             { // otherwise, fill with zeros
-              //fprintf(stderr,"filling zeros for uninitialized wire");
+            
+              //fprintf(stdout,"filling zeros for uninitialized wire");
               st->wires[st->input_g.reswire].keydata = st->copy_key(st->constant_keys[0]);
             }
           
@@ -399,8 +400,10 @@ void gate_op(struct PCFState * st, struct PCFOP * op)
   uint8_t tab = data->truth_table;
   void * tmp = st->wires[destidx].keydata;
 
-  // fprintf(stderr,"wire1: %u, wire2: %u\tabsolute1: %u, absolute2: %u\n",
+  //fprintf(stdout,"wire1: %u, wire2: %u\tabsolute1: %u, absolute2: %u\n",
   //        data->wire1, data->wire2, op1idx, op2idx);
+  //fprintf(stdout,"wire1: %u\twire2: %u\n",
+  //        st->wires[op1idx].keydata, st->wires[op2idx].keydata);
 
   for(i = 0; i < 4; i++)
     {

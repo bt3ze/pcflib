@@ -50,7 +50,7 @@ typedef struct PCFGate {
   // wires are assigned these values as their "flags"
   // wires can either be known to all parties, or unknown
   // if unknown, the information they hold must not be leaked
-  enum {KNOWN_WIRE = 0, UNKNOWN_WIRE = 1};
+enum {KNOWN_WIRE = 0, UNKNOWN_WIRE = 1};
 
 typedef struct wire {
   uint32_t value;
