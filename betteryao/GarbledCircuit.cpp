@@ -623,7 +623,7 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
 
   __m128i key1 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire1));
   __m128i key2 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire2));
-  genStandardGate2(current_key, key1, key2, m_garbling_bufr, current_gate->truth_table);
+  genStandardGate(current_key, key1, key2, m_garbling_bufr, current_gate->truth_table);
 }
 
 /*                  
