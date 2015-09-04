@@ -481,15 +481,16 @@ void GarbledCircuit::generate_Alice_Input(PCFGate* current_gate, __m128i &curren
     // send the output keys to Eval for decryption
     // by put the keys into the output buffer
     // they will be sent between gates
+    
     m_garbling_bufr.clear();
     
     append_m128i_to_Bytes(output_keys[0],m_garbling_bufr);
     append_m128i_to_Bytes(output_keys[1],m_garbling_bufr);
 
-    send_half_gate(m_garbling_bufr);
-      
-
     assert(m_garbling_bufr.size() == 2*Env::key_size_in_bytes());
+    send_half_gate(m_garbling_bufr);
+
+    m_garbling_bufr.clear();
     
 }
 
@@ -556,9 +557,7 @@ if (m_bob_out.size()*8 <= m_bob_out_ix)
   __m128i output_mask_key;
   save_Key_to_128bit(output_mask, output_mask_key);
   
-  //print128_num(current_key);
   current_key = _mm_xor_si128(output_mask_key, current_key);
-  // print128_num(current_key);
 
   evaluate_Gate(current_gate, current_key);
   
@@ -571,10 +570,7 @@ if (m_bob_out.size()*8 <= m_bob_out_ix)
 
 void GarbledCircuit::generate_Alice_Output(PCFGate* current_gate, __m128i &current_key){
   
-  generate_Gate(current_gate, current_key);
-  
-  //print128_num(current_key);
-  
+  generate_Gate(current_gate, current_key); 
   
   // gen moves through all of his output bits and saves the parity of
   // the current zero keys, to be transmitted to Evl all together after
@@ -605,11 +601,7 @@ void GarbledCircuit::generate_Bob_Output(PCFGate* current_gate, __m128i &current
   __m128i output_mask_key;
   save_Key_to_128bit(output_mask, output_mask_key);
 
-  //print128_num(current_key);
   current_key = _mm_xor_si128(output_mask_key, current_key);
-  //  print128_num(current_key);
-
-
   
   generate_Gate(current_gate,current_key); 
   
@@ -622,10 +614,6 @@ void GarbledCircuit::generate_Bob_Output(PCFGate* current_gate, __m128i &current
   
 }
 
-
-
-// NOTE: TODO
-// PICK UP WITH THE GARBLING BUFFER FOR NON-GATE GATES (I/O)
 
 
 void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
@@ -641,11 +629,13 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
     if(current_gate->truth_table == 0x01){ // AND Gate            
       genHalfGatePair(current_key, key1, key2, m_garbling_bufr, 0, 0, 0);
       send_half_gate(m_garbling_bufr);
+      m_garbling_bufr.clear();
     }
     
     else if(current_gate->truth_table == 0x07){ // OR Gate
       genHalfGatePair(current_key, key1, key2, m_garbling_bufr, 1, 1, 1);
       send_half_gate(m_garbling_bufr);
+      m_garbling_bufr.clear();
     }
     
     else { 
@@ -658,6 +648,7 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
       // we also use this method for output gates
       genStandardGate(current_key, key1, key2, m_garbling_bufr, current_gate->truth_table);
       send_full_gate(m_garbling_bufr);
+      m_garbling_bufr.clear();
 
       
 #ifdef FREE_XOR

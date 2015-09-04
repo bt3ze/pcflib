@@ -479,7 +479,7 @@ void BetterYao5::evaluate_circuits(){
 
     //bufr = m_gcs[ix].get_garbling_bufr();
     //GEN_SEND(bufr);
-    m_gcs[ix].clear_garbling_bufr();
+    //m_gcs[ix].clear_garbling_bufr();
     
     //comm_time += MPI_Wtime() - start;
     //start = MPI_Wtime();
