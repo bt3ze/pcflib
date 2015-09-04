@@ -519,6 +519,7 @@ void BetterYao5::evaluate_circuits(){
 
     fprintf(stdout,"garble: %f\n",garble_time);
     fprintf(stdout,"comm: %f\n",comm_time);
+    fprintf(stdout,"comm2: %f\n",m_gcs[ix].m_comm_time);
   
 }
 

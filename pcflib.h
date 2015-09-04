@@ -113,7 +113,12 @@ typedef struct PCFState {
 
   // pointer to the currently evaluated gates
   PCFGate * curgate;
-
+  
+  wire * alice_inputs;
+  wire * bob_inputs;
+  wire * alice_outputs;
+  wire * bob_outputs;
+  
   // pointer to two constants: 0 and 1
   void * constant_keys[2];
 

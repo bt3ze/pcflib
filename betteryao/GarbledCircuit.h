@@ -102,6 +102,10 @@ public:
     // for Gen output authenticity proof
     Bytes get_Gen_Output_Label(uint32_t idx);
 
+
+    // timing communication
+    double m_comm_time;
+
 protected:
 
 
@@ -134,17 +138,19 @@ protected:
     // these are the individual functions for the types of gates
     // alice in, alice out, bob in, bob out, and general gate
  
-    void generate_Alice_Input(PCFGate* current_Gate, __m128i &current_key);
-    void evaluate_Alice_Input(PCFGate* current_Gate, __m128i &current_key);
+    void generate_Alice_Input(PCFGate* current_Gate, __m128i &current_key, Bytes & garbling_bufr);
+    void evaluate_Alice_Input(PCFGate* current_Gate, __m128i &current_key, Bytes & garbling_bufr);
     void generate_Bob_Input(PCFGate* current_Gate, __m128i &current_key);
     void evaluate_Bob_Input(PCFGate* current_Gate, __m128i &current_key);
-    void generate_Gate(PCFGate* current_Gate, __m128i &current_key);
-    void evaluate_Gate(PCFGate* current_Gate, __m128i &current_key);
-    void evaluate_Alice_Output(PCFGate* current_Gate, __m128i &current_key);
-    void evaluate_Bob_Output(PCFGate* current_Gate, __m128i &current_key);
-    void generate_Alice_Output(PCFGate* current_Gate, __m128i &current_key);
-    void generate_Bob_Output(PCFGate* current_Gate, __m128i &current_key);
+    void evaluate_Alice_Output(PCFGate* current_Gate, __m128i &current_key, Bytes & garbling_bufr);
+    void evaluate_Bob_Output(PCFGate* current_Gate, __m128i &current_key, Bytes & garbling_bufr);
+    void generate_Alice_Output(PCFGate* current_Gate, __m128i &current_key, Bytes & garbling_bufr);
+    void generate_Bob_Output(PCFGate* current_Gate, __m128i &current_key, Bytes & garbling_bufr);
     
+
+    void generate_Gate(PCFGate* current_Gate, __m128i &current_key, Bytes & garbling_bufr);
+    void evaluate_Gate(PCFGate* current_Gate, __m128i &current_key, Bytes & garbling_bufr);
+
  
     void genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, byte a1, byte a2, byte a3); 
     void evlHalfGatePair(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr); 
@@ -203,7 +209,6 @@ protected:
     uint32_t m_alice_out_ix;
     uint32_t m_bob_out_ix;
 
-
     // for Gen output authenticity proof
     std::vector<Bytes> m_gen_output_labels;
 
@@ -211,9 +216,7 @@ protected:
     Bytes m_hash_out; // stores the hash function output
     uint32_t m_hash_row_idx;
     
-
     uint32_t m_gen_inp_size; //important for accessing output mask keys and hash keys
-
 
     // very important: used for encrypting
     AES_KEY_J m_fixed_key;
