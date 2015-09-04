@@ -191,6 +191,11 @@ protected:
     // it will contain garbling information for each gate sent
     Bytes m_garbling_bufr;
     
+    void send_half_gate(const Bytes &buf);
+    void send_full_gate(const Bytes &buf);
+    Bytes read_half_gate();
+    Bytes read_full_gate();
+
     // a couple of buffers that hold circuit output, used in the garbling functions
     Bytes m_alice_out;
     Bytes m_bob_out;

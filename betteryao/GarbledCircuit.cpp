@@ -307,6 +307,9 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
 
     // fprintf(stdout, "Alice Input!");
     generate_Alice_Input(current_gate, current_key);
+
+    // send two ciphertexts
+
     return &current_key;
     
   }  else if (current_gate->tag == TAG_INPUT_B){
@@ -345,10 +348,6 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
     m_gate_index++;
 
   
-    fprintf(stdout, "gate: %i %i %i \n", current_gate->truth_table, current_gate->wire1, current_gate->wire2);
-    print128_num(key1);
-    print128_num(key2);
-    print128_num(current_key);
     return &current_key; 
   }
 }
@@ -402,9 +401,6 @@ void * GarbledCircuit::evl_Next_Gate(PCFGate *current_gate){
     evaluate_Gate(current_gate,current_key);
     m_gate_index++;
 
-    fprintf(stdout, "gate: %x %i %i \n", current_gate->truth_table, current_gate->wire1, current_gate->wire2);
-    print128_num(key1);
-    print128_num(key2);
     return &current_key;
   }
 }
@@ -433,7 +429,7 @@ void GarbledCircuit::generate_Bob_Input(PCFGate* current_gate, __m128i &current_
   
   // we need to set the garbling buffer to something (or nothing)
   // because it will be sent by default between gates
-  m_garbling_bufr = Bytes(0);
+  // m_garbling_bufr = Bytes(0);
 
 }
 
@@ -451,7 +447,7 @@ void GarbledCircuit::evaluate_Bob_Input(PCFGate* current_gate, __m128i &current_
 
 void GarbledCircuit::generate_Alice_Input(PCFGate* current_gate, __m128i &current_key){
     // Here, Eval already has her input keys, but Gen doesn't know
-    // which to use. So he will generate a new key and its XOR-offser,
+    // which to use. So he will generate a new key and its XOR-offset,
     // encrypt it using the respective Eval input keys, and send the keys to Eval.
     // She will decrypt the proper one and use it 
     
@@ -486,8 +482,12 @@ void GarbledCircuit::generate_Alice_Input(PCFGate* current_gate, __m128i &curren
     // by put the keys into the output buffer
     // they will be sent between gates
     m_garbling_bufr.clear();
+    
     append_m128i_to_Bytes(output_keys[0],m_garbling_bufr);
     append_m128i_to_Bytes(output_keys[1],m_garbling_bufr);
+
+    send_half_gate(m_garbling_bufr);
+      
 
     assert(m_garbling_bufr.size() == 2*Env::key_size_in_bytes());
     
@@ -501,12 +501,16 @@ void GarbledCircuit::evaluate_Alice_Input(PCFGate* current_gate, __m128i &curren
   Bytes evl_input = get_Evl_Input(gen_input_idx);
   
   // receive 2 ciphertexts
+  m_garbling_bufr = read_half_gate();
+
   assert(m_garbling_bufr.size() == 2*Env::key_size_in_bytes());
   
   // find the input ciphertext that corresponds to Eval's chosen bit
   uint32_t bit = get_Input_Parity(current_gate->wire1);
   assert(bit == 0 || bit == 1);  
   
+
+
   // select the one to decrypt
   Bytes encrypted_input;
   encrypted_input.insert(encrypted_input.end(),
@@ -526,7 +530,7 @@ void GarbledCircuit::evaluate_Alice_Output(PCFGate* current_gate, __m128i &curre
 
   evaluate_Gate(current_gate,current_key);
 
-  print128_num(current_key);
+  //print128_num(current_key);
   
   if(m_alice_out.size()*8 <= m_alice_out_ix){
     m_alice_out.resize((m_alice_out.size()+1)*2,0); // grow by doubling
@@ -568,8 +572,8 @@ if (m_bob_out.size()*8 <= m_bob_out_ix)
 void GarbledCircuit::generate_Alice_Output(PCFGate* current_gate, __m128i &current_key){
   
   generate_Gate(current_gate, current_key);
-
-  print128_num(current_key);
+  
+  //print128_num(current_key);
   
   
   // gen moves through all of his output bits and saves the parity of
@@ -619,38 +623,42 @@ void GarbledCircuit::generate_Bob_Output(PCFGate* current_gate, __m128i &current
 }
 
 
+
+// NOTE: TODO
+// PICK UP WITH THE GARBLING BUFFER FOR NON-GATE GATES (I/O)
+
+
 void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
 
   __m128i key1 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire1));
   __m128i key2 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire2));
-  genStandardGate(current_key, key1, key2, m_garbling_bufr, current_gate->truth_table);
-}
 
-/*                  
-#ifdef _NOT_DEFINED
+
 #ifdef FREE_XOR
   if(current_gate->truth_table == 0x06){ // if XOR gate
     xor_Gate(key1, key2, current_key);
   } else {
     if(current_gate->truth_table == 0x01){ // AND Gate            
       genHalfGatePair(current_key, key1, key2, m_garbling_bufr, 0, 0, 0);
+      send_half_gate(m_garbling_bufr);
     }
     
     else if(current_gate->truth_table == 0x07){ // OR Gate
       genHalfGatePair(current_key, key1, key2, m_garbling_bufr, 1, 1, 1);
+      send_half_gate(m_garbling_bufr);
     }
     
     else { 
 
-      //#endif
 #endif
       
       // here (most likely) we have a NOT gate or an XNOR gate 
       // the compiler's optimizer should do its best to remove them
       // but since they can't be garbled with half gates, we garble with GRR
       // we also use this method for output gates
-
       genStandardGate(current_key, key1, key2, m_garbling_bufr, current_gate->truth_table);
+      send_full_gate(m_garbling_bufr);
+
       
 #ifdef FREE_XOR
     }
@@ -658,18 +666,13 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key){
 #endif
 
 }
-*/
+
 
 void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
    
   __m128i key1 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire1));
   __m128i key2 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire2));
 
-  evlStandardGate(current_key, key1, key2, m_garbling_bufr);      
-}
-        /*
-
-#ifdef _NOT_DEFINED  
 #ifdef FREE_XOR
   if (current_gate->truth_table == 0x06)
     {
@@ -677,11 +680,13 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
     } else {
     if(current_gate->truth_table == 0x01){ // AND Gate
       // fprintf(stdout,"AND GATE!\n");
+      m_garbling_bufr = read_half_gate();
       evlHalfGatePair(current_key, key1,key2, m_garbling_bufr);
 
     } 
     else if(current_gate->truth_table == 0x07){ // OR gate
       // fprintf(stdout,"OR GATE!\n");
+      m_garbling_bufr = read_half_gate();
       evlHalfGatePair(current_key, key1,key2, m_garbling_bufr);
       
     }
@@ -689,7 +694,8 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
     else { 
 
 #endif
-#endif
+
+      m_garbling_bufr = read_full_gate();
 
       // here (most likely) we have a NOT gate or an XNOR gate 
       // the compiler's optimizer should do its best to remove them
@@ -706,7 +712,6 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key){
   // current_key will be available to the calling function
 
 }
-*/
 
 void GarbledCircuit::genStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, uint8_t truth_table){
 
@@ -738,7 +743,6 @@ void GarbledCircuit::genStandardGate(__m128i& current_key, __m128i & key1, __m12
   tweak = _mm_set1_epi64x(j1);
 
 
-  
   // now run the key derivation function using the keys and the gate index  
   __m128i key1_in = _mm_loadu_si128(X+perm_x);
   __m128i key2_in = _mm_loadu_si128(Y+perm_y);
@@ -758,7 +762,7 @@ void GarbledCircuit::genStandardGate(__m128i& current_key, __m128i & key1, __m12
   current_key = _mm_loadu_si128(Z);
 
   
-  // encrypt the first entry: (key1 xor R, key2)
+  // encrypt the first entry: (X[1-x],Y[y]) or (key1 xor R, key2)
   key1_in = _mm_loadu_si128(X+1-perm_x); 
   key2_in = _mm_loadu_si128(Y+perm_y);
   H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
@@ -794,169 +798,6 @@ void GarbledCircuit::genStandardGate(__m128i& current_key, __m128i & key1, __m12
   // the calling function will also be able to send the information in out_bufr
 }
 
-void GarbledCircuit::genStandardGate_old(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, uint8_t truth_table){
-
-  // X and Y are input, Z is output
-  __m128i X[2], Y[2], Z[2];
-  __m128i garble_ciphertext;
-  __m128i garble_key[2];
-  
-  Bytes tmp;
-  
-  uint8_t semantic_bit;
-
-  // load the (zero-key) inputs from the PCF state container
-  X[0] = key1;
-  Y[0] = key2;
-  // and derive their XOR-complements
-  X[1] = _mm_xor_si128(X[0], m_R); // X[1] = X[0] ^ R
-  Y[1] = _mm_xor_si128(Y[0], m_R); // Y[1] = Y[0] ^ R
-  
-  // and get the permutation bits (tells if each zero-key has a 1 on the end)
-  const uint8_t perm_x = _mm_extract_epi8(X[0],0) & 0x01;
-  const uint8_t perm_y = _mm_extract_epi8(Y[0],0) & 0x01;
-  // construct the permutation index
-  const uint8_t de_garbled_ix = (perm_y << 1)|perm_x; // wire1 + 2*wire2
-  
-    // and load the garbling keys      
-  garble_key[0] = _mm_load_si128(X+perm_x);
-  garble_key[1] = _mm_load_si128(Y+perm_y);
-  
-  
-  // now run the key derivation function using the keys and the gate index
-#ifndef AESNI
-  /*
-  // now we are ready to garble
-  // load the plaintext to be encrypted
-  __m128i aes_plaintext = _mm_set1_epi64x(m_gate_index);
-
-
-  // this old garbling method has been replaced with a faster, better one
-  KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&garble_ciphertext, (uint8_t*)garble_key);     
-  garble_ciphertext = _mm_and_si128(garble_ciphertext, m_clear_mask);
-  // garble_ciphertext now contains the encryption of both zero-keys
-  */
-#else
-
-  uint32_t j1;
-  j1 = increment_index();
-  
-  __m128i tweak;
-  tweak = _mm_set1_epi64x(j1);
-  
-  __m128i key1_in = garble_key[0];
-  __m128i key2_in = garble_key[1];
-  H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
-
-#endif
-  
-  semantic_bit = (truth_table >> (3-de_garbled_ix)) & 0x01;
-
-  
-#ifdef GRR
-  // GRR technique: using zero entry's key as one of the output keys
-  // the output key is the encrypted gate index
-  // this puts the zero key in Z[0] and the one key in Z[1]
-  
-  // we want the new zero-key to be in Z[0]
-  _mm_store_si128(Z+semantic_bit, garble_ciphertext);
-  // and other output is an offset
-  Z[1 - semantic_bit] = _mm_xor_si128(Z[semantic_bit], m_R);
-  // load it into current_key to return it to the circuit's state container
-  current_key = _mm_load_si128(Z);
-  
-#else
-
-  /*
-  // practically, this code is obsolete. we should be using GRR
-  
-  // otherwise we generate a new random key for the 0th entry
-  tmp = m_prng.rand_bits(Env::k());
-  tmp.resize(16, 0);
-  Z[0] = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
-  Z[1] = _mm_xor_si128(Z[0], m_R);
-  
-  current_key = _mm_load_si128(Z);
-  */
-#endif
-  
-  
-  // we just used X[0] as garble_key[0],
-  // so now take the XOR with R to get X[1-x]
-  garble_key[0] = _mm_xor_si128(garble_key[0], m_R);
-  
-  // and run through the KDF
-#ifndef AESNI
-  /*
-  // this old garbling method has been replaced with a faster, better one
-  KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&garble_ciphertext, (uint8_t*)garble_key);     
-  garble_ciphertext = _mm_and_si128(garble_ciphertext, m_clear_mask);
-  */
-#else
-
-  key1_in = garble_key[0];
-  key2_in = garble_key[1];
-  H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
-
-#endif
-  
-  // recover the permutation bit
-  semantic_bit = (truth_table>>(3-(0x01^de_garbled_ix)))&0x01;
-  // encrypt the key using the ciphertext
-  garble_ciphertext = _mm_xor_si128(garble_ciphertext, Z[semantic_bit]);
-  append_m128i_to_Bytes(garble_ciphertext,out_bufr);  
-  
-  // encrypt the 2nd entry : (X[x], Y[1-y])
-  garble_key[0] = _mm_xor_si128(garble_key[0], m_R);
-  garble_key[1] = _mm_xor_si128(garble_key[1], m_R);
-  
-#ifndef AESNI
-  /*
-  // this old garbling method has been replaced with a faster, better one
-  KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&garble_ciphertext, (uint8_t*)garble_key);     
-  // clear extra bits at the front
-  garble_ciphertext = _mm_and_si128(garble_ciphertext, m_clear_mask);
-  */
-#else
-
-
-  key1_in = garble_key[0];
-  key2_in = garble_key[1];
-  H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
-
-#endif
-  
-  semantic_bit = (truth_table>>(3-(0x02^de_garbled_ix)))&0x01;
-  garble_ciphertext = _mm_xor_si128(garble_ciphertext, Z[semantic_bit]);
-  append_m128i_to_Bytes(garble_ciphertext,out_bufr);
-  
-  
-  // encrypt the 3rd entry : (X[1-x], Y[1-y])
-  garble_key[0] = _mm_xor_si128(garble_key[0], m_R);
-
-  
-#ifndef AESNI
-  /*
-  // this garbling function has been replaced with a newer, better one
-  KDF256((uint8_t*)&aes_plaintext, (uint8_t*)&garble_ciphertext, (uint8_t*)garble_key);
-  garble_ciphertext = _mm_and_si128(garble_ciphertext, m_clear_mask);
-  */
-#else
-
-  key1_in = garble_key[0];
-  key2_in = garble_key[1];
-  H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
-
-#endif
-  
-  semantic_bit = (truth_table>>(3-(0x03^de_garbled_ix)))&0x01;
-  garble_ciphertext = _mm_xor_si128(garble_ciphertext, Z[semantic_bit]);
-  append_m128i_to_Bytes(garble_ciphertext,out_bufr);
-  
-  
-  // current_key holds our output key, and it will be available to our calling function
-  // the calling function will also be able to send the information in out_bufr
-}
 
 void GarbledCircuit::evlStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr){
   __m128i garble_key[2], aes_plaintext, garble_ciphertext;
@@ -1297,5 +1138,32 @@ Bytes GarbledCircuit::get_hash_out(){
 Bytes GarbledCircuit::get_Gen_Output_Label(uint32_t idx){
   return m_gen_output_labels[idx];
 }
+
+
+void GarbledCircuit::send_half_gate(const Bytes &buf){
+  Env::remote()->write_2_ciphertexts(buf);
+}
+
+void GarbledCircuit::send_full_gate(const Bytes &buf){
+#ifdef GRR
+  Env::remote()->write_3_ciphertexts(buf);
+#else
+  Env::remote()->write_4_ciphertexts(buf);
+#endif
+}
+
+Bytes GarbledCircuit::read_half_gate(){
+  return Env::remote()->read_2_ciphertexts();
+}
+
+Bytes GarbledCircuit::read_full_gate(){
+#ifdef GRR
+  return Env::remote()->read_3_ciphertexts();
+#else
+  return Env::remote()->read_4_ciphertexts();
+#endif
+
+}
+    
 
 #endif

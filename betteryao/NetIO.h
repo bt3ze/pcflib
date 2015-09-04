@@ -16,6 +16,13 @@ public:
 	void write_bytes(const Bytes &bytes);
 	Bytes read_bytes();
 
+        void write_2_ciphertexts(const Bytes &bytes);
+        void write_3_ciphertexts(const Bytes &bytes);
+        void write_4_ciphertexts(const Bytes &bytes);
+        Bytes read_2_ciphertexts();
+        Bytes read_3_ciphertexts();
+        Bytes read_4_ciphertexts();
+
 	void write_string(const std::string &str);
 	std::string read_string();
 };
@@ -36,5 +43,7 @@ public:
 	Socket *accept();
 	virtual ~ServerSocket();
 };
+
+inline void my_read(int socket, void *data, size_t n);
 
 #endif /* NETIO_H_ */

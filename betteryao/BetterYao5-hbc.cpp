@@ -474,19 +474,19 @@ void BetterYao5::evaluate_circuits(){
 
   start = MPI_Wtime();
   while(get_next_gate(m_gcs[ix].m_st)){
-    garble_time += MPI_Wtime() - start;
-    start = MPI_Wtime();
+    //garble_time += MPI_Wtime() - start;
+    //start = MPI_Wtime();
 
-    bufr = m_gcs[ix].get_garbling_bufr();
-    GEN_SEND(bufr);
+    //bufr = m_gcs[ix].get_garbling_bufr();
+    //GEN_SEND(bufr);
     m_gcs[ix].clear_garbling_bufr();
     
-    comm_time += MPI_Wtime() - start;
-    start = MPI_Wtime();
+    //comm_time += MPI_Wtime() - start;
+    //start = MPI_Wtime();
   }
   garble_time += MPI_Wtime()-start;
 
-  GEN_SEND(Bytes(0)); // redundant value to prevent Evl from hanging
+  //GEN_SEND(Bytes(0)); // redundant value to prevent Evl from hanging
   
   GEN_END
     
@@ -499,14 +499,17 @@ void BetterYao5::evaluate_circuits(){
   start = MPI_Wtime();
   do {
 
-    garble_time += MPI_Wtime()-start;
-    start = MPI_Wtime();
+    // if non-xor gate, get garbling buffer
+    // else, 
 
-    bufr = EVL_RECV();
-    m_gcs[ix].set_garbling_bufr(bufr);
+    //garble_time += MPI_Wtime()-start;
+    //start = MPI_Wtime();
+
+    //    bufr = EVL_RECV();
+    // m_gcs[ix].set_garbling_bufr(bufr);
     
-    comm_time += MPI_Wtime()-start;
-    start = MPI_Wtime();
+    //    comm_time += MPI_Wtime()-start;
+    // start = MPI_Wtime();
 
   } while(get_next_gate(m_gcs[ix].m_st));
 
@@ -517,7 +520,6 @@ void BetterYao5::evaluate_circuits(){
     fprintf(stdout,"garble: %f\n",garble_time);
     fprintf(stdout,"comm: %f\n",comm_time);
   
-
 }
 
 
