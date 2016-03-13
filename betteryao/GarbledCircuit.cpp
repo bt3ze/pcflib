@@ -27,23 +27,33 @@ void *copy_key(void *old_key)
 }
 */
 
-void copy_key(void* old_key, void * dest_key){
+void copy_key(void* source_key, void * dest_key){
   //  __m128i *new_key = 0; 
  
   //fprintf(stdout,"copy key \n");
 
-  if (old_key != 0)
+  if (source_key != 0)
     {
       // first argument is size, second argument is allignment
       //new_key = (__m128i*)_mm_malloc(sizeof(__m128i), sizeof(__m128i));
-      dest_key = old_key;
-      _mm_storeu_si128(reinterpret_cast<__m128i*>dest_key,reinterpret_cast<__m128i*>old_key);
-      
-    } 
-  
-  // print128_num(*new_key);
+      //dest_key = old_key;
+      //fprintf(stderr,"before copy... ");
+      //print128_num(*reinterpret_cast<__m128i*>(source_key));
 
- // _mm_storeu_si128(reinterpret_cast<__m128i*>(dest_key),*new_key);
+      //fprintf(stderr,"dest key: %p \n", dest_key);
+      // print128_num(*reinterpret_cast<__m128i*>(dest_key));
+      
+      _mm_storeu_si128(reinterpret_cast<__m128i*>(dest_key),*reinterpret_cast<__m128i*>(source_key));
+      //fprintf(stderr,"after copy\n");
+      //print128_num(*reinterpret_cast<__m128i*>(dest_key));
+
+    } else{
+    fprintf(stderr,"no copy\n");
+  }
+  
+  //print128_num(*reinterpret_cast<__m128i*>(dest_key));
+
+ // _mm_storeu_si128((dest_key),*new_key);
 
   //fprintf(stdout,"key copied \n");
   
@@ -84,6 +94,8 @@ void * gen_next_gate(PCFState *st, PCFGate *current_gate){
 
   // returns void pointer, which is pointer to a key?
   // use this one to call the Garbled Circuit object again
+
+  fprintf(stdout,"get next gate\n");
   GarbledCircuit &cct = *reinterpret_cast<GarbledCircuit*>(get_external_circuit(st));
 
   return cct.gen_Next_Gate(current_gate);
@@ -92,6 +104,8 @@ void * gen_next_gate(PCFState *st, PCFGate *current_gate){
 void * evl_next_gate(PCFState *st, PCFGate *current_gate){
   // returns void pointer, which is pointer to a key?
   // use this one to call the Garbled Circuit object again
+
+  fprintf(stdout,"evl next gate\n");
   GarbledCircuit &cct = *reinterpret_cast<GarbledCircuit*>(get_external_circuit(st));
   
   // now, call the appropriate function from cct
@@ -101,7 +115,7 @@ void * evl_next_gate(PCFState *st, PCFGate *current_gate){
 void print128_num(__m128i var)
 {
   uint16_t *val = (uint16_t*) &var;
-  fprintf(stdout,"Numerical: %x %x %x %x %x %x %x %x \n", 
+  fprintf(stderr,"Numerical: %x %x %x %x %x %x %x %x \n", 
           val[0], val[1], val[2], val[3], val[4], val[5], 
           val[6], val[7]);
 }
