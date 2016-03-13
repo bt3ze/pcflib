@@ -95,7 +95,7 @@ void * gen_next_gate(PCFState *st, PCFGate *current_gate){
   // returns void pointer, which is pointer to a key?
   // use this one to call the Garbled Circuit object again
 
-  fprintf(stdout,"get next gate\n");
+  //fprintf(stdout,"get next gate\n");
   GarbledCircuit &cct = *reinterpret_cast<GarbledCircuit*>(get_external_circuit(st));
 
   return cct.gen_Next_Gate(current_gate);
@@ -105,7 +105,7 @@ void * evl_next_gate(PCFState *st, PCFGate *current_gate){
   // returns void pointer, which is pointer to a key?
   // use this one to call the Garbled Circuit object again
 
-  fprintf(stdout,"evl next gate\n");
+  //fprintf(stdout,"evl next gate\n");
   GarbledCircuit &cct = *reinterpret_cast<GarbledCircuit*>(get_external_circuit(st));
   
   // now, call the appropriate function from cct
