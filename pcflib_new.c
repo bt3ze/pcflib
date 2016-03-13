@@ -919,7 +919,7 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void (*co
       ret->wires[i].keydata = (void *)malloc(4*sizeof(uint32_t));
       check_alloc(ret->wires[i].keydata);
       
-      copy_key(key0,ret->wires[i].keydata);
+      //      copy_key(key0,ret->wires[i].keydata);
       //ret->wires[i].keydata = copy_key(key0);
     }
   fprintf(stdout,"keys allocated\n");

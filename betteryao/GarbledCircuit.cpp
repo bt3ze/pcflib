@@ -36,28 +36,17 @@ void copy_key(void* source_key, void * dest_key){
     {
       // first argument is size, second argument is allignment
       //new_key = (__m128i*)_mm_malloc(sizeof(__m128i), sizeof(__m128i));
-      //dest_key = old_key;
-      //fprintf(stderr,"before copy... ");
-      //print128_num(*reinterpret_cast<__m128i*>(source_key));
 
-      //fprintf(stderr,"dest key: %p \n", dest_key);
-      // print128_num(*reinterpret_cast<__m128i*>(dest_key));
-      
+      double start = MPI_Wtime();
       _mm_storeu_si128(reinterpret_cast<__m128i*>(dest_key),*reinterpret_cast<__m128i*>(source_key));
-      //fprintf(stderr,"after copy\n");
-      //print128_num(*reinterpret_cast<__m128i*>(dest_key));
+      
+      benchmark_time +=  MPI_Wtime() - start;
+
 
     } else{
     fprintf(stderr,"no copy\n");
   }
   
-  //print128_num(*reinterpret_cast<__m128i*>(dest_key));
-
- // _mm_storeu_si128((dest_key),*new_key);
-
-  //fprintf(stdout,"key copied \n");
-  
-
   //  return new_key;
  
 }
@@ -77,9 +66,18 @@ void save_Key_to_128bit(const Bytes & key, __m128i & destination){
 
 void append_m128i_to_Bytes(const __m128i & num, Bytes & dest){
   Bytes tmp;
+  
+
+  //startTime = RDTSC;
+  //double start = MPI_Wtime();
+
   tmp.resize(16,0);
   _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]),num);
   dest.insert(dest.end(),tmp.begin(),tmp.begin()+Env::key_size_in_bytes());
+
+
+  //benchmark_time += MPI_Wtime() - start; //endTime = RDTSC;
+
 }
 
 
@@ -196,6 +194,7 @@ void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys
   //aes_key = _mm_xor_si128(aes_key,aes_key);
   init_circuit_AES_key(aes_key);
 
+
 }
 
 void GarbledCircuit::init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys, const std::vector<Bytes> * evl_keys,const uint32_t gen_inp_size, const Bytes & evl_input, const Bytes &zero_key, const Bytes & one_key){
@@ -213,6 +212,7 @@ void GarbledCircuit::init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys
   __m128i aes_key = m_const_wire[0];
   //  aes_key = _mm_xor_si128(aes_key,aes_key);
   init_circuit_AES_key(aes_key);
+
 
 }
 
@@ -347,8 +347,10 @@ void H_Pi256(__m128i & destination, __m128i &key1, __m128i &key2, __m128i & twea
  */
 void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
   
+  // double start = MPI_Wtime();
+
   static __m128i current_key; // must be static to return it
-  
+
   if(current_gate->tag == TAG_INPUT_A){
 
     // fprintf(stdout, "Alice Input!");
@@ -357,13 +359,13 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
 
     // send two ciphertexts
 
-    return &current_key;
+    // return &current_key;
     
   }  else if (current_gate->tag == TAG_INPUT_B){
 
     //  fprintf(stdout, "Bob Input!");
     generate_Bob_Input(current_gate, current_key);
-    return &current_key;
+    // return &current_key;
 
   } else if (current_gate->tag == TAG_OUTPUT_A) {
     
@@ -371,7 +373,7 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
     clear_garbling_bufr();
     generate_Alice_Output(current_gate,current_key, m_garbling_bufr);
     m_gate_index++;
-    return &current_key;
+    // return &current_key;
 
   } else if (current_gate->tag == TAG_OUTPUT_B){
 
@@ -385,7 +387,7 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
     m_gen_output_labels.push_back(tmp); // for output authenticity proof
     
     m_gate_index++;
-    return &current_key;
+    //return &current_key;
 
   } else {
 
@@ -393,26 +395,31 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
     clear_garbling_bufr();
     generate_Gate(current_gate,current_key,m_garbling_bufr);
     m_gate_index++;
-
   
-    return &current_key; 
+    //return &current_key; 
   }
+
+  // benchmark_time +=  MPI_Wtime() - start;
+
+  return &current_key;
 }
 
 
 void * GarbledCircuit::evl_Next_Gate(PCFGate *current_gate){
   
+  // double start = MPI_Wtime();
+
   static __m128i current_key; // must be static to return it
   
   if(current_gate->tag == TAG_INPUT_A){
     
     evaluate_Alice_Input(current_gate, current_key, m_garbling_bufr);
-    return &current_key;
+    //return &current_key;
     
   } else if (current_gate->tag == TAG_INPUT_B){
     
     evaluate_Bob_Input(current_gate,current_key);
-    return &current_key; 
+    //return &current_key; 
     
   } else if (current_gate->tag == TAG_OUTPUT_A) {
 
@@ -421,7 +428,7 @@ void * GarbledCircuit::evl_Next_Gate(PCFGate *current_gate){
     evaluate_Alice_Output(current_gate,current_key, m_garbling_bufr);
 
     m_gate_index++;
-    return &current_key;
+    //return &current_key;
 
   } else if (current_gate->tag == TAG_OUTPUT_B){
 
@@ -438,15 +445,20 @@ void * GarbledCircuit::evl_Next_Gate(PCFGate *current_gate){
     m_gen_output_labels.push_back(tmp);
 
     m_gate_index++;
-    return &current_key;
+    //return &current_key;
     
 } else {
     
     evaluate_Gate(current_gate,current_key, m_garbling_bufr);
     m_gate_index++;
 
-    return &current_key;
+    //return &current_key;
   }
+
+  //  benchmark_time +=  MPI_Wtime() - start;
+ 
+ return &current_key;
+
 }
 
 
@@ -745,6 +757,8 @@ void GarbledCircuit::genStandardGate(__m128i& current_key, __m128i & key1, __m12
   
   uint8_t semantic_bit;
     
+  //double start = MPI_Wtime();
+
   // load the (zero-key) inputs from the PCF state container
   X[0] = key1;
   Y[0] = key2;
@@ -820,6 +834,9 @@ void GarbledCircuit::genStandardGate(__m128i& current_key, __m128i & key1, __m12
   
   // current_key holds our output key, and it will be available to our calling function
   // the calling function will also be able to send the information in out_bufr
+
+  //benchmark_time +=  MPI_Wtime() - start;
+
 }
 
 
@@ -829,6 +846,8 @@ void GarbledCircuit::evlStandardGate(__m128i& current_key, __m128i & key1, __m12
   __m128i a;
   Bytes::const_iterator it;
   
+  //double start = MPI_Wtime();
+
   aes_plaintext = _mm_set1_epi64x(m_gate_index);
   
   garble_key[0] =  key1;
@@ -879,6 +898,9 @@ void GarbledCircuit::evlStandardGate(__m128i& current_key, __m128i & key1, __m12
 #endif
     
     // current key holds our output key, and it will be available to the calling function
+
+    //benchmark_time +=  MPI_Wtime() - start;
+
 }
 
 
@@ -890,6 +912,8 @@ void GarbledCircuit::genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i &
   assert(a2==0||a2==1);
   assert(a3==0||a3==1);
   
+  //double start = MPI_Wtime();
+
   const uint8_t perm_x = _mm_extract_epi8(key1,0) & 0x01;
   const uint8_t perm_y = _mm_extract_epi8(key2,0) & 0x01;
 
@@ -959,12 +983,16 @@ void GarbledCircuit::genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i &
   // combine half gates:
   out_key = _mm_xor_si128(Wg,We);
 
+  //benchmark_time += MPI_Wtime() - start;
+
 }
   
 
 
 void GarbledCircuit::evlHalfGatePair(__m128i &current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr){
   assert(in_bufr.size() == 2*Env::key_size_in_bytes());
+
+  //double start = MPI_Wtime();
 
   // get the select bits
   byte sa,sb;
@@ -1023,6 +1051,8 @@ void GarbledCircuit::evlHalfGatePair(__m128i &current_key, __m128i & key1, __m12
   }
 
   current_key = _mm_xor_si128(Wg,We);
+
+  //benchmark_time += MPI_Wtime() - start;
 
 }  
 
@@ -1142,10 +1172,14 @@ void generate_K_Probe_Matrix(std::vector<Bytes> &matrix){
 
 
 Bytes GarbledCircuit::get_alice_out(){
+  fprintf(stdout,"benchmark time: %f\n",benchmark_time);
+
   return m_alice_out;
 }
 
- Bytes GarbledCircuit::get_bob_out(){
+Bytes GarbledCircuit::get_bob_out(){
+  fprintf(stdout,"benchmark time: %f\n",benchmark_time);
+
   return m_bob_out;
 }
 
@@ -1158,10 +1192,14 @@ Bytes GarbledCircuit::get_hash_out(){
     m_alice_out.resize(m_alice_out_ix/8,0);
   if(m_bob_out_ix>0)
     m_bob_out.resize(m_bob_out_ix/8,0);
+
+
 }
 
 Bytes GarbledCircuit::get_Gen_Output_Label(uint32_t idx){
+
   return m_gen_output_labels[idx];
+
 }
 
 

@@ -15,6 +15,7 @@ extern "C" {
 
 #include "../pcflib_new.h"
 
+
 //  void *copy_key(void *);
 void copy_key(void *, void*);
 void delete_key(void *);
@@ -27,6 +28,8 @@ void *evl_next_gate(struct PCFState *st, struct PCFGate *gate);
 #ifdef __CPLUSPLUS
 }
 #endif
+
+
  
 
 #define  _mm_extract_epi8(x, imm) \
@@ -45,6 +48,9 @@ void save_Key_to_128bit(const Bytes & key, __m128i & destination);
 void append_m128i_to_Bytes(const __m128i & num, Bytes & buf);
 
           
+static double benchmark_time = 0.0;
+
+
 class GarbledCircuit {
 
 public:
@@ -221,6 +227,7 @@ protected:
 
     // very important: used for encrypting
     AES_KEY_J m_fixed_key;
+
 
 };
 
