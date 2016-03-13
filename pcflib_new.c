@@ -886,6 +886,9 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void (*co
   ret->inp_i = 0;
   ret->inp_idx = 0; // should not be strictly necessary because will be set before first use
 
+  ret->accum=0.0;
+  ret->accum2=0.0;
+
   fprintf(stdout,"allocate const keys:\n");
   
   ret->constant_keys[0] =(void*) malloc(4*sizeof(uint32_t));
@@ -986,17 +989,22 @@ void finalize(PCFState * st)
 
   //  fprintf(stderr, "finalize\n");
   
-  uint32_t i = 0;
+  // uint32_t i = 0;
   
-  for(i = 0; i < 200000; i++)
-    {
-      if(st->wires[i].keydata != 0)
-        st->delete_key(st->wires[i].keydata);
-    } 
+  // still need some way to delete the keys and free memory
+  //for(i = 0; i < 200000; i++)
+  //  {
+  //    if(st->wires[i].keydata != 0)
+  //      st->delete_key(st->wires[i].keydata);
+  //  } 
   free(st->wires);
   //  free(st);
   
   //  fprintf(stderr,"done finalize\n");
+  
+  fprintf(stderr,"accumulator: %f\n",st->accum);
+  fprintf(stderr,"accumulator2: %f\n",st->accum2);
+
 }
 
 struct PCFGate * get_next_gate(struct PCFState * st)
@@ -1005,13 +1013,18 @@ struct PCFGate * get_next_gate(struct PCFState * st)
   //fprintf(stderr, "get next gate");
   //  std::cout << "get next gate" << std::endl;
 
+  clock_gettime(CLOCK_REALTIME, &(st->requestStart)); 
+
   st->curgate = 0;
   //fprintf(stderr,"program counter: %u\n",st->PC);
   while((st->curgate == 0) && (st->done == 0))
-    {
+  {
       // if curgate is 0, why are we executing things?
 
+    //fprintf(stderr,"curgate: %p",st->curgate);
+
       // call the instruction's op function
+
       st->ops[st->PC].op(st, &st->ops[st->PC]);
       // then increment the program counter
       st->PC++;
@@ -1022,6 +1035,12 @@ struct PCFGate * get_next_gate(struct PCFState * st)
   //  if((st->curgate == 0) || (st->done != 0))
   // this seems redundant, since st->curgate should only be 0 after the above loop if st->done is nonzero
 
+ 
+  clock_gettime(CLOCK_REALTIME, &(st->requestEnd));
+
+  st->accum += ( st->requestEnd.tv_sec - st->requestStart.tv_sec )
+    + ( st->requestEnd.tv_nsec - st->requestStart.tv_nsec )
+    / BILLION;
 
   if(st->done != 0)
   {

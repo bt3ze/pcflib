@@ -461,12 +461,15 @@ void gate_op(struct PCFState * st, struct PCFOP * op)
   uint8_t bits[4];
   int8_t i = 0;
   uint8_t tab = data->truth_table;
-  void * tmp = st->wires[destidx].keydata;
+  //void * tmp = st->wires[destidx].keydata;
 
   //fprintf(stdout,"wire1: %u, wire2: %u\tabsolute1: %u, absolute2: %u\n",
   //        data->wire1, data->wire2, op1idx, op2idx);
   //fprintf(stdout,"wire1: %u\twire2: %u\n",
   //        st->wires[op1idx].keydata, st->wires[op2idx].keydata);
+
+
+
 
   for(i = 0; i < 4; i++)
     {
@@ -474,13 +477,13 @@ void gate_op(struct PCFState * st, struct PCFOP * op)
       tab = tab >> 1;
     }
 
-  assert(st->curgate == 0);
-  assert(data->truth_table < 16);
+  //assert(st->curgate == 0);
+  //assert(data->truth_table < 16);
   
   if((st->wires[op1idx].flags != KNOWN_WIRE) || (st->wires[op2idx].flags != KNOWN_WIRE))
     {
       // Time for the callback
-      assert((st->wires[op1idx].keydata != 0) && (st->wires[op2idx].keydata != 0)); // asserts no null pointers, but asserting not known constant wires is unclear. should be taken care of by the KNOWN_WIRE checks
+      //assert((st->wires[op1idx].keydata != 0) && (st->wires[op2idx].keydata != 0)); // asserts no null pointers, but asserting not known constant wires is unclear. should be taken care of by the KNOWN_WIRE checks
  
       st->curgate = &_gate;
 
@@ -505,24 +508,29 @@ void gate_op(struct PCFState * st, struct PCFOP * op)
       st->curgate->tag = TAG_INTERNAL;
 
       // st->wires[destidx].keydata = st->copy_key(st->callback(st, st->curgate));
+      clock_gettime(CLOCK_REALTIME, &(st->requestStart2));
       st->copy_key(st->callback(st, st->curgate),st->wires[destidx].keydata);
+      clock_gettime(CLOCK_REALTIME, &(st->requestEnd2));
+      st->accum2 += ( st->requestEnd2.tv_sec - st->requestStart2.tv_sec )
+        + ( st->requestEnd2.tv_nsec - st->requestStart2.tv_nsec )
+        / BILLION;
 
 
-      if(tmp != 0) st->delete_key(tmp);
+      //if(tmp != 0) st->delete_key(tmp);
 
       st->wires[destidx].flags = UNKNOWN_WIRE;
     }
   else
     {
       // Check that we are dealing only with bits
-      assert((st->wires[op1idx].value < 2) && (st->wires[op2idx].value < 2));
-      assert(((st->wires[op1idx].value) + (2*(st->wires[op2idx].value))) < 4);
+      //assert((st->wires[op1idx].value < 2) && (st->wires[op2idx].value < 2));
+      //assert(((st->wires[op1idx].value) + (2*(st->wires[op2idx].value))) < 4);
       
       if((bits[(st->wires[op1idx].value) + (2*(st->wires[op2idx].value))]) >= 2){
         fprintf(stderr, "Problem!\n");
       }
       
-      assert((bits[(st->wires[op1idx].value) + (2*(st->wires[op2idx].value))]) < 2);
+      //      assert((bits[(st->wires[op1idx].value) + (2*(st->wires[op2idx].value))]) < 2);
 
       // st->wires[destidx].keydata = st->copy_key(st->constant_keys[bits[(st->wires[op1idx].value) + (2*(st->wires[op2idx].value))]]);
       st->copy_key(st->constant_keys[bits[(st->wires[op1idx].value) + (2*(st->wires[op2idx].value))]], st->wires[destidx].keydata );
@@ -536,6 +544,9 @@ void gate_op(struct PCFState * st, struct PCFOP * op)
       st->wires[destidx].value = bits[(st->wires[op1idx].value) + (2*(st->wires[op2idx].value))];
       st->wires[destidx].flags = KNOWN_WIRE;
     }
+
+ 
+
 }
 
 void copy_op(struct PCFState * st, struct PCFOP * op)

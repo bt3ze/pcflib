@@ -394,6 +394,8 @@ void branch_op(struct PCFState * st, struct PCFOP * op)
 
 void gate_op(struct PCFState * st, struct PCFOP * op)
 {
+  //  MPI_Wtime();
+
   // fprintf(stderr,"gate op\n");
   struct PCFGate * data = (struct PCFGate*)op->data;
   uint32_t op1idx = data->wire1 + st->base;

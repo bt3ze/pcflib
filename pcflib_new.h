@@ -41,6 +41,14 @@ extern "C" {
 #endif
 #include <search.h>
 
+  //  static double btime;
+
+#include <time.h>
+
+#define BILLION 1E9
+  //static double accum = 0.0;
+
+
   struct PCFState;
 
   /* This should be immutable -- we should be able to safely make a shallow copy. */
@@ -108,6 +116,14 @@ struct activation_record {
   void check_alloc(void * ptr);
 
 typedef struct PCFState {
+  double accum, accum2;// = 0.0;
+  struct timespec requestStart, requestEnd, requestStart2, requestEnd2;
+
+  //clock_gettime(CLOCK_REALTIME, &requestStart);
+  //function_call();
+  //clock_gettime(CLOCK_REALTIME, &requestEnd);
+
+
   // base pointer on the circuit's emulated stack
   uint32_t base;
   // program counter on the circuit's emulated machine
