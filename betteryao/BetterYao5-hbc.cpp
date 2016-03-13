@@ -472,6 +472,8 @@ void BetterYao5::evaluate_circuits(){
   int ix = 0;
   Bytes bufr;
 
+  fprintf(stdout,"Gen Begin Garbling - get next gate \n");
+
   start = MPI_Wtime();
   while(get_next_gate(m_gcs[ix].m_st)){
     //garble_time += MPI_Wtime() - start;
@@ -495,6 +497,7 @@ void BetterYao5::evaluate_circuits(){
   int ix =0;
   Bytes bufr;
   
+  fprintf(stdout,"Evl begin evaluating - get next gate\n");
 
   start = MPI_Wtime();
   do {

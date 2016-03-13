@@ -11,6 +11,7 @@
    ACCESSORY FUNCTIONS
  */
 
+/*
 void *copy_key(void *old_key)
 {
   __m128i *new_key = 0;
@@ -20,26 +21,41 @@ void *copy_key(void *old_key)
       new_key = (__m128i*)_mm_malloc(sizeof(__m128i), sizeof(__m128i));
       *new_key = *reinterpret_cast<__m128i*>(old_key);
     }
+
+  //print128_num(*new_key);
   return new_key;
 }
+*/
 
+void copy_key(void* old_key, void * dest_key){
+  //  __m128i *new_key = 0; 
+ 
+  //fprintf(stdout,"copy key \n");
 
-void copy_key_2(void* old_key, void * new_key){
-  __m128i *new_key = 0;
   if (old_key != 0)
     {
       // first argument is size, second argument is allignment
-      new_key = (__m128i*)_mm_malloc(sizeof(__m128i), sizeof(__m128i));
-      *new_key = *reinterpret_cast<__m128i*>(old_key);
-    }
-  return new_key;
+      //new_key = (__m128i*)_mm_malloc(sizeof(__m128i), sizeof(__m128i));
+      dest_key = old_key;
+      _mm_storeu_si128(reinterpret_cast<__m128i*>dest_key,reinterpret_cast<__m128i*>old_key);
+      
+    } 
+  
+  // print128_num(*new_key);
 
+ // _mm_storeu_si128(reinterpret_cast<__m128i*>(dest_key),*new_key);
+
+  //fprintf(stdout,"key copied \n");
+  
+
+  //  return new_key;
+ 
 }
 
 
 void delete_key(void *key)
 {
-  if (key != 0) _mm_free(key);
+  // if (key != 0) _mm_free(key);
 }
 
 
@@ -114,14 +130,14 @@ GarbledCircuit::GarbledCircuit(): m_gate_index(0), m_bob_out_ix(0),m_alice_out_i
 
 
 void GarbledCircuit::set_Gen_Circuit_Functions(){
-  set_key_copy_function(m_st, copy_key_2);
+  set_key_copy_function(m_st, copy_key);
   set_key_delete_function(m_st, delete_key);
   set_callback(m_st,gen_next_gate);  
 }
 
 
 void GarbledCircuit::set_Evl_Circuit_Functions(){
-  set_key_copy_function(m_st, copy_key_2);
+  set_key_copy_function(m_st, copy_key);
   set_key_delete_function(m_st, delete_key);
   set_callback(m_st,evl_next_gate);
 }

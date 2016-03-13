@@ -35,6 +35,7 @@ extern "C" {
 
 #include <stdint.h>
 #include <pthread.h>
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
@@ -169,9 +170,10 @@ typedef struct PCFState {
 
   /* The function that will be used to make copies of the keys
      associated with a wire. */
-  void * (*copy_key)(void *);
+  //void * (*copy_key)(void *);
+  void (* copy_key) (void *, void *);
 
-  void copy_key_2(void * source, void * dest);
+  //  void copy_key_2(void * source, void * dest);
 
 
   /* The function that will be used to delete keys when a wire is
@@ -185,7 +187,7 @@ typedef struct PCFState {
   void * get_external_circuit(struct PCFState *);
   void set_key_delete_function(struct PCFState *, void (*)(void*));
   //  void set_key_copy_function(struct PCFState *, void *(*)(void*));
-  void set_key_copy_function(struct PCFState *, void *(*)(void*,void*));
+  void set_key_copy_function(struct PCFState *, void (*f)(void*,void*));
   void set_callback(struct PCFState *, void* (*)(struct PCFState *, struct PCFGate *));
   PCFGate * get_next_gate(PCFState *);
   //  PCFState * load_pcf_file(const char *, void *, void *, void *(*)(void*));

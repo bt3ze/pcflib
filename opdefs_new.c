@@ -5,7 +5,7 @@
 #include <search.h>
 #include <errno.h>
 #include <string.h>
-#include "opdefs.h"
+#include "opdefs_new.h"
 
 struct PCFGate _gate;
 #define DEBUG_OUTPUT 0
@@ -245,7 +245,7 @@ void call_op (struct PCFState * st, struct PCFOP * op)
             
               //fprintf(stdout,"filling zeros for uninitialized wire");
               //st->wires[st->input_g.reswire].keydata = st->copy_key(st->constant_keys[0]);
-              st->copy_key(st->constant_keys[0],st->input_g.reswire].keydata);
+              st->copy_key(st->constant_keys[0],st->wires[st->input_g.reswire].keydata);
             }
           
           st->wires[st->input_g.reswire].flags = UNKNOWN_WIRE;
@@ -405,7 +405,7 @@ void branch_op(struct PCFState * st, struct PCFOP * op)
 
 void gate_op(struct PCFState * st, struct PCFOP * op)
 {
-  // fprintf(stderr,"gate op\n");
+  //fprintf(stderr,"gate op\n");
   struct PCFGate * data = (struct PCFGate*)op->data;
   uint32_t op1idx = data->wire1 + st->base;
   uint32_t op2idx = data->wire2 + st->base;

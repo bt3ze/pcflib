@@ -13,9 +13,10 @@
 extern "C" {
 #endif
 
-#include "../pcflib.h"
+#include "../pcflib_new.h"
 
-void *copy_key(void *);
+//  void *copy_key(void *);
+void copy_key(void *, void*);
 void delete_key(void *);
 
 void *gen_next_gate(struct PCFState *st, struct PCFGate *gate);

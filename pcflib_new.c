@@ -7,8 +7,8 @@
 #include <search.h>
 #include <assert.h>
 
-#include "pcflib.h"
-#include "opdefs.h"
+#include "pcflib_new.h"
+#include "opdefs_new.h"
 
 void check_alloc(void * ptr)
 {
@@ -868,7 +868,7 @@ PCFOP * read_instr(struct PCFState * st, const char * line, uint32_t iptr)
 */ 
 
 //PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void *(*copy_key)(void*))
-PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void (*copy_key_2)(void*,void*))
+PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void (*copy_key)(void*,void*))
 {
   FILE * input;
   PCFState * ret; 
@@ -885,10 +885,20 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void (*co
   //ret->bob_outputs = 0;
   ret->inp_i = 0;
   ret->inp_idx = 0; // should not be strictly necessary because will be set before first use
-  copy_key_2(key0, ret->constant_keys[0]);
-  copy_key_2(key1, ret->constant_keys[1]);
-  ret->copy_key = copy_key_2;
-//ret->constant_keys[0] = copy_key(key0);
+
+  fprintf(stdout,"allocate const keys:\n");
+  
+  ret->constant_keys[0] =(void*) malloc(4*sizeof(uint32_t));
+  ret->constant_keys[1] =(void*) malloc(4*sizeof(uint32_t));
+  fprintf(stdout,"set up const keys:\n");
+
+  copy_key(key0, ret->constant_keys[0]);
+  fprintf(stdout,"set const key 0\n");
+  copy_key(key1, ret->constant_keys[1]);
+  fprintf(stdout,"set const key 1\n");
+  ret->copy_key = copy_key;
+  fprintf(stdout,"set copy key function\n");
+  //ret->constant_keys[0] = copy_key(key0);
   //ret->constant_keys[1] = copy_key(key1);
   //ret->copy_key = copy_key;
   ret->call_stack = 0;
@@ -898,19 +908,21 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void (*co
 
   ret->wires = (struct wire *)malloc(num_wires * sizeof(struct wire)); // !note here the limit on size of the wire table
   check_alloc(ret->wires);
-
   
-  // this loop is a little curious
-  // but i guess it's fine, because it sets all of the wire values to 0
-  // and claims they're known wires
-  // they can be changed later
+
+  fprintf(stdout,"allocate keys\n");
   for(i = 0; i < num_wires; i++)
     {
+      //fprintf(stdout,"%i",i);
       ret->wires[i].flags = KNOWN_WIRE;
       ret->wires[i].value = 0;
-      copy_key_2(key0,ret->wires[i].keydata);
+      ret->wires[i].keydata = (void *)malloc(4*sizeof(uint32_t));
+      check_alloc(ret->wires[i].keydata);
+      
+      copy_key(key0,ret->wires[i].keydata);
       //ret->wires[i].keydata = copy_key(key0);
     }
+  fprintf(stdout,"keys allocated\n");
   
 
   memset(ret->labels, 0, sizeof(struct hsearch_data));
@@ -1066,7 +1078,7 @@ void set_callback(struct PCFState * st, void* (*callback)(struct PCFState *,stru
 }
 
 //void set_key_copy_function(struct PCFState * st, void *(*f)(void*))
-void set_key_copy_function(struct PCFState * st, void (*f)(void*,void*));
+void set_key_copy_function(struct PCFState * st, void (*f)(void*,void*))
 {
   st->copy_key = f;
 }
