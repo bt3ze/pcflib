@@ -37,11 +37,19 @@ void copy_key(void* source_key, void * dest_key){
       // first argument is size, second argument is allignment
       //new_key = (__m128i*)_mm_malloc(sizeof(__m128i), sizeof(__m128i));
 
-      double start = MPI_Wtime();
+      num_copies++;
+      clock_gettime(CLOCK_REALTIME, &copy_start);
+      //double start = MPI_Wtime();
+
+      
       _mm_storeu_si128(reinterpret_cast<__m128i*>(dest_key),*reinterpret_cast<__m128i*>(source_key));
       
       //benchmark_time +=  MPI_Wtime() - start;
 
+      clock_gettime(CLOCK_REALTIME, &copy_end);
+      copy_time += ( copy_end.tv_sec - copy_start.tv_sec )
+        + ( copy_end.tv_nsec - copy_start.tv_nsec )
+        / BILN;
 
     } else{
     fprintf(stderr,"no copy\n");
@@ -1277,6 +1285,7 @@ Bytes GarbledCircuit::get_alice_out(){
   fprintf(stdout,"half gates : %i \t hgate time: %f\n",half_gates,hg_time);
   fprintf(stdout,"other gates: %i \t other time: %f\n",other_gates,og_time);
   fprintf(stdout,"total gates: %i \t total time: %f\n",total_gates,garble_time);
+  fprintf(stdout,"num copies: %i \t copy time: %f\n",num_copies, copy_time);
 
   return m_alice_out;
 }
@@ -1288,6 +1297,7 @@ Bytes GarbledCircuit::get_bob_out(){
   fprintf(stdout,"half gates : %i \t hgate time: %f\n",half_gates,hg_time);
   fprintf(stdout,"other gates: %i \t other time: %f\n",other_gates,og_time);
   fprintf(stdout,"total gates: %i \t total time: %f\n",total_gates,garble_time);
+  fprintf(stdout,"num copies : %i \t copy time : %f\n",num_copies, copy_time);
 
   return m_bob_out;
 }

@@ -50,9 +50,10 @@ void append_m128i_to_Bytes(const __m128i & num, Bytes & buf);
           
 #include <time.h>
 #define BILN 1E9
-//static double benchmark_time = 0.0;
+static double copy_time = 0.0;
+static int num_copies = 0;
 //  static double btime2 = 0.0;
-//  static  struct timespec bstart, bend;
+static struct timespec copy_start, copy_end;
 
 
 class GarbledCircuit {
