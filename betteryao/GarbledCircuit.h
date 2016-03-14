@@ -48,7 +48,11 @@ void save_Key_to_128bit(const Bytes & key, __m128i & destination);
 void append_m128i_to_Bytes(const __m128i & num, Bytes & buf);
 
           
-static double benchmark_time = 0.0;
+#include <time.h>
+#define BILN 1E9
+//static double benchmark_time = 0.0;
+//  static double btime2 = 0.0;
+//  static  struct timespec bstart, bend;
 
 
 class GarbledCircuit {
@@ -227,6 +231,22 @@ protected:
 
     // very important: used for encrypting
     AES_KEY_J m_fixed_key;
+
+
+    uint32_t xor_gates;
+    uint32_t half_gates;
+    uint32_t other_gates;
+    uint32_t total_gates;
+
+    double xor_time;
+    double hg_time; // half gate time
+    double og_time; // other gate tim
+    double garble_time; // other gate time
+
+    struct timespec xor_start, xor_end;
+    struct timespec half_start, half_end;
+    struct timespec og_start, og_end;
+    struct timespec garble_start, garble_end;
 
 
 };

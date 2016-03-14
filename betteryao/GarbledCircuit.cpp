@@ -40,7 +40,7 @@ void copy_key(void* source_key, void * dest_key){
       double start = MPI_Wtime();
       _mm_storeu_si128(reinterpret_cast<__m128i*>(dest_key),*reinterpret_cast<__m128i*>(source_key));
       
-      benchmark_time +=  MPI_Wtime() - start;
+      //benchmark_time +=  MPI_Wtime() - start;
 
 
     } else{
@@ -100,7 +100,7 @@ void * gen_next_gate(PCFState *st, PCFGate *current_gate){
  }
 
 void * evl_next_gate(PCFState *st, PCFGate *current_gate){
-  // returns void pointer, which is pointer to a key?
+  // returns void pointer, which is pointer to a key
   // use this one to call the Garbled Circuit object again
 
   //fprintf(stdout,"evl next gate\n");
@@ -195,6 +195,9 @@ void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys
   init_circuit_AES_key(aes_key);
 
 
+  xor_gates = half_gates = other_gates = total_gates = 0;
+  xor_time = hg_time = og_time = garble_time = 0.0;
+  
 }
 
 void GarbledCircuit::init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys, const std::vector<Bytes> * evl_keys,const uint32_t gen_inp_size, const Bytes & evl_input, const Bytes &zero_key, const Bytes & one_key){
@@ -212,6 +215,9 @@ void GarbledCircuit::init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys
   __m128i aes_key = m_const_wire[0];
   //  aes_key = _mm_xor_si128(aes_key,aes_key);
   init_circuit_AES_key(aes_key);
+
+  xor_gates = half_gates = other_gates = total_gates = 0;
+  xor_time = hg_time = og_time = garble_time = 0.0;
 
 
 }
@@ -347,6 +353,9 @@ void H_Pi256(__m128i & destination, __m128i &key1, __m128i &key2, __m128i & twea
  */
 void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
   
+  //clock_gettime(CLOCK_REALTIME, &bstart);
+    
+
   // double start = MPI_Wtime();
 
   static __m128i current_key; // must be static to return it
@@ -400,6 +409,10 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
   }
 
   // benchmark_time +=  MPI_Wtime() - start;
+  //  clock_gettime(CLOCK_REALTIME, &bend);
+  //btime2 += ( bend.tv_sec - bstart.tv_sec )
+  //  + ( bend.tv_nsec - bstart.tv_nsec )
+  //  / BILN;
 
   return &current_key;
 }
@@ -409,6 +422,8 @@ void * GarbledCircuit::evl_Next_Gate(PCFGate *current_gate){
   
   // double start = MPI_Wtime();
 
+  //clock_gettime(CLOCK_REALTIME, &bstart);
+   
   static __m128i current_key; // must be static to return it
   
   if(current_gate->tag == TAG_INPUT_A){
@@ -457,15 +472,23 @@ void * GarbledCircuit::evl_Next_Gate(PCFGate *current_gate){
 
   //  benchmark_time +=  MPI_Wtime() - start;
  
+
+  //clock_gettime(CLOCK_REALTIME, &bend);
+  //btime2 += ( bend.tv_sec - bstart.tv_sec )
+  //  + ( bend.tv_nsec - bstart.tv_nsec )
+  //  / BILN;
+
  return &current_key;
 
 }
 
 
 void GarbledCircuit::xor_Gate(__m128i & key1, __m128i & key2, __m128i &current_key){
-  
+
   current_key = _mm_xor_si128(key1,key2);
-  
+
+
+
 }
 
 uint32_t GarbledCircuit::increment_index(){
@@ -668,11 +691,30 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key, 
   __m128i key1 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire1));
   __m128i key2 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire2));
 
+  total_gates++;
+  clock_gettime(CLOCK_REALTIME, &garble_start);    
 
 #ifdef FREE_XOR
   if(current_gate->truth_table == 0x06){ // if XOR gate
+  
+    xor_gates++;
+    clock_gettime(CLOCK_REALTIME, &xor_start);    
+   
     xor_Gate(key1, key2, current_key);
-  } else {
+
+    clock_gettime(CLOCK_REALTIME, &xor_end);
+    xor_time += ( xor_end.tv_sec - xor_start.tv_sec )
+      + ( xor_end.tv_nsec - xor_start.tv_nsec )
+      / BILN;
+
+
+  } else if (current_gate->truth_table == 0x01 || current_gate->truth_table == 0x07)   {
+  
+    //fprintf(stderr,"%i\n",current_gate->truth_table);
+
+    half_gates++;
+    clock_gettime(CLOCK_REALTIME, &half_start); 
+
     if(current_gate->truth_table == 0x01){ // AND Gate            
       genHalfGatePair(current_key, key1, key2, garbling_bufr, 0, 0, 0);
       send_half_gate(garbling_bufr);
@@ -683,23 +725,45 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key, 
       send_half_gate(garbling_bufr);
     }
     
-    else { 
+    
+    clock_gettime(CLOCK_REALTIME, &half_end);
+    hg_time += ( half_end.tv_sec - half_start.tv_sec )
+      + ( half_end.tv_nsec - half_start.tv_nsec )
+      / BILN;
+    
+  } else { 
 
 #endif
       
-      // here (most likely) we have a NOT gate or an XNOR gate 
-      // the compiler's optimizer should do its best to remove them
-      // but since they can't be garbled with half gates, we garble with GRR
-      // NOT or XNOR gates, however, might be a bit cryptographically dangerous
-      // we also use this method for output gates
-      genStandardGate(current_key, key1, key2, garbling_bufr, current_gate->truth_table);
-      send_full_gate(garbling_bufr);
+    //fprintf(stderr,"%i\n",current_gate->truth_table);
 
-      
+
+    // here (most likely) we have a NOT gate or an XNOR gate 
+    // the compiler's optimizer should do its best to remove them
+    // but since they can't be garbled with half gates, we garble with GRR
+    // NOT or XNOR gates, however, might be a bit cryptographically dangerous
+    // we also use this method for output gates
+    
+    other_gates++;
+    clock_gettime(CLOCK_REALTIME, &og_start);
+    
+    genStandardGate(current_key, key1, key2, garbling_bufr, current_gate->truth_table);
+    send_full_gate(garbling_bufr);
+
+    clock_gettime(CLOCK_REALTIME, &og_end);
+    og_time += ( og_end.tv_sec - og_start.tv_sec )
+      + ( og_end.tv_nsec - og_start.tv_nsec )
+      / BILN;
+
 #ifdef FREE_XOR
     }
-  }
 #endif
+
+    
+  clock_gettime(CLOCK_REALTIME, &garble_end);
+  garble_time += ( garble_end.tv_sec - garble_start.tv_sec )
+    + ( garble_end.tv_nsec - garble_start.tv_nsec )
+    / BILN;
 
 }
 
@@ -709,16 +773,32 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key, 
   __m128i key1 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire1));
   __m128i key2 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire2));
 
+  total_gates++;
+  clock_gettime(CLOCK_REALTIME, &garble_start);    
+
 #ifdef FREE_XOR
   if (current_gate->truth_table == 0x06)
     {
+      xor_gates++;
+      clock_gettime(CLOCK_REALTIME, &xor_start);    
+
       xor_Gate(key1, key2, current_key);
-    } else {
+
+      clock_gettime(CLOCK_REALTIME, &xor_end);
+      xor_time += ( xor_end.tv_sec - xor_start.tv_sec )
+        + ( xor_end.tv_nsec - xor_start.tv_nsec )
+        / BILN;
+      
+    } else if(current_gate->truth_table == 0x01 || current_gate->truth_table == 0x07) {
+  
+    half_gates++;
+    clock_gettime(CLOCK_REALTIME, &half_start); 
+   
     if(current_gate->truth_table == 0x01){ // AND Gate
       // fprintf(stdout,"AND GATE!\n");
       garbling_bufr = read_half_gate();
       evlHalfGatePair(current_key, key1,key2, garbling_bufr);
-
+      
     } 
     else if(current_gate->truth_table == 0x07){ // OR gate
       // fprintf(stdout,"OR GATE!\n");
@@ -727,25 +807,44 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key, 
       
     }
 
-    else { 
+        
+    clock_gettime(CLOCK_REALTIME, &half_end);
+    hg_time += ( half_end.tv_sec - half_start.tv_sec )
+      + ( half_end.tv_nsec - half_start.tv_nsec )
+      / BILN;
+
+  }else { 
 
 #endif
 
-      garbling_bufr = read_full_gate();
 
-      // here (most likely) we have a NOT gate or an XNOR gate 
+    other_gates++;
+    clock_gettime(CLOCK_REALTIME, &og_start);
+    
+    // here (most likely) we have a NOT gate or an XNOR gate 
       // the compiler's optimizer should do its best to remove them
       // but since they can't be garbled with half gates, we garble with GRR
       // we also use this for output gates
-      evlStandardGate(current_key, key1, key2, garbling_bufr);      
+    garbling_bufr = read_full_gate();
+    evlStandardGate(current_key, key1, key2, garbling_bufr);      
+      
+    clock_gettime(CLOCK_REALTIME, &og_end);
+    og_time += ( og_end.tv_sec - og_start.tv_sec )
+      + ( og_end.tv_nsec - og_start.tv_nsec )
+      / BILN;
     
 #ifdef FREE_XOR
 
     }
-  }
 #endif
 
   // current_key will be available to the calling function
+
+  
+  clock_gettime(CLOCK_REALTIME, &garble_end);
+  garble_time += ( garble_end.tv_sec - garble_start.tv_sec )
+    + ( garble_end.tv_nsec - garble_start.tv_nsec )
+    / BILN;
 
 }
 
@@ -1170,15 +1269,25 @@ void generate_K_Probe_Matrix(std::vector<Bytes> &matrix){
 }
 
 
-
 Bytes GarbledCircuit::get_alice_out(){
-  fprintf(stdout,"benchmark time: %f\n",benchmark_time);
+  //  fprintf(stdout,"benchmark time: %f\n",benchmark_time);
+  //fprintf(stdout,"benchmark time2: %f\n",btime2);
+
+  fprintf(stdout,"xor gates  : %i \t xor time  : %f\n",xor_gates,xor_time);
+  fprintf(stdout,"half gates : %i \t hgate time: %f\n",half_gates,hg_time);
+  fprintf(stdout,"other gates: %i \t other time: %f\n",other_gates,og_time);
+  fprintf(stdout,"total gates: %i \t total time: %f\n",total_gates,garble_time);
 
   return m_alice_out;
 }
 
 Bytes GarbledCircuit::get_bob_out(){
-  fprintf(stdout,"benchmark time: %f\n",benchmark_time);
+  //  fprintf(stdout,"benchmark time: %f\n",benchmark_time);
+
+  fprintf(stdout,"xor gates  : %i \t xor time  : %f\n",xor_gates,xor_time);
+  fprintf(stdout,"half gates : %i \t hgate time: %f\n",half_gates,hg_time);
+  fprintf(stdout,"other gates: %i \t other time: %f\n",other_gates,og_time);
+  fprintf(stdout,"total gates: %i \t total time: %f\n",total_gates,garble_time);
 
   return m_bob_out;
 }
