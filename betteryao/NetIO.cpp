@@ -86,6 +86,19 @@ void Socket::write_4_ciphertexts(const Bytes &bytes){
 }
 
 
+void Socket::write_n_ciphertexts(const Bytes &bytes, const uint32_t n){
+  uint32_t sz = n*Env::key_size_in_bytes();
+  size_t ix = 0;
+
+  for(; sz> CHUNK_SIZE;sz -= CHUNK_SIZE, ix+= CHUNK_SIZE){
+    send(m_socket, &bytes[ix], CHUNK_SIZE,0);
+  }
+
+  if(sz > 0) {
+    send(m_socket,&bytes[ix], sz,0);
+  }
+}
+
 Bytes Socket::read_2_ciphertexts(){
   Bytes bytes(2*Env::key_size_in_bytes());
   uint32_t sz = 2 * Env::key_size_in_bytes();
@@ -120,6 +133,21 @@ Bytes Socket::read_3_ciphertexts(){
 Bytes Socket::read_4_ciphertexts(){
   Bytes bytes(4*Env::key_size_in_bytes());
   uint32_t sz = 4 * Env::key_size_in_bytes();
+  uint32_t ix;
+
+  for (ix = 0; sz > CHUNK_SIZE; sz -= CHUNK_SIZE, ix += CHUNK_SIZE)
+    my_read(m_socket, &bytes[0]+ix, CHUNK_SIZE);
+  
+  //my_read(m_socket, &bytes[0]+ix, bytes.size()-ix);
+  my_read(m_socket, &bytes[0]+ix, sz);
+
+  return bytes;
+
+}
+
+Bytes Socket::read_n_ciphertexts(const uint32_t n){
+  Bytes bytes(n*Env::key_size_in_bytes());
+  uint32_t sz = n * Env::key_size_in_bytes();
   uint32_t ix;
 
   for (ix = 0; sz > CHUNK_SIZE; sz -= CHUNK_SIZE, ix += CHUNK_SIZE)
