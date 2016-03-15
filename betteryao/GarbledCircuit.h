@@ -268,14 +268,20 @@ protected:
 
 
     Bytes m_message_queue;
-    uint32_t m_messages_waiting;
+    Bytes m_ciphertext_buff; // should always be two or three ciphertexts long
     uint32_t m_message_limit;
+    uint32_t m_messages_waiting; // provide similar functions
+    uint32_t m_queue_index; // provide similar functions
+
+    // these functions are for batch sending gates
+    // they are all void because information will be returned by their calling functions
+    void enqueue_messages(Bytes & source, uint32_t num);
+    void add_messages_to_queue(Bytes & src, uint32_t num);
+    void send_buffer();
+
+    void retrieve_buffer();
+    Bytes retrieve_ciphertexts(uint32_t num_ctexts);
     
-
-    void GarbledCircuit::queue_messages;
-    void GarbledCircuit::enqueue_messages(Bytes & src, uint32_t num);
-    void GarbledCircuit::send_buffer();
-
 };
 
 

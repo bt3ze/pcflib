@@ -229,10 +229,17 @@ void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys
 
   m_temp_bufr.resize(16,0);
   
+  m_message_queue.resize(16*Env::key_size_in_bytes());
+  m_message_limit = 30;
+  m_messages_waiting = 0;
+  m_queue_index = 0;
+
 
   xor_gates = half_gates = other_gates = total_gates = 0;
   xor_time = hg_time = og_time = garble_time = 0.0;
   
+  
+
 }
 
 void GarbledCircuit::init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys, const std::vector<Bytes> * evl_keys,const uint32_t gen_inp_size, const Bytes & evl_input, const Bytes &zero_key, const Bytes & one_key){
@@ -251,12 +258,18 @@ void GarbledCircuit::init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys
   //  aes_key = _mm_xor_si128(aes_key,aes_key);
   init_circuit_AES_key(aes_key);
 
-  xor_gates = half_gates = other_gates = total_gates = 0;
-  xor_time = hg_time = og_time = garble_time = 0.0;
-  
   m_temp_bufr.resize(16,0);
    
+  m_message_queue.resize(16*Env::key_size_in_bytes());
+  m_message_limit = 30;
+  m_messages_waiting = 0;
+  m_queue_index = 0;
+  
 
+  xor_gates = half_gates = other_gates = total_gates = 0;
+  xor_time = hg_time = og_time = garble_time = 0.0;
+
+  
 }
 
 /**
@@ -1116,7 +1129,7 @@ void GarbledCircuit::genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i &
   out_bufr.clear();
   out_bufr.insert(out_bufr.begin(),tmp_bufr.begin(),tmp_bufr.begin()+Env::key_size_in_bytes());
 
-
+  //  std::fill(out_bufr.begin(),out_bufr.end(),0);
   //_mm_storeu_si128(reinterpret_cast<__m128i*>(&out_bufr[0]),Tg);
   //_mm_storeu_si128(reinterpret_cast<__m128i*>(&out_bufr[0]+Env::key_size_in_bytes()),Te);
 
@@ -1239,6 +1252,7 @@ void GarbledCircuit::set_garbling_bufr(Bytes buf){
 
 void GarbledCircuit::clear_garbling_bufr(){
   m_garbling_bufr.clear();
+  //std::fill(m_garbling_bufr.begin(),m_garbling_bufr.end(),0);
 }
 
 
@@ -1354,7 +1368,7 @@ Bytes GarbledCircuit::get_alice_out(){
   fprintf(stdout,"num buffers: %i \tbuffer time: %f\n",num_buffers, buffer_time);
   fprintf(stdout,"num b cpy  : %i \t b_cpy time: %f\n",num_b_cpy, b_cpy_time);
   fprintf(stdout,"num comm   : %i \t comm time: %f\n",num_comms, comm_time);
-  fprintf(stdout,"num send   : %i \t send time: %f\n",num_sends, send_time);
+  //fprintf(stdout,"num send   : %i \t send time: %f\n",num_sends, send_time);
 
   return m_alice_out;
 }
@@ -1370,7 +1384,7 @@ Bytes GarbledCircuit::get_bob_out(){
   fprintf(stdout,"num buffers: %i \tbuffer time: %f\n",num_buffers, buffer_time);
   fprintf(stdout,"num b cpy  : %i \t b_cpy time: %f\n",num_b_cpy, b_cpy_time);
   fprintf(stdout,"num comm   : %i \t comm time: %f\n",num_comms, comm_time);
-  fprintf(stdout,"num send   : %i \t send time: %f\n",num_sends, send_time);
+  //fprintf(stdout,"num send   : %i \t send time: %f\n",num_sends, send_time);
   
 
   return m_bob_out;
@@ -1467,24 +1481,24 @@ Bytes GarbledCircuit::read_full_gate(){
 }
 
 void GarbledCircuit::enqueue_messages(Bytes & source, uint32_t num){
-  if(num + m_message_waiting < m_messages_limit){
+  if(num + m_messages_waiting < m_message_limit){
     add_messages_to_queue(source,num);
 
-  } else if(num + m_messages_waiting == m_messages_limit) { 
+  } else if(num + m_messages_waiting == m_message_limit) { 
  
     send_buffer();
     add_messages_to_queue(source,num);
     
   } else {
-    int send_early = m_messages_limit - m_messages_waiting;
+    int send_early = m_message_limit - m_messages_waiting;
     
     add_messages_to_queue(source, send_early);
     
     send_buffer();
 
-    m_message_queue.insert(m_message_queue.begin(),src.begin() +
-                           send_early*Env::key_size_in_bytes(), 
-                           src.begin()+send_early*Env::key_size_in_bytes()
+    m_message_queue.insert(m_message_queue.begin(),
+                           source.begin() + send_early*Env::key_size_in_bytes(), 
+                           source.begin() + send_early*Env::key_size_in_bytes()
                            + (num - send_early)*Env::key_size_in_bytes());
     m_messages_waiting = (num - send_early);
   }
@@ -1498,9 +1512,70 @@ void GarbledCircuit::add_messages_to_queue(Bytes & src, uint32_t num){
 }
 
 void GarbledCircuit::send_buffer(){
+  // this is also like a flush
   m_messages_waiting = 0;
-  Env::remote()->send(m_message_queue);
+  // Env::remote()->send(m_message_queue);
   
+}
+
+Bytes GarbledCircuit::retrieve_ciphertexts(uint32_t num_ctexts){
+  //Bytes ret;
+  m_ciphertext_buff.clear();
+
+  if( num_ctexts < m_messages_waiting){
+    // get num messages from the queue
+    // advance the queue index / reduce the number waiting
+    m_ciphertext_buff.insert(m_ciphertext_buff.begin(),
+                             m_message_queue.begin() + m_queue_index*Env::key_size_in_bytes(),
+                             m_message_queue.begin() + m_queue_index*Env::key_size_in_bytes() + num_ctexts*Env::key_size_in_bytes());
+    m_queue_index += num_ctexts;
+    m_messages_waiting -= num_ctexts;
+
+    return m_ciphertext_buff;
+    
+  } else if (num_ctexts == m_messages_waiting){
+    // get the last messages
+    // reset the queue index/ reset the number waiting
+    // retrieve the next set of messages
+    m_ciphertext_buff.insert(m_ciphertext_buff.begin(),             
+                             m_message_queue.begin() + m_queue_index*Env::key_size_in_bytes(),
+                             m_message_queue.begin() + m_queue_index*Env::key_size_in_bytes() + num_ctexts*Env::key_size_in_bytes());
+    
+    retrieve_buffer();
+
+    return m_ciphertext_buff;
+
+  } else{ 
+    // get the last ones left
+    // reset the queue index/ reset the number waiting
+    // get the remaining ones we need and update appropriately
+    uint32_t get_early = num_ctexts - m_messages_waiting;
+    uint32_t get_later = num_ctexts - get_early;
+    
+    m_ciphertext_buff.insert(m_ciphertext_buff.begin(),             
+                             m_message_queue.begin() + m_queue_index*Env::key_size_in_bytes(),
+                             m_message_queue.end());
+    
+    retrieve_buffer();
+    m_ciphertext_buff.insert(m_ciphertext_buff.begin() + get_early*Env::key_size_in_bytes(),
+                             m_message_queue.begin(),
+                             m_message_queue.begin() + get_later*Env::key_size_in_bytes());
+    
+    m_messages_waiting -= get_later;
+    m_queue_index += get_later;
+    
+    return m_ciphertext_buff;
+  }
+  
+}
+
+void GarbledCircuit::retrieve_buffer(){
+  // resets the queue index/ the number waiting
+  // retrieves the next batch of messages from the wire
+  m_queue_index = 0;
+  m_messages_waiting = m_message_limit;
+  
+
 }
 
 #endif
