@@ -46,14 +46,26 @@ void H_Pi(__m128i & destination, __m128i &key, __m128i & tweak, __m128i & clear_
              
 void save_Key_to_128bit(const Bytes & key, __m128i & destination);
 void append_m128i_to_Bytes(const __m128i & num, Bytes & buf);
+void insert_to_garbling_bufr(const __m128i & num, Bytes & dest, Bytes & tmp_bufr, uint32_t pos);
 
           
 #include <time.h>
 #define BILN 1E9
 static double copy_time = 0.0;
+static double buffer_time = 0.0;
 static int num_copies = 0;
+static int num_buffers = 0;
 //  static double btime2 = 0.0;
 static struct timespec copy_start, copy_end;
+static struct timespec buffer_start, buffer_end;
+
+static int num_b_cpy = 0;
+static double b_cpy_time = 0.0;
+static struct timespec better_cpy_start, better_cpy_end;
+
+static int num_comms = 0;
+static double comm_time = 0.0;
+static struct timespec comm_start, comm_end;
 
 
 class GarbledCircuit {
@@ -209,6 +221,11 @@ protected:
     // it will contain garbling information for each gate sent
     Bytes m_garbling_bufr;
     
+    // these will be used to move things around, between buffers, and into _mm_128i fields
+    Bytes m_temp_bufr;
+    //__m128i key_bufr[4];
+
+
     void send_half_gate(const Bytes &buf);
     void send_full_gate(const Bytes &buf);
     Bytes read_half_gate();
@@ -249,6 +266,15 @@ protected:
     struct timespec og_start, og_end;
     struct timespec garble_start, garble_end;
 
+
+    Bytes m_message_queue;
+    uint32_t m_messages_waiting;
+    uint32_t m_message_limit;
+    
+
+    void GarbledCircuit::queue_messages;
+    void GarbledCircuit::enqueue_messages(Bytes & src, uint32_t num);
+    void GarbledCircuit::send_buffer();
 
 };
 

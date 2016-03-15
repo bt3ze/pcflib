@@ -2,6 +2,7 @@
 #define NETIO_H_
 
 #include "Bytes.h"
+#include <time.h>
 
 class Socket
 {
@@ -45,5 +46,10 @@ public:
 };
 
 inline void my_read(int socket, void *data, size_t n);
+
+static int num_sends = 0;
+static double send_time = 0.0;
+static struct timespec send_start, send_end;
+
 
 #endif /* NETIO_H_ */

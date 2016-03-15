@@ -16,8 +16,7 @@
 
 #include "Env.h"
 
-
-const int CHUNK_SIZE = 1024;
+const int CHUNK_SIZE = 2048;
 
 Socket::Socket() : m_socket(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP))
 {}
@@ -43,8 +42,12 @@ void Socket::write_bytes(const Bytes &bytes)
 }
 
 void Socket::write_2_ciphertexts(const Bytes &bytes){
-  uint32_t sz = 2 * Env::key_size_in_bytes();
+
+// fprintf(stderr,"write 2\n");
+
+
   size_t ix = 0;
+  uint32_t sz = 2 * Env::key_size_in_bytes();
   
   for(; sz> CHUNK_SIZE;sz -= CHUNK_SIZE, ix+= CHUNK_SIZE){
     send(m_socket, &bytes[ix], CHUNK_SIZE,0);

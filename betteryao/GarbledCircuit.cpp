@@ -39,13 +39,9 @@ void copy_key(void* source_key, void * dest_key){
 
       num_copies++;
       clock_gettime(CLOCK_REALTIME, &copy_start);
-      //double start = MPI_Wtime();
-
       
       _mm_storeu_si128(reinterpret_cast<__m128i*>(dest_key),*reinterpret_cast<__m128i*>(source_key));
-      
-      //benchmark_time +=  MPI_Wtime() - start;
-
+     
       clock_gettime(CLOCK_REALTIME, &copy_end);
       copy_time += ( copy_end.tv_sec - copy_start.tv_sec )
         + ( copy_end.tv_nsec - copy_start.tv_nsec )
@@ -67,27 +63,55 @@ void delete_key(void *key)
 
 
 void save_Key_to_128bit(const Bytes & key, __m128i & destination){
+  num_buffers++;
+  clock_gettime(CLOCK_REALTIME, &buffer_start);
+
   Bytes tmp = key;
+
   tmp.resize(16,0);
   destination = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
+
+  //destination = _mm_loadu_si128(reinterpret_cast<__m128i*>(key[0]));
+
+  clock_gettime(CLOCK_REALTIME, &buffer_end);
+  buffer_time += ( buffer_end.tv_sec - buffer_start.tv_sec )
+    + ( buffer_end.tv_nsec - buffer_start.tv_nsec )
+    / BILN;
 }
 
 void append_m128i_to_Bytes(const __m128i & num, Bytes & dest){
   Bytes tmp;
   
-
-  //startTime = RDTSC;
-  //double start = MPI_Wtime();
+  num_buffers++;
+  clock_gettime(CLOCK_REALTIME, &buffer_start);
+  
 
   tmp.resize(16,0);
   _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]),num);
   dest.insert(dest.end(),tmp.begin(),tmp.begin()+Env::key_size_in_bytes());
 
-
-  //benchmark_time += MPI_Wtime() - start; //endTime = RDTSC;
+  //m_temp_bufr.clear();
+  //_mm_storeu_si128(reinterpret_cast<__m128i*>(&m_temp_bufr[0]),num);
+  //dest.insert(dest.end(),m_temp_bufr.begin(),m_temp_bufr.begin()+Env::key_size_in_bytes());
+  
+  clock_gettime(CLOCK_REALTIME, &buffer_end);
+  buffer_time += ( buffer_end.tv_sec - buffer_start.tv_sec )
+    + ( buffer_end.tv_nsec - buffer_start.tv_nsec )
+    / BILN;
 
 }
 
+
+void insert_to_garbling_bufr(const __m128i & num, Bytes & dest, Bytes & tmp_bufr, uint32_t pos){
+  
+  //std::fill(tmp_bufr.begin(),tmp_bufr.end(),0);
+  _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp_bufr[0]),num);
+  dest.insert(dest.begin()+pos*Env::key_size_in_bytes(),tmp_bufr.begin(),tmp_bufr.begin()+Env::key_size_in_bytes());
+
+  //_mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp_bufr[0]),num);
+ 
+
+}
 
 
 /**
@@ -192,7 +216,7 @@ void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys
   // initialize the constant wires
   save_Key_to_128bit(zero_key,m_const_wire[0]);
   save_Key_to_128bit(one_key, m_const_wire[1]);
-    
+  
 
   m_gen_inp_size = gen_inp_size;
   set_Input_Keys(gen_keys, evl_keys);
@@ -202,6 +226,9 @@ void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys
   //aes_key = _mm_xor_si128(aes_key,aes_key);
   init_circuit_AES_key(aes_key);
 
+
+  m_temp_bufr.resize(16,0);
+  
 
   xor_gates = half_gates = other_gates = total_gates = 0;
   xor_time = hg_time = og_time = garble_time = 0.0;
@@ -226,7 +253,9 @@ void GarbledCircuit::init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys
 
   xor_gates = half_gates = other_gates = total_gates = 0;
   xor_time = hg_time = og_time = garble_time = 0.0;
-
+  
+  m_temp_bufr.resize(16,0);
+   
 
 }
 
@@ -326,9 +355,9 @@ void H_Pi(__m128i & destination, __m128i &key, __m128i & tweak, __m128i & clear_
 
   KDF128((uint8_t*)&destination,(uint8_t*)&K, &fixed_key);
   destination = _mm_xor_si128(destination, K);
-  destination = _mm_and_si128(destination,clear_mask);
-  
+  destination = _mm_and_si128(destination,clear_mask);  
 }
+
 
 /**
    remember to copy the keys before they enter this function, because it's destructive to key1 and key2
@@ -368,7 +397,13 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
 
   static __m128i current_key; // must be static to return it
 
-  if(current_gate->tag == TAG_INPUT_A){
+  if(current_gate->tag == TAG_INTERNAL){
+    // actual gate
+    clear_garbling_bufr();
+    generate_Gate(current_gate,current_key,m_garbling_bufr);
+    m_gate_index++;
+  
+  } else if(current_gate->tag == TAG_INPUT_A){
 
     // fprintf(stdout, "Alice Input!");
     clear_garbling_bufr();
@@ -408,10 +443,8 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
 
   } else {
 
-    // actual gate
-    clear_garbling_bufr();
-    generate_Gate(current_gate,current_key,m_garbling_bufr);
-    m_gate_index++;
+    fprintf(stdout,"read gate error\n");
+    exit(0);
   
     //return &current_key; 
   }
@@ -434,7 +467,11 @@ void * GarbledCircuit::evl_Next_Gate(PCFGate *current_gate){
    
   static __m128i current_key; // must be static to return it
   
-  if(current_gate->tag == TAG_INPUT_A){
+  if(current_gate->tag == TAG_INTERNAL){
+    evaluate_Gate(current_gate,current_key, m_garbling_bufr);
+    m_gate_index++;
+
+  } else if(current_gate->tag == TAG_INPUT_A){
     
     evaluate_Alice_Input(current_gate, current_key, m_garbling_bufr);
     //return &current_key;
@@ -472,9 +509,8 @@ void * GarbledCircuit::evl_Next_Gate(PCFGate *current_gate){
     
 } else {
     
-    evaluate_Gate(current_gate,current_key, m_garbling_bufr);
-    m_gate_index++;
-
+    fprintf(stderr,"gate read error\n");
+    exit(0);
     //return &current_key;
   }
 
@@ -932,7 +968,7 @@ void GarbledCircuit::genStandardGate(__m128i& current_key, __m128i & key1, __m12
   key1_in = _mm_loadu_si128(X+1-perm_x);
   key2_in = _mm_loadu_si128(Y+1-perm_y);
   H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
-  
+   
 
   semantic_bit = (truth_table>>(3-(0x03^de_garbled_ix)))&0x01;
   garble_ciphertext = _mm_xor_si128(garble_ciphertext, Z[semantic_bit]);
@@ -1080,12 +1116,26 @@ void GarbledCircuit::genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i &
   out_bufr.clear();
   out_bufr.insert(out_bufr.begin(),tmp_bufr.begin(),tmp_bufr.begin()+Env::key_size_in_bytes());
 
+
+  //_mm_storeu_si128(reinterpret_cast<__m128i*>(&out_bufr[0]),Tg);
+  //_mm_storeu_si128(reinterpret_cast<__m128i*>(&out_bufr[0]+Env::key_size_in_bytes()),Te);
+
+
   // add Te to output buffer
   //  tmp_bufr.clear();
   //tmp_bufr.resize(16,0);
   std::fill(tmp_bufr.begin(),tmp_bufr.end(),0);
   _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp_bufr[0]),Te);
-  out_bufr.insert(out_bufr.end(),tmp_bufr.begin(),tmp_bufr.begin()+Env::key_size_in_bytes());
+  out_bufr.insert(out_bufr.begin()+Env::key_size_in_bytes(),tmp_bufr.begin(),tmp_bufr.begin()+Env::key_size_in_bytes());
+
+
+
+  //reinterpret_cast<__m128i*>(&out_bufr[0]) = _mm_loadu_si128(&Tg);
+  //Tg = _mm_loadu_si128(reinterpret_cast<__m128i*>(&in_bufr[0]));
+  //Te = _mm_loadu_si128(reinterpret_cast<__m128i*>(&in_bufr[0]+Env::key_size_in_bytes()));
+  //Tg = _mm_and_si128(Tg,m_clear_mask);
+  //Te = _mm_and_si128(Te,m_clear_mask);
+
 
   // combine half gates:
   out_key = _mm_xor_si128(Wg,We);
@@ -1097,7 +1147,7 @@ void GarbledCircuit::genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i &
 
 
 void GarbledCircuit::evlHalfGatePair(__m128i &current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr){
-  assert(in_bufr.size() == 2*Env::key_size_in_bytes());
+  //assert(in_bufr.size() == 2*Env::key_size_in_bytes());
 
   //double start = MPI_Wtime();
 
@@ -1124,14 +1174,29 @@ void GarbledCircuit::evlHalfGatePair(__m128i &current_key, __m128i & key1, __m12
   // TG is always sent first, and then TE
   // where TG is the single row transmitted for the Generator's half-gate
   // and TE is the single row transmitted for the Evaluator's half-gate
-  tmp_bufr.resize(16,0);
-  tmp_bufr.insert(tmp_bufr.begin(),in_bufr.begin(), in_bufr.begin()+Env::key_size_in_bytes());
-  Tg = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp_bufr[0]));
   
-  tmp_bufr.clear();
-  tmp_bufr.resize(16,0);
-  tmp_bufr.insert(tmp_bufr.begin(),in_bufr.begin()+Env::key_size_in_bytes(),in_bufr.begin()+2*Env::key_size_in_bytes());
-  Te = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp_bufr[0]));
+  //num_b_cpy++;
+  //clock_gettime(CLOCK_REALTIME, &better_cpy_start);
+  
+  //tmp_bufr.resize(16,0);
+  //tmp_bufr.insert(tmp_bufr.begin(),in_bufr.begin(), in_bufr.begin()+Env::key_size_in_bytes());
+  //Tg = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp_bufr[0]));
+  
+  //tmp_bufr.clear();
+  //tmp_bufr.resize(16,0);
+  //tmp_bufr.insert(tmp_bufr.begin(),in_bufr.begin()+Env::key_size_in_bytes(),in_bufr.begin()+2*Env::key_size_in_bytes());
+  // Te = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp_bufr[0]));
+
+  Tg = _mm_loadu_si128(reinterpret_cast<__m128i*>(&in_bufr[0]));
+  Te = _mm_loadu_si128(reinterpret_cast<__m128i*>(&in_bufr[0]+Env::key_size_in_bytes()));
+  Tg = _mm_and_si128(Tg,m_clear_mask);
+  Te = _mm_and_si128(Te,m_clear_mask);
+
+  //clock_gettime(CLOCK_REALTIME, &better_cpy_end);
+  //b_cpy_time += ( better_cpy_end.tv_sec - better_cpy_start.tv_sec )
+  //  + ( better_cpy_end.tv_nsec - better_cpy_start.tv_nsec )
+  //  / BILN;
+
 
   __m128i Wa,Wb;
 
@@ -1285,7 +1350,11 @@ Bytes GarbledCircuit::get_alice_out(){
   fprintf(stdout,"half gates : %i \t hgate time: %f\n",half_gates,hg_time);
   fprintf(stdout,"other gates: %i \t other time: %f\n",other_gates,og_time);
   fprintf(stdout,"total gates: %i \t total time: %f\n",total_gates,garble_time);
-  fprintf(stdout,"num copies: %i \t copy time: %f\n",num_copies, copy_time);
+  fprintf(stdout,"num copies : %i \t copy time : %f\n",num_copies, copy_time);
+  fprintf(stdout,"num buffers: %i \tbuffer time: %f\n",num_buffers, buffer_time);
+  fprintf(stdout,"num b cpy  : %i \t b_cpy time: %f\n",num_b_cpy, b_cpy_time);
+  fprintf(stdout,"num comm   : %i \t comm time: %f\n",num_comms, comm_time);
+  fprintf(stdout,"num send   : %i \t send time: %f\n",num_sends, send_time);
 
   return m_alice_out;
 }
@@ -1298,6 +1367,11 @@ Bytes GarbledCircuit::get_bob_out(){
   fprintf(stdout,"other gates: %i \t other time: %f\n",other_gates,og_time);
   fprintf(stdout,"total gates: %i \t total time: %f\n",total_gates,garble_time);
   fprintf(stdout,"num copies : %i \t copy time : %f\n",num_copies, copy_time);
+  fprintf(stdout,"num buffers: %i \tbuffer time: %f\n",num_buffers, buffer_time);
+  fprintf(stdout,"num b cpy  : %i \t b_cpy time: %f\n",num_b_cpy, b_cpy_time);
+  fprintf(stdout,"num comm   : %i \t comm time: %f\n",num_comms, comm_time);
+  fprintf(stdout,"num send   : %i \t send time: %f\n",num_sends, send_time);
+  
 
   return m_bob_out;
 }
@@ -1326,10 +1400,19 @@ void GarbledCircuit::send_half_gate(const Bytes &buf){
   //clock_t start_t;
   //start_t = clock();
 
+  
+  num_comms++;
+  clock_gettime(CLOCK_REALTIME, &comm_start);
+
   Env::remote()->write_2_ciphertexts(buf);
 
   //m_comm_time += (double) (clock() - start_t)/CLOCKS_PER_SEC;
 
+  
+  clock_gettime(CLOCK_REALTIME, &comm_end);
+  comm_time += ( comm_end.tv_sec - comm_start.tv_sec )
+    + ( comm_end.tv_nsec - comm_start.tv_nsec )
+    / BILN;
 
 }
 
@@ -1351,8 +1434,18 @@ void GarbledCircuit::send_full_gate(const Bytes &buf){
 Bytes GarbledCircuit::read_half_gate(){
   //clock_t start_t;
   //start_t = clock();
+
+  num_comms++;
+  clock_gettime(CLOCK_REALTIME, &comm_start);
   
-  return Env::remote()->read_2_ciphertexts();
+  Bytes ret =  Env::remote()->read_2_ciphertexts();
+
+  clock_gettime(CLOCK_REALTIME, &comm_end);
+  comm_time += ( comm_end.tv_sec - comm_start.tv_sec )
+    + ( comm_end.tv_nsec - comm_start.tv_nsec )
+    / BILN;
+  
+  return ret;
 
     //m_comm_time += (double) (clock() - start_t)/CLOCKS_PER_SEC;
 
@@ -1372,6 +1465,42 @@ Bytes GarbledCircuit::read_full_gate(){
   //  m_comm_time += (double) (clock() - start_t)/CLOCKS_PER_SEC;
 
 }
+
+void GarbledCircuit::enqueue_messages(Bytes & source, uint32_t num){
+  if(num + m_message_waiting < m_messages_limit){
+    add_messages_to_queue(source,num);
+
+  } else if(num + m_messages_waiting == m_messages_limit) { 
+ 
+    send_buffer();
+    add_messages_to_queue(source,num);
     
+  } else {
+    int send_early = m_messages_limit - m_messages_waiting;
+    
+    add_messages_to_queue(source, send_early);
+    
+    send_buffer();
+
+    m_message_queue.insert(m_message_queue.begin(),src.begin() +
+                           send_early*Env::key_size_in_bytes(), 
+                           src.begin()+send_early*Env::key_size_in_bytes()
+                           + (num - send_early)*Env::key_size_in_bytes());
+    m_messages_waiting = (num - send_early);
+  }
+    
+}
+    
+void GarbledCircuit::add_messages_to_queue(Bytes & src, uint32_t num){
+  m_message_queue.insert(m_message_queue.begin()+m_messages_waiting*Env::key_size_in_bytes(),src.begin(),src.begin()+num*Env::key_size_in_bytes());
+
+  m_messages_waiting += num;
+}
+
+void GarbledCircuit::send_buffer(){
+  m_messages_waiting = 0;
+  Env::remote()->send(m_message_queue);
+  
+}
 
 #endif
