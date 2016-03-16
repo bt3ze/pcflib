@@ -145,9 +145,10 @@ Bytes Socket::read_4_ciphertexts(){
 
 }
 
-Bytes Socket::read_n_ciphertexts(Bytes & bytes, const uint32_t n){
+void Socket::read_n_ciphertexts(Bytes & bytes, const uint32_t n){
   // Bytes bytes(n*Env::key_size_in_bytes());
   uint32_t sz = n * Env::key_size_in_bytes();
+  
   uint32_t ix;
 
   for (ix = 0; sz > CHUNK_SIZE; sz -= CHUNK_SIZE, ix += CHUNK_SIZE)
@@ -156,7 +157,7 @@ Bytes Socket::read_n_ciphertexts(Bytes & bytes, const uint32_t n){
   //my_read(m_socket, &bytes[0]+ix, bytes.size()-ix);
   my_read(m_socket, &bytes[0]+ix, sz);
 
-  return bytes;
+  //return bytes;
 
 }
 
