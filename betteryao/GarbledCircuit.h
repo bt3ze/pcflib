@@ -30,7 +30,7 @@ void *evl_next_gate(struct PCFState *st, struct PCFGate *gate);
 #endif
 
 
-#define MESSAGE_LIMIT 150
+#define MESSAGE_LIMIT 300
 
 #define  _mm_extract_epi8(x, imm) \
         ((((imm) & 0x1) == 0) ?   \

@@ -1002,66 +1002,12 @@ void GarbledCircuit::genStandardGate(__m128i& current_key, __m128i & key1, __m12
   garble_ciphertext3 = _mm_xor_si128(garble_ciphertext3, Z[semantic_bit3]);
   garble_ciphertext4 = _mm_xor_si128(garble_ciphertext4, Z[semantic_bit4]);
 
-
-  //append_m128i_to_Bytes(garble_ciphertext2,out_bufr);
-  //append_m128i_to_Bytes(garble_ciphertext3,out_bufr);
-  //append_m128i_to_Bytes(garble_ciphertext4,out_bufr);
-  
+ 
   _mm_storeu_si128(reinterpret_cast<__m128i*>(&out_bufr[0]),garble_ciphertext2);
   _mm_storeu_si128(reinterpret_cast<__m128i*>(&out_bufr[Env::key_size_in_bytes()]),garble_ciphertext3);
   _mm_storeu_si128(reinterpret_cast<__m128i*>(&out_bufr[2*Env::key_size_in_bytes()]),garble_ciphertext4);
 
-
-  /*
-  __m128i key1_in = _mm_loadu_si128(X+perm_x);
-  __m128i key2_in = _mm_loadu_si128(Y+perm_y);
-
-  H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
-  semantic_bit = (truth_table >> (3-de_garbled_ix)) & 0x01;
-
-
-  // GRR technique: using zero entry's key as one of the output keys
-  // the output key is the encrypted gate index
-  // this puts the zero key in Z[0] and the one key in Z[1]
-  
-  // we want the new zero-key to be in Z[0]
-  // and other output is an offset
-  _mm_store_si128(Z+semantic_bit, garble_ciphertext);
-  Z[1 - semantic_bit] = _mm_xor_si128(Z[semantic_bit], m_R);
-  current_key = _mm_loadu_si128(Z);
-
-  
-  // encrypt the first entry: (X[1-x],Y[y]) or (key1 xor R, key2)
-   key1_in = _mm_loadu_si128(X+1-perm_x); 
-   key2_in = _mm_loadu_si128(Y+perm_y);
-   H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
-
-   semantic_bit = (truth_table>>(3-(0x01^de_garbled_ix)))&0x01;
-   garble_ciphertext = _mm_xor_si128(garble_ciphertext, Z[semantic_bit]);
-   append_m128i_to_Bytes(garble_ciphertext,out_bufr);  
-  
-
-  // encrypt the 2nd entry : (X[x], Y[1-y])
-   key1_in = _mm_loadu_si128(X+perm_x);
-   key2_in = _mm_loadu_si128(Y+1-perm_y);
-   H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
-
-  
-   semantic_bit = (truth_table>>(3-(0x02^de_garbled_ix)))&0x01;
-   garble_ciphertext = _mm_xor_si128(garble_ciphertext, Z[semantic_bit]);
-   append_m128i_to_Bytes(garble_ciphertext,out_bufr);
-  
-  
-  // encrypt the 3rd entry : (X[1-x], Y[1-y])
-   key1_in = _mm_loadu_si128(X+1-perm_x);
-   key2_in = _mm_loadu_si128(Y+1-perm_y);
-   H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
-   
-
-   semantic_bit = (truth_table>>(3-(0x03^de_garbled_ix)))&0x01;
-   garble_ciphertext = _mm_xor_si128(garble_ciphertext, Z[semantic_bit]);
-   append_m128i_to_Bytes(garble_ciphertext,out_bufr);
-  */
+ 
   
   // current_key holds our output key, and it will be available to our calling function
   // the calling function will also be able to send the information in out_bufr
