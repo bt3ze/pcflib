@@ -24,7 +24,7 @@ public:
         Bytes read_2_ciphertexts();
         Bytes read_3_ciphertexts();
         Bytes read_4_ciphertexts();
-        Bytes read_n_ciphertexts(const uint32_t n);
+        Bytes read_n_ciphertexts(Bytes & bytes, const uint32_t n);
 
 	void write_string(const std::string &str);
 	std::string read_string();

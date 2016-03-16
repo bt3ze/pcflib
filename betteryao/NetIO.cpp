@@ -16,7 +16,7 @@
 
 #include "Env.h"
 
-const int CHUNK_SIZE = 2048;
+const int CHUNK_SIZE = 8192;
 
 Socket::Socket() : m_socket(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP))
 {}
@@ -145,8 +145,8 @@ Bytes Socket::read_4_ciphertexts(){
 
 }
 
-Bytes Socket::read_n_ciphertexts(const uint32_t n){
-  Bytes bytes(n*Env::key_size_in_bytes());
+Bytes Socket::read_n_ciphertexts(Bytes & bytes, const uint32_t n){
+  // Bytes bytes(n*Env::key_size_in_bytes());
   uint32_t sz = n * Env::key_size_in_bytes();
   uint32_t ix;
 

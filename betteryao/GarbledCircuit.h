@@ -30,7 +30,7 @@ void *evl_next_gate(struct PCFState *st, struct PCFGate *gate);
 #endif
 
 
- 
+#define MESSAGE_LIMIT 150
 
 #define  _mm_extract_epi8(x, imm) \
         ((((imm) & 0x1) == 0) ?   \
@@ -108,6 +108,9 @@ public:
     void * gen_Next_Gate(PCFGate *current_gate);
     void * evl_Next_Gate(PCFGate *current_gate);
 
+    void Garble_Circuit();
+    void Evaluate_Circuit();
+
 
     // pointer to the PCF State
     struct PCFState *m_st;
@@ -129,6 +132,8 @@ public:
 
     // timing communication
     double m_comm_time;
+
+      void send_buffer();
 
 protected:
 
@@ -275,9 +280,9 @@ protected:
 
     // these functions are for batch sending gates
     // they are all void because information will be returned by their calling functions
-    void enqueue_messages(Bytes & source, uint32_t num);
-    void add_messages_to_queue(Bytes & src, uint32_t num);
-    void send_buffer();
+    void enqueue_messages(const Bytes & source, uint32_t num);
+    void add_messages_to_queue(const Bytes & src, uint32_t num);
+  
 
     void retrieve_buffer();
     Bytes retrieve_ciphertexts(uint32_t num_ctexts);

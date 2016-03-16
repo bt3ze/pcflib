@@ -475,7 +475,7 @@ void BetterYao5::evaluate_circuits(){
   fprintf(stdout,"Gen Begin Garbling - get next gate \n");
 
   start = MPI_Wtime();
-  while(get_next_gate(m_gcs[ix].m_st)){
+  //  while(get_next_gate(m_gcs[ix].m_st)){
     //garble_time += MPI_Wtime() - start;
     //start = MPI_Wtime();
 
@@ -485,10 +485,17 @@ void BetterYao5::evaluate_circuits(){
     
     //comm_time += MPI_Wtime() - start;
     //start = MPI_Wtime();
-  }
+    //}
+  m_gcs[ix].Garble_Circuit();
+
   garble_time += MPI_Wtime()-start;
+  
+  m_gcs[ix].send_buffer();
 
   //GEN_SEND(Bytes(0)); // redundant value to prevent Evl from hanging
+  
+
+  MPI_Barrier(m_mpi_comm);
   
   GEN_END
     
@@ -500,7 +507,7 @@ void BetterYao5::evaluate_circuits(){
   fprintf(stdout,"Evl begin evaluating - get next gate\n");
 
   start = MPI_Wtime();
-  do {
+  //do {
 
     // if non-xor gate, get garbling buffer
     // else, 
@@ -514,9 +521,13 @@ void BetterYao5::evaluate_circuits(){
     //    comm_time += MPI_Wtime()-start;
     // start = MPI_Wtime();
 
-  } while(get_next_gate(m_gcs[ix].m_st));
-
+  //  } while(get_next_gate(m_gcs[ix].m_st));
+  m_gcs[ix].Evaluate_Circuit();
+  
   garble_time += MPI_Wtime()-start;
+
+  MPI_Barrier(m_mpi_comm);
+  
 
   EVL_END
 
@@ -543,10 +554,17 @@ void BetterYao5::retrieve_outputs(){
   
   m_gcs[i].trim_output_buffers();
 
+  fprintf(stdout,"send alice out parity\n");
+
+
   Bytes alice_out_parity = m_gcs[i].get_alice_out();
+  std::cout << "alice out (parity): " << alice_out_parity.to_hex() << std::endl;
+
   GEN_SEND(alice_out_parity);
   
 
+  fprintf(stdout,"receive bob out\n");
+  
   Bytes bob_out_evaluated = GEN_RECV();
   
   //  if(bob_out_evaluated.size() > 0){
@@ -572,17 +590,35 @@ void BetterYao5::retrieve_outputs(){
     
   int i = 0;
 
+  MPI_Barrier(m_mpi_comm);
+
+
+  fprintf(stdout,"trim output\n");
+
+  
+
   m_gcs[i].trim_output_buffers();
   
+
+
+  std::cout << "get alice out" << std::endl;
   Bytes alice_out = m_gcs[i].get_alice_out();
+  
+
   std::cout << "alice out (masked): " << alice_out.to_hex() << std::endl;
   
   Bytes alice_out_parity = EVL_RECV();
+
+  fprintf(stdout,"Evl get alice parity:\n");
+  std::cout << " " << alice_out_parity.to_hex() << std::endl;
+  
   alice_out = alice_out ^ alice_out_parity;
       
   // TODO: eval won't receive this info. Gen's outputs will 
   // be commincated properly
   Bytes bob_out = m_gcs[i].get_bob_out();
+  fprintf(stdout,"send bob out\n");
+  //std::cout << "send bob out" << std::endl;
   EVL_SEND(bob_out);
   Bytes bob_out_parity = EVL_RECV();
   bob_out = bob_out ^ bob_out_parity;
