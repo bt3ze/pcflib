@@ -117,8 +117,6 @@ public:
     // get the constant wires
     void * get_Const_Wire(uint32_t i);
  
-    Bytes get_garbling_bufr();
-    void set_garbling_bufr(Bytes buf);
     void clear_garbling_bufr();
     Bytes get_bob_out();
     Bytes get_alice_out();
@@ -233,8 +231,8 @@ protected:
 
     void send_half_gate(const Bytes &buf);
     void send_full_gate(const Bytes &buf);
-    Bytes read_half_gate();
-    Bytes read_full_gate();
+    void read_half_gate(Bytes &buf);
+    void read_full_gate(Bytes &buf);
 
     // a couple of buffers that hold circuit output, used in the garbling functions
     Bytes m_alice_out;
@@ -285,7 +283,7 @@ protected:
   
 
     void retrieve_buffer();
-    Bytes retrieve_ciphertexts(uint32_t num_ctexts);
+    void retrieve_ciphertexts(Bytes & buf, uint32_t num_ctexts);
     
 };
 

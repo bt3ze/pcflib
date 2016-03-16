@@ -230,6 +230,7 @@ void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys
   init_circuit_AES_key(aes_key);
 
 
+  m_garbling_bufr.resize(256,0);
   m_temp_bufr.resize(256,0);
   
   m_message_queue.resize(MESSAGE_LIMIT*Env::key_size_in_bytes());
@@ -261,6 +262,7 @@ void GarbledCircuit::init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys
   //  aes_key = _mm_xor_si128(aes_key,aes_key);
   init_circuit_AES_key(aes_key);
 
+  m_garbling_bufr.resize(256,0);
   m_temp_bufr.resize(16,0);
    
   m_message_queue.resize(MESSAGE_LIMIT*Env::key_size_in_bytes());
@@ -651,7 +653,8 @@ void GarbledCircuit::evaluate_Alice_Input(PCFGate* current_gate, __m128i &curren
   Bytes evl_input = get_Evl_Input(gen_input_idx);
   
   // receive 2 ciphertexts
-  garbling_bufr = read_half_gate();
+  //garbling_bufr = read_half_gate();
+  read_half_gate(garbling_bufr);
 
   assert(garbling_bufr.size() == 2*Env::key_size_in_bytes());
   
@@ -873,13 +876,15 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key, 
    
     if(current_gate->truth_table == 0x01){ // AND Gate
       // fprintf(stdout,"AND GATE!\n");
-      garbling_bufr = read_half_gate();
+      read_half_gate(garbling_bufr);
+      //garbling_bufr = read_half_gate();
       evlHalfGatePair(current_key, key1,key2, garbling_bufr);
       
     } 
     else if(current_gate->truth_table == 0x07){ // OR gate
       // fprintf(stdout,"OR GATE!\n");
-      garbling_bufr = read_half_gate();
+      //garbling_bufr = read_half_gate();
+      read_half_gate(garbling_bufr);
       evlHalfGatePair(current_key, key1,key2, garbling_bufr);
       
     }
@@ -902,7 +907,9 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key, 
       // the compiler's optimizer should do its best to remove them
       // but since they can't be garbled with half gates, we garble with GRR
       // we also use this for output gates
-    garbling_bufr = read_full_gate();
+    
+    read_full_gate(garbling_bufr);
+    //garbling_bufr = read_full_gate();
     evlStandardGate(current_key, key1, key2, garbling_bufr);      
       
     clock_gettime(CLOCK_REALTIME, &og_end);
@@ -1186,28 +1193,10 @@ void GarbledCircuit::evlHalfGatePair(__m128i &current_key, __m128i & key1, __m12
   // TG is always sent first, and then TE
   // where TG is the single row transmitted for the Generator's half-gate
   // and TE is the single row transmitted for the Evaluator's half-gate
-  
-  //num_b_cpy++;
-  //clock_gettime(CLOCK_REALTIME, &better_cpy_start);
-  
-  //tmp_bufr.resize(16,0);
-  //tmp_bufr.insert(tmp_bufr.begin(),in_bufr.begin(), in_bufr.begin()+Env::key_size_in_bytes());
-  //Tg = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp_bufr[0]));
-  
-  //tmp_bufr.clear();
-  //tmp_bufr.resize(16,0);
-  //tmp_bufr.insert(tmp_bufr.begin(),in_bufr.begin()+Env::key_size_in_bytes(),in_bufr.begin()+2*Env::key_size_in_bytes());
-  // Te = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp_bufr[0]));
-
   Tg = _mm_loadu_si128(reinterpret_cast<__m128i*>(&in_bufr[0]));
   Te = _mm_loadu_si128(reinterpret_cast<__m128i*>(&in_bufr[0]+Env::key_size_in_bytes()));
   Tg = _mm_and_si128(Tg,m_clear_mask);
   Te = _mm_and_si128(Te,m_clear_mask);
-
-  //clock_gettime(CLOCK_REALTIME, &better_cpy_end);
-  //b_cpy_time += ( better_cpy_end.tv_sec - better_cpy_start.tv_sec )
-  //  + ( better_cpy_end.tv_nsec - better_cpy_start.tv_nsec )
-  //  / BILN;
 
 
   __m128i Wa,Wb;
@@ -1240,14 +1229,6 @@ void GarbledCircuit::evlHalfGatePair(__m128i &current_key, __m128i & key1, __m12
 
 }  
 
-
-Bytes GarbledCircuit::get_garbling_bufr(){
-  return m_garbling_bufr;
-}
-
-void GarbledCircuit::set_garbling_bufr(Bytes buf){
-  m_garbling_bufr = buf;
-}
 
 void GarbledCircuit::clear_garbling_bufr(){
   m_garbling_bufr.clear();
@@ -1451,7 +1432,7 @@ void GarbledCircuit::send_full_gate(const Bytes &buf){
 
 }
 
-Bytes GarbledCircuit::read_half_gate(){
+void GarbledCircuit::read_half_gate(Bytes & buf){
   //clock_t start_t;
   //start_t = clock();
 
@@ -1459,10 +1440,10 @@ Bytes GarbledCircuit::read_half_gate(){
   clock_gettime(CLOCK_REALTIME, &comm_start);
   
   //Bytes ret =  Env::remote()->read_2_ciphertexts();
-  Bytes ret =  retrieve_ciphertexts(2);
+  retrieve_ciphertexts(buf,2);
 
   
-
+  
   clock_gettime(CLOCK_REALTIME, &comm_end);
   comm_time += ( comm_end.tv_sec - comm_start.tv_sec )
     + ( comm_end.tv_nsec - comm_start.tv_nsec )
@@ -1471,27 +1452,29 @@ Bytes GarbledCircuit::read_half_gate(){
 
   //  std::cout << "read half gate " << std::endl << ret.to_hex() << std::endl; 
 
-  return ret;
+  // return ret;
 
     //m_comm_time += (double) (clock() - start_t)/CLOCKS_PER_SEC;
 
 }
 
-Bytes GarbledCircuit::read_full_gate(){
+void GarbledCircuit::read_full_gate(Bytes & buf){
   //clock_t start_t;
   // start_t = clock();
   
 
 #ifdef GRR
-  Bytes ret = retrieve_ciphertexts(3);
+  retrieve_ciphertexts(buf,3);
+  //Bytes ret = retrieve_ciphertexts(3);
   //return Env::remote()->read_3_ciphertexts();
 #else
-  Bytes ret =  retrieve_ciphertexts(4);
+  retrieve_ciphertexts(buf,4);
+//Bytes ret =  retrieve_ciphertexts(4);
   //return Env::remote()->read_4_ciphertexts();
 #endif
   //std::cout << "read full gate " << std::endl << ret.to_hex() << std::endl; 
     
-  return ret;
+  //return ret;
   //  m_comm_time += (double) (clock() - start_t)/CLOCKS_PER_SEC;
 
 }
@@ -1534,44 +1517,44 @@ void GarbledCircuit::send_buffer(){
   Env::remote()->write_n_ciphertexts(m_message_queue, m_message_limit);
   m_messages_waiting = 0;
   std::fill(m_message_queue.begin(),m_message_queue.end(),0);
-
+  
   //std::cout << "sent" << std::endl;
 
 }
 
-Bytes GarbledCircuit::retrieve_ciphertexts(uint32_t num_ctexts){
+void GarbledCircuit::retrieve_ciphertexts(Bytes & buf, uint32_t num_ctexts){
   //Bytes ret;
-  m_ciphertext_buff.clear();
-
+  //m_ciphertext_buff.clear();
+  
   if( num_ctexts < m_messages_waiting ){
     // get num messages from the queue
     // advance the queue index / reduce the number waiting
-    m_ciphertext_buff.insert(m_ciphertext_buff.begin(),
-                             m_message_queue.begin() + m_queue_index*Env::key_size_in_bytes(),
-                             m_message_queue.begin() + m_queue_index*Env::key_size_in_bytes() + num_ctexts*Env::key_size_in_bytes());
+    buf.insert(buf.begin(),
+               m_message_queue.begin() + m_queue_index*Env::key_size_in_bytes(),
+               m_message_queue.begin() + m_queue_index*Env::key_size_in_bytes() + num_ctexts*Env::key_size_in_bytes());
     m_queue_index += num_ctexts;
     m_messages_waiting -= num_ctexts;
-
+    
     //assert(m_queue_index + m_messages_waiting == m_message_limit);
-
-    return m_ciphertext_buff;
+    
+    // return m_ciphertext_buff;
     
   } else if (num_ctexts == m_messages_waiting ){
     // get the last messages
     // reset the queue index/ reset the number waiting
     // retrieve the next set of messages
-
+    
     assert(num_ctexts + m_queue_index == m_message_limit);
-    m_ciphertext_buff.insert(m_ciphertext_buff.begin(),             
-                             m_message_queue.begin() + m_queue_index*Env::key_size_in_bytes(),
-                             m_message_queue.begin() + m_queue_index*Env::key_size_in_bytes() + num_ctexts*Env::key_size_in_bytes());
+    buf.insert(buf.begin(),             
+               m_message_queue.begin() + m_queue_index*Env::key_size_in_bytes(),
+               m_message_queue.begin() + m_queue_index*Env::key_size_in_bytes() + num_ctexts*Env::key_size_in_bytes());
     
     // fprintf(stdout,"case 2\n");
     retrieve_buffer();
     
     // assert(m_queue_index + m_messages_waiting == m_message_limit);
 
-    return m_ciphertext_buff;
+    // return m_ciphertext_buff;
 
   } else{  // num_ctexts > m_messages_waiting
     // get the last ones left
@@ -1581,9 +1564,9 @@ Bytes GarbledCircuit::retrieve_ciphertexts(uint32_t num_ctexts){
     uint32_t get_later = num_ctexts - get_early;
 
     if(get_early > 0){ // should always be true for this case
-      m_ciphertext_buff.insert(m_ciphertext_buff.begin(),             
-                               m_message_queue.begin() + m_queue_index*Env::key_size_in_bytes(),
-                               m_message_queue.begin() + m_queue_index*Env::key_size_in_bytes() + get_early*Env::key_size_in_bytes());
+      buf.insert(buf.begin(),             
+                 m_message_queue.begin() + m_queue_index*Env::key_size_in_bytes(),
+                 m_message_queue.begin() + m_queue_index*Env::key_size_in_bytes() + get_early*Env::key_size_in_bytes());
       
       //   std::cout << "partial ciphertext" << m_ciphertext_buff.to_hex() << std::endl;
       // fprintf(stdout,"partial copy\n");
@@ -1591,16 +1574,16 @@ Bytes GarbledCircuit::retrieve_ciphertexts(uint32_t num_ctexts){
     
     // fprintf(stdout,"case 3\n");
     retrieve_buffer();
-    m_ciphertext_buff.insert(m_ciphertext_buff.begin() + get_early*Env::key_size_in_bytes(),
-                             m_message_queue.begin(),
-                             m_message_queue.begin() + get_later*Env::key_size_in_bytes());
+    buf.insert(buf.begin() + get_early*Env::key_size_in_bytes(),
+               m_message_queue.begin(),
+               m_message_queue.begin() + get_later*Env::key_size_in_bytes());
     
     m_messages_waiting -= get_later;
     m_queue_index += get_later;
     
     //assert(m_queue_index + m_messages_waiting == m_message_limit);
     
-    return m_ciphertext_buff;
+    // return m_ciphertext_buff;
   }
   
 }
