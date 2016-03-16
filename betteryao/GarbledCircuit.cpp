@@ -937,8 +937,10 @@ void GarbledCircuit::genStandardGate(__m128i& current_key, __m128i & key1, __m12
   // X and Y are input, Z is output
   __m128i X[2], Y[2], Z[2];
   __m128i garble_ciphertext;
+  __m128i garble_ciphertext1, garble_ciphertext2, garble_ciphertext3, garble_ciphertext4;
   
   uint8_t semantic_bit;
+  uint8_t semantic_bit1, semantic_bit2, semantic_bit3, semantic_bit4;
     
   //double start = MPI_Wtime();
 
@@ -964,13 +966,59 @@ void GarbledCircuit::genStandardGate(__m128i& current_key, __m128i & key1, __m12
   tweak = _mm_set1_epi64x(j1);
 
 
+  
   // now run the key derivation function using the keys and the gate index  
+  __m128i key1_1 = _mm_loadu_si128(X+perm_x);
+  __m128i key2_1 = _mm_loadu_si128(Y+perm_y);
+
+  __m128i key1_2 = _mm_loadu_si128(X+1-perm_x);;
+  __m128i key2_2 = _mm_loadu_si128(Y+perm_y);
+
+  __m128i key1_3 = _mm_loadu_si128(X+perm_x);
+  __m128i key2_3 = _mm_loadu_si128(Y+1-perm_y);
+  
+  __m128i key1_4 = _mm_loadu_si128(X+1-perm_x);
+  __m128i key2_4 = _mm_loadu_si128(Y+1-perm_y);
+  
+
+  H_Pi256(garble_ciphertext1, key1_1, key2_1, tweak, m_clear_mask, m_fixed_key);
+  H_Pi256(garble_ciphertext2, key1_2, key2_2, tweak, m_clear_mask, m_fixed_key);
+  H_Pi256(garble_ciphertext3, key1_3, key2_3, tweak, m_clear_mask, m_fixed_key);
+  H_Pi256(garble_ciphertext4, key1_4, key2_4, tweak, m_clear_mask, m_fixed_key);
+
+
+  semantic_bit1 = (truth_table >> (3-de_garbled_ix)) & 0x01;
+  semantic_bit2 = (truth_table>>(3-(0x01^de_garbled_ix)))&0x01;
+  semantic_bit3 = (truth_table>>(3-(0x02^de_garbled_ix)))&0x01;
+  semantic_bit4 = (truth_table>>(3-(0x03^de_garbled_ix)))&0x01;
+
+
+  _mm_store_si128(Z+semantic_bit1, garble_ciphertext1);
+  Z[1 - semantic_bit1] = _mm_xor_si128(Z[semantic_bit1], m_R);
+  current_key = _mm_loadu_si128(Z);
+
+  
+  garble_ciphertext2 = _mm_xor_si128(garble_ciphertext2, Z[semantic_bit2]);
+  garble_ciphertext3 = _mm_xor_si128(garble_ciphertext3, Z[semantic_bit3]);
+  garble_ciphertext4 = _mm_xor_si128(garble_ciphertext4, Z[semantic_bit4]);
+
+
+  //append_m128i_to_Bytes(garble_ciphertext2,out_bufr);
+  //append_m128i_to_Bytes(garble_ciphertext3,out_bufr);
+  //append_m128i_to_Bytes(garble_ciphertext4,out_bufr);
+  
+  _mm_storeu_si128(reinterpret_cast<__m128i*>(&out_bufr[0]),garble_ciphertext2);
+  _mm_storeu_si128(reinterpret_cast<__m128i*>(&out_bufr[Env::key_size_in_bytes()]),garble_ciphertext3);
+  _mm_storeu_si128(reinterpret_cast<__m128i*>(&out_bufr[2*Env::key_size_in_bytes()]),garble_ciphertext4);
+
+
+  /*
   __m128i key1_in = _mm_loadu_si128(X+perm_x);
   __m128i key2_in = _mm_loadu_si128(Y+perm_y);
 
   H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
   semantic_bit = (truth_table >> (3-de_garbled_ix)) & 0x01;
-  
+
 
   // GRR technique: using zero entry's key as one of the output keys
   // the output key is the encrypted gate index
@@ -984,36 +1032,36 @@ void GarbledCircuit::genStandardGate(__m128i& current_key, __m128i & key1, __m12
 
   
   // encrypt the first entry: (X[1-x],Y[y]) or (key1 xor R, key2)
-  key1_in = _mm_loadu_si128(X+1-perm_x); 
-  key2_in = _mm_loadu_si128(Y+perm_y);
-  H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
+   key1_in = _mm_loadu_si128(X+1-perm_x); 
+   key2_in = _mm_loadu_si128(Y+perm_y);
+   H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
 
-  semantic_bit = (truth_table>>(3-(0x01^de_garbled_ix)))&0x01;
-  garble_ciphertext = _mm_xor_si128(garble_ciphertext, Z[semantic_bit]);
-  append_m128i_to_Bytes(garble_ciphertext,out_bufr);  
+   semantic_bit = (truth_table>>(3-(0x01^de_garbled_ix)))&0x01;
+   garble_ciphertext = _mm_xor_si128(garble_ciphertext, Z[semantic_bit]);
+   append_m128i_to_Bytes(garble_ciphertext,out_bufr);  
   
 
   // encrypt the 2nd entry : (X[x], Y[1-y])
-  key1_in = _mm_loadu_si128(X+perm_x);
-  key2_in = _mm_loadu_si128(Y+1-perm_y);
-  H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
+   key1_in = _mm_loadu_si128(X+perm_x);
+   key2_in = _mm_loadu_si128(Y+1-perm_y);
+   H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
 
   
-  semantic_bit = (truth_table>>(3-(0x02^de_garbled_ix)))&0x01;
-  garble_ciphertext = _mm_xor_si128(garble_ciphertext, Z[semantic_bit]);
-  append_m128i_to_Bytes(garble_ciphertext,out_bufr);
+   semantic_bit = (truth_table>>(3-(0x02^de_garbled_ix)))&0x01;
+   garble_ciphertext = _mm_xor_si128(garble_ciphertext, Z[semantic_bit]);
+   append_m128i_to_Bytes(garble_ciphertext,out_bufr);
   
   
   // encrypt the 3rd entry : (X[1-x], Y[1-y])
-  key1_in = _mm_loadu_si128(X+1-perm_x);
-  key2_in = _mm_loadu_si128(Y+1-perm_y);
-  H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
+   key1_in = _mm_loadu_si128(X+1-perm_x);
+   key2_in = _mm_loadu_si128(Y+1-perm_y);
+   H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
    
 
-  semantic_bit = (truth_table>>(3-(0x03^de_garbled_ix)))&0x01;
-  garble_ciphertext = _mm_xor_si128(garble_ciphertext, Z[semantic_bit]);
-  append_m128i_to_Bytes(garble_ciphertext,out_bufr);
-  
+   semantic_bit = (truth_table>>(3-(0x03^de_garbled_ix)))&0x01;
+   garble_ciphertext = _mm_xor_si128(garble_ciphertext, Z[semantic_bit]);
+   append_m128i_to_Bytes(garble_ciphertext,out_bufr);
+  */
   
   // current_key holds our output key, and it will be available to our calling function
   // the calling function will also be able to send the information in out_bufr
@@ -1062,16 +1110,16 @@ void GarbledCircuit::evlStandardGate(__m128i& current_key, __m128i & key1, __m12
 #ifdef GRR
   if (garbled_ix == 0) {
    current_key = _mm_load_si128(&garble_ciphertext);
-   }
-    else
-      {
-        it = in_bufr.begin() + (garbled_ix-1)*Env::key_size_in_bytes();
-        
-        tmp.assign(it, it+Env::key_size_in_bytes());
-        tmp.resize(16, 0);
-        a = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
-        current_key = _mm_xor_si128(garble_ciphertext, a);
-      }
+  }
+  else
+    {
+      it = in_bufr.begin() + (garbled_ix-1)*Env::key_size_in_bytes();
+      
+      tmp.assign(it, it+Env::key_size_in_bytes());
+      tmp.resize(16, 0);
+      a = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
+      current_key = _mm_xor_si128(garble_ciphertext, a);
+    }
 #else
     it = in_bufr.begin() + (garbled_ix)*Env::key_size_in_bytes();
     tmp.assign(it, it+Env::key_size_in_bytes());
