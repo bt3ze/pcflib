@@ -231,7 +231,6 @@ void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys
 
 
   m_garbling_bufr.resize(256,0);
-  m_temp_bufr.resize(256,0);
   
   m_message_queue.resize(MESSAGE_LIMIT*Env::key_size_in_bytes());
   m_message_limit = MESSAGE_LIMIT;
@@ -263,7 +262,6 @@ void GarbledCircuit::init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys
   init_circuit_AES_key(aes_key);
 
   m_garbling_bufr.resize(256,0);
-  m_temp_bufr.resize(16,0);
    
   m_message_queue.resize(MESSAGE_LIMIT*Env::key_size_in_bytes());
   m_message_limit = MESSAGE_LIMIT;
@@ -796,13 +794,13 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key, 
     clock_gettime(CLOCK_REALTIME, &half_start); 
 
     if(current_gate->truth_table == 0x01){ // AND Gate            
-      genHalfGatePair(current_key, key1, key2, m_temp_bufr, 0, 0, 0);
-      send_half_gate(m_temp_bufr);
+      genHalfGatePair(current_key, key1, key2, m_garbling_bufr, 0, 0, 0);
+      send_half_gate(m_garbling_bufr);
     }
     
     else if(current_gate->truth_table == 0x07){ // OR Gate
-      genHalfGatePair(current_key, key1, key2, m_temp_bufr, 1, 1, 1);
-      send_half_gate(m_temp_bufr);
+      genHalfGatePair(current_key, key1, key2, m_garbling_bufr, 1, 1, 1);
+      send_half_gate(m_garbling_bufr);
     }
     
     

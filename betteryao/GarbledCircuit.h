@@ -225,7 +225,7 @@ protected:
     Bytes m_garbling_bufr;
     
     // these will be used to move things around, between buffers, and into _mm_128i fields
-    Bytes m_temp_bufr;
+    //Bytes m_temp_bufr;
     //__m128i key_bufr[4];
 
 
