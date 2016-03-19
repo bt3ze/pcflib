@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-#include "../pcflib_new.h"
+#include "../pcflib.h"
 
 
 //  void *copy_key(void *);

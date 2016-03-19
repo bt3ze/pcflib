@@ -345,7 +345,7 @@ uint32_t GarbledCircuit::get_Input_Parity(uint32_t idx){
 void GarbledCircuit::Garble_Circuit(){
   while(get_next_gate(m_st)){
   }
-  //send_buffer(); // last send, in case there's something left over
+  send_buffer(); // last send, in case there's something left over
 }
 
 void GarbledCircuit::Evaluate_Circuit(){
@@ -1413,8 +1413,18 @@ void GarbledCircuit::send_full_gate(const Bytes &buf){
   //std::cout << "send full gate " << std::endl << buf.to_hex() << std::endl; 
 
 #ifdef GRR
+ num_comms++;
+  clock_gettime(CLOCK_REALTIME, &comm_start);
+
+
   enqueue_messages(buf,3);
   //Env::remote()->write_3_ciphertexts(buf);
+
+  
+  clock_gettime(CLOCK_REALTIME, &comm_end);
+  comm_time += ( comm_end.tv_sec - comm_start.tv_sec )
+    + ( comm_end.tv_nsec - comm_start.tv_nsec )
+    / BILN;
 #else
   enqueue_messages(buf,4);
   //Env::remote()->write_4_ciphertexts(buf);
@@ -1458,9 +1468,18 @@ void GarbledCircuit::read_full_gate(Bytes & buf){
   
 
 #ifdef GRR
+   num_comms++;
+  clock_gettime(CLOCK_REALTIME, &comm_start);
+
   retrieve_ciphertexts(buf,3);
   //Bytes ret = retrieve_ciphertexts(3);
   //return Env::remote()->read_3_ciphertexts();
+
+ 
+  clock_gettime(CLOCK_REALTIME, &comm_end);
+  comm_time += ( comm_end.tv_sec - comm_start.tv_sec )
+    + ( comm_end.tv_nsec - comm_start.tv_nsec )
+    / BILN;
 #else
   retrieve_ciphertexts(buf,4);
 //Bytes ret =  retrieve_ciphertexts(4);

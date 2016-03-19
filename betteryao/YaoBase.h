@@ -14,7 +14,7 @@
 #include "Commitment.h"
 #include "Algebra.h"
 
-#include "../pcflib_new.h"
+#include "../pcflib.h"
 
 #include "macros.h"
 

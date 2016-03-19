@@ -412,7 +412,7 @@ void BetterYao5::initialize_circuits(){
 
 
   m_gcs[ix].m_st = 
-    load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key);
+    load_pcf_file(Env::pcf_file(), m_gcs[ix].get_Const_Wire(0), m_gcs[ix].get_Const_Wire(1), copy_key); 
   m_gcs[ix].m_st->alice_in_size = get_gen_full_input_size();
   m_gcs[ix].m_st->bob_in_size = get_evl_inp_count();
   
@@ -421,7 +421,7 @@ void BetterYao5::initialize_circuits(){
   m_gcs[ix].set_Gen_Circuit_Functions();
   
   
-  fprintf(stderr,"Gen Input: \t%s\nGen Full Input: \t%s\nGen Permutation Bits: \t%s\n",
+  fprintf(stderr,"Gen Input : \t%s\nGen Full Input: \t%s\nGen Permutation Bits: \t%s\n",
           m_private_input.to_hex().c_str(),
           get_gen_full_input().to_hex().c_str(),
           m_gen_inp_permutation_bits[ix].to_hex().c_str());
@@ -490,7 +490,7 @@ void BetterYao5::evaluate_circuits(){
 
   garble_time += MPI_Wtime()-start;
   
-  m_gcs[ix].send_buffer();
+  //m_gcs[ix].send_buffer();
 
   //GEN_SEND(Bytes(0)); // redundant value to prevent Evl from hanging
   

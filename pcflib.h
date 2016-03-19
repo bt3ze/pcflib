@@ -1,3 +1,31 @@
+
+/***
+
+    The PCFState object/struct will store the state of the garbled circuit
+    and will provide the API get_next_gate which processes the state of the
+    circuit until a gate is emitted, at which point it requires a new
+    wire key to be set.
+
+    PCFGate holds the information required for a single gate:
+    - its incoming wire values,
+    - its output (result) wire
+    - its truth table
+    - its tag (input, output, internal)
+
+    A wire contains flags, a value, and keydata
+    - flags determine if the wire is known and thus need not be garbled
+    - the value field allows us to hold constant values on a wire
+    - keydata contains a garbled ciphertext (AKA garbling key)
+
+    The activation record maintains the call stack for the circuit
+    - we lay out the circuit as an virtual stack, where wire indices are locations on the stack
+    - this allows us to do things like call functions, simply by allocating new space
+    -- note that it is the job of the _circuit program_ to clear space once it has been deallocated,
+       not the job of the State object itself. the state only does as it is told
+
+ */
+
+
 #ifndef __PCFLIB_H
 #define __PCFLIB_H
 
@@ -7,10 +35,19 @@ extern "C" {
 
 #include <stdint.h>
 #include <pthread.h>
+
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
 #include <search.h>
+
+  //  static double btime;
+
+#include <time.h>
+
+#define BILLION 1E9
+  //static double accum = 0.0;
+
 
   struct PCFState;
 
@@ -79,6 +116,10 @@ struct activation_record {
   void check_alloc(void * ptr);
 
 typedef struct PCFState {
+  double accum, accum2;// = 0.0;
+  struct timespec requestStart, requestEnd, requestStart2, requestEnd2;
+
+
   // base pointer on the circuit's emulated stack
   uint32_t base;
   // program counter on the circuit's emulated machine
@@ -141,7 +182,11 @@ typedef struct PCFState {
 
   /* The function that will be used to make copies of the keys
      associated with a wire. */
-  void * (*copy_key)(void *);
+  //void * (*copy_key)(void *);
+  void (* copy_key) (void *, void *);
+
+  //  void copy_key_2(void * source, void * dest);
+
 
   /* The function that will be used to delete keys when a wire is
      destroyed. */
@@ -153,10 +198,12 @@ typedef struct PCFState {
   void set_external_circuit(struct PCFState *, void *);
   void * get_external_circuit(struct PCFState *);
   void set_key_delete_function(struct PCFState *, void (*)(void*));
-  void set_key_copy_function(struct PCFState *, void *(*)(void*));
+  //  void set_key_copy_function(struct PCFState *, void *(*)(void*));
+  void set_key_copy_function(struct PCFState *, void (*f)(void*,void*));
   void set_callback(struct PCFState *, void* (*)(struct PCFState *, struct PCFGate *));
   PCFGate * get_next_gate(PCFState *);
-  PCFState * load_pcf_file(const char *, void *, void *, void *(*)(void*));
+  //  PCFState * load_pcf_file(const char *, void *, void *, void *(*)(void*));
+  PCFState * load_pcf_file(const char *, void *, void *, void (*)(void*,void*));
 
   void set_constant_keys(PCFState *, void *, void*);
 

@@ -867,13 +867,16 @@ PCFOP * read_instr(struct PCFState * st, const char * line, uint32_t iptr)
    (for some reason yet to be discerned) are offset by 1
 */ 
 
-PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void *(*copy_key)(void*))
+//PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void *(*copy_key)(void*))
+PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void (*copy_key)(void*,void*))
 {
   FILE * input;
   PCFState * ret; 
   char line[LINE_MAX];
   uint32_t icount = 0;
   uint32_t i = 0;
+
+  uint32_t num_wires = 200000;
 
   ret = (PCFState*)malloc(sizeof(struct PCFState));
   check_alloc(ret);
@@ -882,32 +885,51 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void *(*c
   //ret->bob_outputs = 0;
   ret->inp_i = 0;
   ret->inp_idx = 0; // should not be strictly necessary because will be set before first use
-  ret->constant_keys[0] = copy_key(key0);
-  ret->constant_keys[1] = copy_key(key1);
+
+  ret->accum=0.0;
+  ret->accum2=0.0;
+
+  fprintf(stdout,"allocate const keys:\n");
+  
+  ret->constant_keys[0] =(void*) malloc(4*sizeof(uint32_t));
+  ret->constant_keys[1] =(void*) malloc(4*sizeof(uint32_t));
+  fprintf(stdout,"set up const keys:\n");
+
+  copy_key(key0, ret->constant_keys[0]);
+  fprintf(stdout,"set const key 0\n");
+  copy_key(key1, ret->constant_keys[1]);
+  fprintf(stdout,"set const key 1\n");
   ret->copy_key = copy_key;
+  fprintf(stdout,"set copy key function\n");
+  //ret->constant_keys[0] = copy_key(key0);
+  //ret->constant_keys[1] = copy_key(key1);
+  //ret->copy_key = copy_key;
   ret->call_stack = 0;
   ret->done = 0;
   ret->labels = (struct hsearch_data *)malloc(sizeof(struct hsearch_data));
   check_alloc(ret->labels);
 
-  ret->wires = (struct wire *)malloc(1000000 * sizeof(struct wire)); // !note here the limit on size of the wire table
+  ret->wires = (struct wire *)malloc(num_wires * sizeof(struct wire)); // !note here the limit on size of the wire table
   check_alloc(ret->wires);
-
   
-  // this loop is a little curious
-  // but i guess it's fine, because it sets all of the wire values to 0
-  // and claims they're known wires
-  // they can be changed later
-  for(i = 0; i < 200000; i++)
+
+  fprintf(stdout,"allocate keys\n");
+  for(i = 0; i < num_wires; i++)
     {
+      //fprintf(stdout,"%i",i);
       ret->wires[i].flags = KNOWN_WIRE;
       ret->wires[i].value = 0;
-      ret->wires[i].keydata = copy_key(key0);
+      ret->wires[i].keydata = (void *)malloc(4*sizeof(uint32_t));
+      check_alloc(ret->wires[i].keydata);
+      
+      //      copy_key(key0,ret->wires[i].keydata);
+      //ret->wires[i].keydata = copy_key(key0);
     }
+  fprintf(stdout,"keys allocated\n");
   
 
   memset(ret->labels, 0, sizeof(struct hsearch_data));
-
+  
   ret->done = 0;
   ret->base = 1;
   ret->PC = 0;
@@ -954,7 +976,9 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void *(*c
   fclose(input);
 
   ret->wires[0].value = 1;
-  ret->wires[0].keydata = ret->copy_key(ret->constant_keys[1]);
+
+  ret->copy_key(ret->constant_keys[1],ret->wires[0].keydata);
+  //  ret->wires[0].keydata = ret->copy_key(ret->constant_keys[1]);
   ret->wires[0].flags = KNOWN_WIRE;
 
   return ret;
@@ -965,17 +989,22 @@ void finalize(PCFState * st)
 
   //  fprintf(stderr, "finalize\n");
   
-  uint32_t i = 0;
+  // uint32_t i = 0;
   
-  for(i = 0; i < 200000; i++)
-    {
-      if(st->wires[i].keydata != 0)
-        st->delete_key(st->wires[i].keydata);
-    } 
+  // still need some way to delete the keys and free memory
+  //for(i = 0; i < 200000; i++)
+  //  {
+  //    if(st->wires[i].keydata != 0)
+  //      st->delete_key(st->wires[i].keydata);
+  //  } 
   free(st->wires);
   //  free(st);
   
   //  fprintf(stderr,"done finalize\n");
+  
+  fprintf(stderr,"accumulator: %f\n",st->accum);
+  fprintf(stderr,"accumulator2: %f\n",st->accum2);
+
 }
 
 struct PCFGate * get_next_gate(struct PCFState * st)
@@ -984,28 +1013,42 @@ struct PCFGate * get_next_gate(struct PCFState * st)
   //fprintf(stderr, "get next gate");
   //  std::cout << "get next gate" << std::endl;
 
+  clock_gettime(CLOCK_REALTIME, &(st->requestStart)); 
+
   st->curgate = 0;
   //fprintf(stderr,"program counter: %u\n",st->PC);
   while((st->curgate == 0) && (st->done == 0))
-    {
+  {
       // if curgate is 0, why are we executing things?
 
+    //fprintf(stderr,"curgate: %p",st->curgate);
+
       // call the instruction's op function
+
       st->ops[st->PC].op(st, &st->ops[st->PC]);
       // then increment the program counter
       st->PC++;
       // and verify that the PC has not eclipsed the instruction count
       assert((st->PC < st->icount));
     }
+
   //  if((st->curgate == 0) || (st->done != 0))
   // this seems redundant, since st->curgate should only be 0 after the above loop if st->done is nonzero
+
+ 
+  clock_gettime(CLOCK_REALTIME, &(st->requestEnd));
+
+  st->accum += ( st->requestEnd.tv_sec - st->requestStart.tv_sec )
+    + ( st->requestEnd.tv_nsec - st->requestStart.tv_nsec )
+    / BILLION;
+
   if(st->done != 0)
   {
       // no more gates and the PCFState thinks it's done
     //      fprintf(stderr,"enter finalize\n");
-      finalize(st);
-      return 0;
-    }
+    finalize(st);
+    return 0;
+  }
   else {
     // return the next gate
     return st->curgate;
@@ -1053,7 +1096,8 @@ void set_callback(struct PCFState * st, void* (*callback)(struct PCFState *,stru
   st->callback = callback;
 }
 
-void set_key_copy_function(struct PCFState * st, void *(*f)(void*))
+//void set_key_copy_function(struct PCFState * st, void *(*f)(void*))
+void set_key_copy_function(struct PCFState * st, void (*f)(void*,void*))
 {
   st->copy_key = f;
 }

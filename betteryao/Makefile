@@ -6,7 +6,7 @@ LIBS       =  -lpbc -lgmp -lcrypto -llog4cxx -lpthread -lgmpxx
 AESNI = -DAESNI #turn this flag on/off for encryption modes
 HEADERS    =  Algebra.h Aes.h Bytes.h Env.h NetIO.h Prng.h Commitment.h \
 	 #   Circuit.h ClawFree.h  
-OBJS       =  Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib_new.o opdefs_new.o Commitment.o # pcflib.o opdefs.o
+OBJS       =  Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o Commitment.o # pcflib_new.o opdefs_new.o
 OLDGARB	   = garbled_circuit.o garbled_circuit_hbc.o garbled_circuit_m.o  # 
 GARBLES    = GarbledCircuit.o # 
 OTEXTENSION = ot-ot.o otextension.o
@@ -29,7 +29,7 @@ MIRACL_PATH= -I$(OTE)/util/Miracl
 MIRACL_LIB = -lpthread $(OTE)/util/Miracl/miracl.a -lssl
 
 
-all : pcflib pcflib_new otextension.o ot-ot.o ot-crypto.o ot-util.o betteryao5
+all : pcflib pcflib otextension.o ot-ot.o ot-crypto.o ot-util.o betteryao5
 
 betteryao: $(MAINS) $(OBJS) $(OLDGARB)
 	$(MPI_CXX) -o evl -DEVL_CODE $(CXX_CFLAGS) $^ $(LIBS)
@@ -65,11 +65,11 @@ pcflib.o: ../pcflib.c ../pcflib.h
 opdefs.o: ../opdefs.c ../pcflib.h ../opdefs.h 
 	gcc -Wall -Werror -c -fPIC ../opdefs.c -g -DBETTERYAO
 
-pcflib_new.o: ../pcflib_new.c ../pcflib_new.h
-	gcc -Wall -Werror -c -fPIC ../pcflib_new.c -g -DBETTERYAO
+#pcflib_new.o: ../pcflib_new.c ../pcflib_new.h
+#	gcc -Wall -Werror -c -fPIC ../pcflib_new.c -g -DBETTERYAO
 
-opdefs_new.o: ../opdefs_new.c ../pcflib_new.h ../opdefs_new.h 
-	gcc -Wall -Werror -c -fPIC ../opdefs_new.c -g -DBETTERYAO
+#opdefs_new.o: ../opdefs_new.c ../pcflib_new.h ../opdefs_new.h 
+#	gcc -Wall -Werror -c -fPIC ../opdefs_new.c -g -DBETTERYAO
 
 
 #ot-alsz: alsz.o ot-crypto.o ot-util.o
