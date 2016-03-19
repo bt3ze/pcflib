@@ -1527,7 +1527,7 @@ void GarbledCircuit::send_buffer(){
 
   Env::remote()->write_n_ciphertexts(m_message_queue, m_message_limit);
   m_messages_waiting = 0;
-  std::fill(m_message_queue.begin(),m_message_queue.end(),0);
+  //  std::fill(m_message_queue.begin(),m_message_queue.end(),0);
   
   //std::cout << "sent" << std::endl;
 
@@ -1603,7 +1603,7 @@ void GarbledCircuit::retrieve_buffer(){
   // resets the queue index/ the number waiting
   // retrieves the next batch of messages from the wire
   
-  std::fill(m_message_queue.begin(),m_message_queue.end(),0);
+  //  std::fill(m_message_queue.begin(),m_message_queue.end(),0);
   m_queue_index = 0;
   m_messages_waiting = m_message_limit;
   Env::remote()->read_n_ciphertexts(m_message_queue,m_message_limit);
