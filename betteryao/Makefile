@@ -2,7 +2,7 @@ CXX_CFLAGS = -I$(HOME)/lccyao2/pcflib/ -I$(HOME)/include/ -I$(HOME)/local/includ
 CXX        = g++
 MPI_CXX    = mpicxx
 CC = cc
-LIBS       =  -lpbc -lgmp -lcrypto -llog4cxx -lpthread -lgmpxx 
+LIBS       =  -lpbc -lgmp -lcrypto -llog4cxx -lpthread #-lgmpxx 
 AESNI = -DAESNI #turn this flag on/off for encryption modes
 HEADERS    =  Algebra.h Aes.h Bytes.h Env.h NetIO.h Prng.h Commitment.h \
 	 #   Circuit.h ClawFree.h  
