@@ -114,13 +114,15 @@ PCFOP * read_label(const char * line, struct PCFState * st, uint32_t iptr)
   *((uint32_t*)newent->data) = iptr;
 
   //hsearch_r(*newent, ENTER, &r, st->labels);
-
+#ifdef __APPLE__
+  if((r=hsearch(*newent, ENTER)) == 0)
+#else
   if(hsearch_r(*newent, ENTER, &r, st->labels) == 0)
+#endif
     {
       fprintf(stderr, "Problem inserting hash table for %s %d: %s\n", newent->key, *((uint32_t*)newent->data), strerror(errno));
       abort();
     }
-
 
   return ret;
 }
@@ -906,13 +908,17 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void (*co
   //ret->copy_key = copy_key;
   ret->call_stack = 0;
   ret->done = 0;
+#ifdef __APPLE__
+// TODO:fix this ????
+#else
   ret->labels = (struct hsearch_data *)malloc(sizeof(struct hsearch_data));
   check_alloc(ret->labels);
+  memset(ret->labels, 0, sizeof(struct hsearch_data));
+#endif
 
   ret->wires = (struct wire *)malloc(num_wires * sizeof(struct wire)); // !note here the limit on size of the wire table
   check_alloc(ret->wires);
   
-
   fprintf(stdout,"allocate keys\n");
   for(i = 0; i < num_wires; i++)
     {
@@ -928,7 +934,6 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void (*co
   fprintf(stdout,"keys allocated\n");
   
 
-  memset(ret->labels, 0, sizeof(struct hsearch_data));
   
   ret->done = 0;
   ret->base = 1;
@@ -948,7 +953,11 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void (*co
       icount++;
     }
 
+#ifdef __APPLE__
+  if(hcreate(icount) == 0)
+#else
   if(hcreate_r(icount, ret->labels) == 0)
+#endif
     {
       fprintf(stderr, "Unable to allocate hash table: %s\n", strerror(errno));
       abort();
@@ -1012,8 +1021,9 @@ struct PCFGate * get_next_gate(struct PCFState * st)
   
   //fprintf(stderr, "get next gate");
   //  std::cout << "get next gate" << std::endl;
-
+#ifndef __APPLE__
   clock_gettime(CLOCK_REALTIME, &(st->requestStart)); 
+#endif
 
   st->curgate = 0;
   //fprintf(stderr,"program counter: %u\n",st->PC);
@@ -1036,11 +1046,12 @@ struct PCFGate * get_next_gate(struct PCFState * st)
   // this seems redundant, since st->curgate should only be 0 after the above loop if st->done is nonzero
 
  
+#ifndef __APPLE__
   clock_gettime(CLOCK_REALTIME, &(st->requestEnd));
-
   st->accum += ( st->requestEnd.tv_sec - st->requestStart.tv_sec )
     + ( st->requestEnd.tv_nsec - st->requestStart.tv_nsec )
     / BILLION;
+#endif
 
   if(st->done != 0)
   {

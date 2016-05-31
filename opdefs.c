@@ -36,7 +36,12 @@ void initbase_op(struct PCFState * st, struct PCFOP * op)
 {
   ENTRY ent, * r;
   ent.key = "main";
+#ifdef __APPLE__
+  if((r=hsearch(ent, FIND)) == 0)
+#else  
   if(hsearch_r(ent, FIND, &r, st->labels) == 0)
+#endif
+
         {
           fprintf(stderr, "Problem searching hash table for main: %s\n", strerror(errno));
           abort();
@@ -109,9 +114,9 @@ void add_op(struct PCFState * st, struct PCFOP* op)
     st->wires[st->base + data->op1].value +
     st->wires[st->base + data->op2].value;
 
-  if(st->wires[st->base + data->dest].keydata != 0){
-    st->delete_key(st->wires[st->base + data->dest].keydata);
-  }
+  //  if(st->wires[st->base + data->dest].keydata != 0){
+  //  st->delete_key(st->wires[st->base + data->dest].keydata);
+  //}
   
   //  st->copy_key(st->constant_keys[0], st->wires[dest+i].keydata);
   st->copy_key(st->constant_keys[0], st->wires[data->dest + st->base].keydata);
@@ -129,9 +134,9 @@ void mul_op(struct PCFState * st, struct PCFOP* op)
     st->wires[st->base + data->op1].value *
     st->wires[st->base + data->op2].value;
 
-  if(st->wires[st->base + data->dest].keydata != 0){
-    st->delete_key(st->wires[st->base + data->dest].keydata);
-  }
+  //if(st->wires[st->base + data->dest].keydata != 0){
+  //  st->delete_key(st->wires[st->base + data->dest].keydata);
+  //}
 
   //  st->copy_key(st->constant_keys[0], st->wires[dest+i].keydata);
   st->copy_key(st->constant_keys[0], st->wires[data->dest + st->base].keydata);
@@ -417,7 +422,11 @@ void call_op (struct PCFState * st, struct PCFOP * op)
       newtop->base = st->base;
       st->call_stack = newtop;
 
-      if(hsearch_r(*ent, FIND, &r, st->labels) == 0)
+#ifdef __APPLE__
+  if((r=hsearch(*ent, FIND)) == 0)
+#else
+  if(hsearch_r(*ent, FIND, &r, st->labels) == 0)
+#endif
         {
           fprintf(stderr, "Problem searching hash table for %s: %s\n", ent->key, strerror(errno));
           abort();
@@ -434,7 +443,11 @@ void branch_op(struct PCFState * st, struct PCFOP * op)
   struct branch_op_data * data = (struct branch_op_data *)op->data;
   ENTRY * ent, * r;
   ent = data->target;
+#ifdef __APPLE__
+  if((r=hsearch(*ent, FIND)) == 0)
+#else
   if(hsearch_r(*ent, FIND, &r, st->labels) == 0)
+#endif
     {
       fprintf(stderr, "Problem searching hash table for %s: %s\n", ent->key, strerror(errno));
       abort();
@@ -509,12 +522,16 @@ void gate_op(struct PCFState * st, struct PCFOP * op)
       st->curgate->tag = TAG_INTERNAL;
 
       // st->wires[destidx].keydata = st->copy_key(st->callback(st, st->curgate));
+#ifndef __APPLE__    
       clock_gettime(CLOCK_REALTIME, &(st->requestStart2));
+#endif
       st->copy_key(st->callback(st, st->curgate),st->wires[destidx].keydata);
+#ifndef __APPLE__    
       clock_gettime(CLOCK_REALTIME, &(st->requestEnd2));
       st->accum2 += ( st->requestEnd2.tv_sec - st->requestStart2.tv_sec )
         + ( st->requestEnd2.tv_nsec - st->requestStart2.tv_nsec )
         / BILLION;
+#endif
 
 
       //if(tmp != 0) st->delete_key(tmp);

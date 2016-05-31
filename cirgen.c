@@ -3,25 +3,35 @@
 #include "pcflib.h"
 
 #include <stdio.h>
+#ifndef __APPLE__
 #include <malloc.h>
+#else
+#include <stdlib.h>
+#endif
 #include <limits.h>
 #include <assert.h>
 #include <string.h>
 
 void read_instr(const char * line);
 
+/*
 void * copy_key(void * k)
 {
   uint32_t * ret = (uint32_t*)malloc(sizeof(uint32_t));
   *ret = *((uint32_t*)k);
   return ret;
 }
+*/
+
+void copy_key(void * src, void * dst){
+  * ((uint32_t*)dst) = *((uint32_t*)src);
+}
 
 void delete_key(void* k)
 {
-  assert(k != 0);
-  if(k != 0)
-    free(k);
+  //assert(k != 0);
+  //if(k != 0)
+  //  free(k);
 }
 
 /* Wire IDs for the constant '0' value and the constant '1' value. */
@@ -82,9 +92,13 @@ void setup_alice_inputs_from_string(struct PCFState * st, const char * inputs)
       for(j = 0; j < 8; j++)
         {
           st->alice_inputs[8*i + j].flags = UNKNOWN_WIRE;
-          st->alice_inputs[8*i + j].keydata = copy_key((q & 0x01) == 1 
-                                                       ? (st->constant_keys[1]) 
-                                                       : (st->constant_keys[0]));
+          copy_key((q & 0x01) == 1 ?
+                   (st->constant_keys[1])
+                   : (st->constant_keys[0])
+                   , st->alice_inputs[8*i + j].keydata);
+            //st->alice_inputs[8*i + j].keydata = copy_key((q & 0x01) == 1 
+            //                                          ? (st->constant_keys[1]) 
+            //                                          : (st->constant_keys[0]));
           q = q >> 1;
         }
     }
@@ -101,9 +115,13 @@ void setup_bob_inputs_from_string(struct PCFState * st, const char * inputs)
       for(j = 0; j < 8; j++)
         {
           st->bob_inputs[8*i + j].flags = UNKNOWN_WIRE;
-          st->bob_inputs[8*i + j].keydata = copy_key((q & 0x01) == 1 
-                                                     ? (st->constant_keys[1]) 
-                                                     : (st->constant_keys[0]));
+          copy_key((q & 0x01) == 1 ?
+                   (st->constant_keys[1])
+                   : (st->constant_keys[0])
+                   , st->bob_inputs[8*i + j].keydata);
+            //st->bob_inputs[8*i + j].keydata = copy_key((q & 0x01) == 1 
+            //                                         ? (st->constant_keys[1]) 
+            //                                         : (st->constant_keys[0]));
           q = q >> 1;
         }
     }
@@ -132,9 +150,13 @@ void setup_alice_inputs_from_hex_string(struct PCFState * st, const char * input
       for(j = 0; j < 4; j++)
         {
           st->alice_inputs[4*i + j].flags = UNKNOWN_WIRE;
-          st->alice_inputs[4*i + j].keydata = copy_key((q & 0x01) == 1 
-                                                     ? (st->constant_keys[1])
-                                                     : (st->constant_keys[0]));
+          copy_key((q & 0x01) == 1 
+                   ? (st->constant_keys[1])
+                   : (st->constant_keys[0]) 
+                   , st->alice_inputs[4*i + j].keydata);
+            //st->alice_inputs[4*i + j].keydata = copy_key((q & 0x01) == 1 
+            //                                         ? (st->constant_keys[1])
+            //                                         : (st->constant_keys[0]));
           q = q >> 1;
         }
     }
@@ -163,9 +185,13 @@ void setup_bob_inputs_from_hex_string(struct PCFState * st, const char * inputs)
       for(j = 0; j < 4; j++)
         {
           st->bob_inputs[4*i + j].flags = UNKNOWN_WIRE;
-          st->bob_inputs[4*i + j].keydata = copy_key((q & 0x01) == 1 
-                                                     ? (st->constant_keys[1])
-                                                     : (st->constant_keys[0]));
+          copy_key((q & 0x01) == 1 
+                   ? (st->constant_keys[1])
+                   : (st->constant_keys[0]) 
+                   , st->bob_inputs[4*i + j].keydata);
+          //st->bob_inputs[4*i + j].keydata = copy_key((q & 0x01) == 1 
+          //                                           ? (st->constant_keys[1])
+          //                                           : (st->constant_keys[0]));
           q = q >> 1;
         }
     }

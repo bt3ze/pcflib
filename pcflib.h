@@ -202,7 +202,7 @@ typedef struct PCFState {
   void set_key_copy_function(struct PCFState *, void (*f)(void*,void*));
   void set_callback(struct PCFState *, void* (*)(struct PCFState *, struct PCFGate *));
   PCFGate * get_next_gate(PCFState *);
-  //  PCFState * load_pcf_file(const char *, void *, void *, void *(*)(void*));
+  //PCFState * load_pcf_file(const char *, void *, void *, void *(*)(void*));
   PCFState * load_pcf_file(const char *, void *, void *, void (*)(void*,void*));
 
   void set_constant_keys(PCFState *, void *, void*);

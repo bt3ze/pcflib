@@ -1,4 +1,4 @@
-all: pcflib.o test #pcflib_new.o
+all: pcflib.o  # test pcflib_new.o
 
 pcflib.o: pcflib.c pcflib.h opdefs.h
 	gcc -fPIC pcflib.c -c -Wall -Werror -g
@@ -17,3 +17,6 @@ test: pcflib.o opdefs.o test.c
 
 cirgen: pcflib.o opdefs.o cirgen.c
 	gcc -fPIC -o cirgen cirgen.c pcflib.o opdefs.o -Wall -Werror -g
+
+clean: 
+	rm pcflib.o opdefs.o cirgen test 
