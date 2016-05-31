@@ -7,26 +7,26 @@ AESNI = -DAESNI #turn this flag on/off for encryption modes
 HEADERS    =  Algebra.h Aes.h Bytes.h Env.h NetIO.h Prng.h Commitment.h \
 	 #   Circuit.h ClawFree.h  
 OBJS       =  Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o Commitment.o # pcflib_new.o opdefs_new.o
-OLDGARB	   = garbled_circuit.o garbled_circuit_hbc.o garbled_circuit_m.o  # 
+#OLDGARB	   = garbled_circuit.o garbled_circuit_hbc.o garbled_circuit_m.o  # 
 GARBLES    = GarbledCircuit.o # 
-OTEXTENSION = ot-ot.o otextension.o
-OT-UTILS =  parse_options.o cbitvector.o
-OT-CRYPTO = crypto.o ecc-pk-crypto.o gmp-pk-crypto.o
-OT-ALSZ =  alsz-ot-ext-rec.o alsz-ot-ext-snd.o ot-ext-rec.o ot-ext-snd.o simpleot.o ot-ext.o 
-OTX = otextension.o
+#OTEXTENSION = ot-ot.o otextension.o
+#OT-UTILS =  parse_options.o cbitvector.o
+#OT-CRYPTO = crypto.o ecc-pk-crypto.o gmp-pk-crypto.o
+#OT-ALSZ =  alsz-ot-ext-rec.o alsz-ot-ext-snd.o ot-ext-rec.o ot-ext-snd.o simpleot.o ot-ext.o 
+#OTX = otextension.o
 #OT-OBJS = cbitvector.o crypto.o ecc-pk-crypto.o gmp-pk-crypto.o
 
 MAINS      = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp
-SPLITMAINS = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp splityao/BetterYao5.cpp splityao/BetterYaoEvl.cpp splityao/BetterYaoGen.cpp 
+#SPLITMAINS = main.cpp YaoBase.cpp Yao.cpp BetterYao4.cpp splityao/BetterYao5.cpp splityao/BetterYaoEvl.cpp splityao/BetterYaoGen.cpp 
 MAINS5   = protocol.cpp YaoBase.cpp BetterYao5.cpp
 MAINS5HBC = protocol.cpp YaoBase.cpp BetterYao5-hbc.cpp
 MACROS    = macros.cpp
-OTE = OTExtension
-OTOT = OTExtension/ot
+#OTE = OTExtension
+#OTOT = OTExtension/ot
 
-OBJECTS_MIRACL= $(OTE)/util/Miracl/*.o
-MIRACL_PATH= -I$(OTE)/util/Miracl
-MIRACL_LIB = -lpthread $(OTE)/util/Miracl/miracl.a -lssl
+#OBJECTS_MIRACL= $(OTE)/util/Miracl/*.o
+#MIRACL_PATH= -I$(OTE)/util/Miracl
+#MIRACL_LIB = -lpthread $(OTE)/util/Miracl/miracl.a -lssl
 
 
 all : pcflib pcflib otextension.o ot-ot.o ot-crypto.o ot-util.o betteryao5
@@ -65,53 +65,38 @@ pcflib.o: ../pcflib.c ../pcflib.h
 opdefs.o: ../opdefs.c ../pcflib.h ../opdefs.h 
 	gcc -Wall -Werror -c -fPIC ../opdefs.c -g -DBETTERYAO
 
-#pcflib_new.o: ../pcflib_new.c ../pcflib_new.h
-#	gcc -Wall -Werror -c -fPIC ../pcflib_new.c -g -DBETTERYAO
 
-#opdefs_new.o: ../opdefs_new.c ../pcflib_new.h ../opdefs_new.h 
-#	gcc -Wall -Werror -c -fPIC ../opdefs_new.c -g -DBETTERYAO
+#alsz.o:  $(OTE)/ot/*.cpp
+#	$(CC) -c -IOTExtension/util $(OT-CFLAGS) OTExtension/ot/*.cpp
 
+#ot-util.o: $(OTE)/util/*.cpp
+#	$(CC) -c -IOTExtension/util $(OT-CFLAGS) OTExtension/util/*.cpp
 
-#ot-alsz: alsz.o ot-crypto.o ot-util.o
+#ot-crypto.o: $(OTE)/util/crypto/*.cpp
+#	$(CC) -c -IOTExtension/util $(OT-CFLAGS) OTExtension/util/crypto/*.cpp
 
-#sim: $(MAINS) $(OBJS)
-#	$(MPI_CXX) -o sim $(CXX_CFLAGS) $^ $(LIBS)
+#ot-ot.o: ot-ext.o ot-ext-snd.o ot-ext-rec.o simpleot.o alsz-ot-ext-rec.o alsz-ot-ext-snd.o
 
-#test-circuit: test-circuit.cpp $(OBJS)
-#	$(MPI_CXX) $(CXX_CFLAGS) -o test-circuit $(CXX_LFLAGS) $^ $(LIBS)
+#ot-ext.o: $(OTE)/ot/ot-ext.h $(OTE)/ot/ot-ext.cpp
+#	$(CC) -c -IOTExtension/util $(OT-CFLAGS) OTExtension/ot/ot-ext.cpp
 
+#ot-ext-snd.o: $(OTE)/ot/ot-ext.h $(OTE)/ot/ot-ext-snd.h $(OTE)/ot/ot-ext-snd.cpp
+#	$(CC) -c -IOTExtension/util $(OT-CFLAGS) OTExtension/ot/ot-ext-snd.cpp
 
-alsz.o:  $(OTE)/ot/*.cpp
-	$(CC) -c -IOTExtension/util $(OT-CFLAGS) OTExtension/ot/*.cpp
+#ot-ext-rec.o: $(OTE)/ot/ot-ext.h $(OTE)/ot/ot-ext-rec.h $(OTE)/ot/ot-ext-rec.cpp
+#	$(CC) -c -IOTExtension/util $(OT-CFLAGS) OTExtension/ot/ot-ext-rec.cpp
 
-ot-util.o: $(OTE)/util/*.cpp
-	$(CC) -c -IOTExtension/util $(OT-CFLAGS) OTExtension/util/*.cpp
+#simpleot.o: $(OTE)/ot/baseOT.h $(OTE)/ot/simpleot.h $(OTE)/ot/simpleot.cpp
+#	$(CC) -c -IOTExtension/util $(OT-CFLAGS) OTExtension/ot/simpleot.cpp
 
-ot-crypto.o: $(OTE)/util/crypto/*.cpp
-	$(CC) -c -IOTExtension/util $(OT-CFLAGS) OTExtension/util/crypto/*.cpp
+#alsz-ot-ext-rec.o: $(OTE)/ot/ot-ext.h $(OTE)/ot/ot-ext-rec.h $(OTE)/ot/alsz-ot-ext-rec.h $(OTE)/ot/alsz-ot-ext-rec.cpp
+#	$(CC) -c -IOTExtension/util $(OT-CFLAGS) OTExtension/ot/alsz-ot-ext-rec.cpp
 
-ot-ot.o: ot-ext.o ot-ext-snd.o ot-ext-rec.o simpleot.o alsz-ot-ext-rec.o alsz-ot-ext-snd.o
+#alsz-ot-ext-snd.o: $(OTE)/ot/ot-ext.h $(OTE)/ot/ot-ext-snd.h $(OTE)/ot/alsz-ot-ext-snd.h $(OTE)/ot/alsz-ot-ext-snd.cpp
+#	$(CC) -c -IOTExtension/util $(OT-CFLAGS) OTExtension/ot/alsz-ot-ext-snd.cpp
 
-ot-ext.o: $(OTE)/ot/ot-ext.h $(OTE)/ot/ot-ext.cpp
-	$(CC) -c -IOTExtension/util $(OT-CFLAGS) OTExtension/ot/ot-ext.cpp
-
-ot-ext-snd.o: $(OTE)/ot/ot-ext.h $(OTE)/ot/ot-ext-snd.h $(OTE)/ot/ot-ext-snd.cpp
-	$(CC) -c -IOTExtension/util $(OT-CFLAGS) OTExtension/ot/ot-ext-snd.cpp
-
-ot-ext-rec.o: $(OTE)/ot/ot-ext.h $(OTE)/ot/ot-ext-rec.h $(OTE)/ot/ot-ext-rec.cpp
-	$(CC) -c -IOTExtension/util $(OT-CFLAGS) OTExtension/ot/ot-ext-rec.cpp
-
-simpleot.o: $(OTE)/ot/baseOT.h $(OTE)/ot/simpleot.h $(OTE)/ot/simpleot.cpp
-	$(CC) -c -IOTExtension/util $(OT-CFLAGS) OTExtension/ot/simpleot.cpp
-
-alsz-ot-ext-rec.o: $(OTE)/ot/ot-ext.h $(OTE)/ot/ot-ext-rec.h $(OTE)/ot/alsz-ot-ext-rec.h $(OTE)/ot/alsz-ot-ext-rec.cpp
-	$(CC) -c -IOTExtension/util $(OT-CFLAGS) OTExtension/ot/alsz-ot-ext-rec.cpp
-
-alsz-ot-ext-snd.o: $(OTE)/ot/ot-ext.h $(OTE)/ot/ot-ext-snd.h $(OTE)/ot/alsz-ot-ext-snd.h $(OTE)/ot/alsz-ot-ext-snd.cpp
-	$(CC) -c -IOTExtension/util $(OT-CFLAGS) OTExtension/ot/alsz-ot-ext-snd.cpp
-
-otextension.o: $(OTOT)/alsz-ot-ext-rec.h $(OTOT)/alsz-ot-ext-snd.h otextension.h otextension.cpp
-	$(CC) -c $(OT-CFLAGS) otextension.cpp
+#otextension.o: $(OTOT)/alsz-ot-ext-rec.h $(OTOT)/alsz-ot-ext-snd.h otextension.h otextension.cpp
+#	$(CC) -c $(OT-CFLAGS) otextension.cpp
 
 server : ipserver.cpp Bytes.o Env.o NetIO.o
 	$(CXX) -pthread -o server $(CXX_CFLAGS) $(CXX_LFLAGS) $^ $(LIBS)
