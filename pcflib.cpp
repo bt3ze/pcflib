@@ -1,4 +1,6 @@
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -71,7 +73,7 @@ PCFOP * read_label(const char * line, struct PCFState * st, uint32_t iptr)
 {
   ENTRY * newent, * r;
   char buf[LINE_MAX], *bitr;
-  PCFOP * ret = malloc(sizeof(struct PCFOP));
+  PCFOP * ret = (PCFOP *)malloc(sizeof(struct PCFOP));
   check_alloc(ret);
 
   ret->op = nop;
@@ -105,11 +107,11 @@ PCFOP * read_label(const char * line, struct PCFState * st, uint32_t iptr)
   newent = (ENTRY*)malloc(sizeof(ENTRY));
   check_alloc(newent);
 
-  newent->key = malloc(strlen(buf)+1);
+  newent->key = (char*)malloc(strlen(buf)+1);
   check_alloc(newent->key);
   strcpy(newent->key, buf);
 
-  newent->data = malloc(sizeof(uint32_t));
+  newent->data = (char*)malloc(sizeof(uint32_t));
   check_alloc(newent->data);
   *((uint32_t*)newent->data) = iptr;
 
@@ -130,7 +132,7 @@ PCFOP * read_label(const char * line, struct PCFState * st, uint32_t iptr)
 PCFOP * read_initbase(const char * line)
 {
   char buf[LINE_MAX], *bitr;
-  PCFOP * ret = malloc(sizeof(struct PCFOP));
+  PCFOP * ret = (PCFOP *)malloc(sizeof(struct PCFOP));
   check_alloc(ret);
 
   ret->op = initbase_op;
@@ -157,8 +159,8 @@ PCFOP * read_initbase(const char * line)
 PCFOP * read_gate(const char * line)
 {
   char buf[LINE_MAX], *bitr;
-  PCFOP * ret = malloc(sizeof(PCFOP));
-  struct PCFGate * data = malloc(sizeof(struct PCFGate));
+  PCFOP * ret = (PCFOP *)malloc(sizeof(PCFOP));
+  struct PCFGate * data = (PCFGate *) malloc(sizeof(struct PCFGate));
   uint32_t i = 0;
   check_alloc(ret);
   check_alloc(data);
@@ -216,8 +218,8 @@ PCFOP * read_gate(const char * line)
 PCFOP * read_copy(const char * line)
 {
   char buf[LINE_MAX], *bitr;
-  PCFOP * ret = malloc(sizeof(PCFOP));
-  struct copy_op_data * data = malloc(sizeof(struct copy_op_data));
+  PCFOP * ret =(PCFOP *) malloc(sizeof(PCFOP));
+  struct copy_op_data * data = (copy_op_data *)malloc(sizeof(struct copy_op_data));
   uint32_t i = 0;
   check_alloc(ret);
   check_alloc(data);
@@ -260,8 +262,8 @@ PCFOP * read_copy(const char * line)
 PCFOP * read_arith(const char * line, void (*op)(struct PCFState *, struct PCFOP *))
 {
   char buf[LINE_MAX], *bitr;
-  PCFOP * ret = malloc(sizeof(PCFOP));
-  struct arith_op_data * data = malloc(sizeof(struct arith_op_data));
+  PCFOP * ret = (PCFOP *)malloc(sizeof(PCFOP));
+  struct arith_op_data * data = (arith_op_data *)malloc(sizeof(struct arith_op_data));
   uint32_t i = 0;
   check_alloc(ret);
   check_alloc(data);
@@ -315,8 +317,8 @@ PCFOP * read_mul(const char * line)
 PCFOP * read_copy_indir(const char * line)
 {
   char buf[LINE_MAX], *bitr;
-  PCFOP * ret = malloc(sizeof(PCFOP));
-  struct copy_op_data * data = malloc(sizeof(struct copy_op_data));
+  PCFOP * ret = ( PCFOP *) malloc(sizeof(PCFOP));
+  struct copy_op_data * data = (copy_op_data *)malloc(sizeof(struct copy_op_data));
   uint32_t i = 0;
   check_alloc(ret);
   check_alloc(data);
@@ -360,8 +362,8 @@ PCFOP * read_copy_indir(const char * line)
 PCFOP * read_indir_copy(const char * line)
 {
   char buf[LINE_MAX], *bitr;
-  PCFOP * ret = malloc(sizeof(PCFOP));
-  struct copy_op_data * data = malloc(sizeof(struct copy_op_data));
+  PCFOP * ret = (PCFOP *)malloc(sizeof(PCFOP));
+  struct copy_op_data * data = (copy_op_data *)malloc(sizeof(struct copy_op_data));
   uint32_t i = 0;
   check_alloc(ret);
   check_alloc(data);
@@ -404,8 +406,8 @@ PCFOP * read_indir_copy(const char * line)
 PCFOP * read_const(const char * line)
 {
   char buf[LINE_MAX], *bitr;
-  PCFOP * ret = malloc(sizeof(PCFOP));
-  struct const_op_data * data = malloc(sizeof(struct const_op_data));
+  PCFOP * ret = ( PCFOP *) malloc(sizeof(PCFOP));
+  struct const_op_data * data = ( const_op_data *)malloc(sizeof(struct const_op_data));
 
   check_alloc(ret);
   check_alloc(data);
@@ -629,8 +631,8 @@ PCFOP * read_join(const char * line)
 PCFOP * read_mkptr(const char * line)
 {
   char buf[LINE_MAX], *bitr;
-  PCFOP * ret = malloc(sizeof(PCFOP));
-  uint32_t * data = malloc(sizeof(uint32_t));
+  PCFOP * ret = ( PCFOP * )malloc(sizeof(PCFOP));
+  uint32_t * data = (uint32_t * )malloc(sizeof(uint32_t));
 
   check_alloc(ret);
   check_alloc(data);
@@ -704,7 +706,7 @@ PCFOP * read_call(const char * line)
           assert(buf[strlen(buf)-1] == '"');
           buf[strlen(buf)-1] = '\0';
 
-          ent->key = malloc(strlen(buf)+1);
+          ent->key = (char*)malloc(strlen(buf)+1);
           strcpy(ent->key, buf);
           data->target = ent;
         }
@@ -763,7 +765,7 @@ PCFOP * read_branch(const char * line)
           assert(buf[strlen(buf)-1] == '"');
           buf[strlen(buf)-1] = '\0';
 
-          ent->key = malloc(strlen(buf)+1);
+          ent->key = (char*)malloc(strlen(buf)+1);
           strcpy(ent->key, buf);
           data->target = ent;
         }
@@ -1163,7 +1165,7 @@ uint32_t read_bob_length(const char * fname)
 
 char* get_alice_input(uint32_t length, const char* fname){
   FILE * cnf;
-  char * alice_in = malloc(sizeof(char)*length);
+  char * alice_in = (char*) malloc(sizeof(char)*length);
   cnf = fopen(fname,"r");
   // alice's input is on the first line.
   // read length characters into alice_in
@@ -1174,7 +1176,7 @@ char* get_alice_input(uint32_t length, const char* fname){
 
 char* get_bob_input(uint32_t length, const char* fname){
   FILE * cnf;
-  char * bob_in = malloc(sizeof(char)*length);
+  char * bob_in = (char*)malloc(sizeof(char)*length);
   char discard[LINE_MAX];
   cnf = fopen(fname,"r");
   // bob's input is on the second line

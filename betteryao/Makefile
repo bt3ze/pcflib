@@ -59,11 +59,11 @@ pcflib_new: pcflib_new.o
 #debug: ../pcflib.c ../pcflib.h
 #	gcc -Wall -Werror -c -fPIC ../pcflib.c -g
 
-pcflib.o: ../pcflib.c ../pcflib.h
-	gcc -Wall -Werror -c -fPIC ../pcflib.c -g -DBETTERYAO
+pcflib.o: ../pcflib.cpp ../pcflib.h
+	gcc -Wall -Werror -c -fPIC ../pcflib.cpp -g -DBETTERYAO
 
-opdefs.o: ../opdefs.c ../pcflib.h ../opdefs.h 
-	gcc -Wall -Werror -c -fPIC ../opdefs.c -g -DBETTERYAO
+opdefs.o: ../opdefs.cpp ../pcflib.h ../opdefs.h 
+	gcc -Wall -Werror -c -fPIC ../opdefs.cpp -g -DBETTERYAO
 
 
 #alsz.o:  $(OTE)/ot/*.cpp

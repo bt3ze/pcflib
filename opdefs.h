@@ -4,6 +4,18 @@
 #include <search.h>
 #include "pcflib.h"
 
+
+void copy_key1(void *, void*);
+/*
+#include <time.h>
+#define BILN 1E9
+static double copy_time = 0.0;
+static double buffer_time = 0.0;
+static int num_copies = 0;
+static int num_buffers = 0;
+static struct timespec copy_start, copy_end;
+*/
+
 struct clear_op_data
 {
   uint32_t localsize;
