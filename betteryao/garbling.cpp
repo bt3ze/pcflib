@@ -80,9 +80,9 @@ void genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i & key2, Bytes & o
   // this function implements half-gate generation by
   // Zahur, Rosulek, and Evans
 
-  assert(a1==0||a1==1);
-  assert(a2==0||a2==1);
-  assert(a3==0||a3==1);
+  //assert(a1==0||a1==1);
+  //assert(a2==0||a2==1);
+  //assert(a3==0||a3==1);
   
   //double start = MPI_Wtime();
 
