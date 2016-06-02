@@ -1,0 +1,108 @@
+parallel garbling notes:
+
+when we do not know the input gates to an instruction, we must make the conservative assumption that _all_ instructions are predecessors. so we get a kind of funneling.
+-- case: indir_copy
+         copy_indir?
+
+
+idea:
+        assign predecessor and successors to every op
+        predecessors all use data on which the op depends
+        successors will use the data
+        must maintain both lists for each op in order to assign flags
+        use flags to determine if any op is ready to be executed
+        execute instructions out of order
+
+- need lookup for who last owned value:
+  map: wire number -> instruction #
+
+
+
+specs: op, preds, and succs
+
+bits
+(BITS :dest (dest-list) :op1 wire1)  
+       preds: next to use wire1
+       succs: last to use (d for d in dest-list)
+
+gate
+(GATE :dest dst :op1 op1 :op2 op2 :truth-table tt)
+       preds: last to use op1,op2
+       succs: next to use dst
+
+const
+(CONST :DEST dst :OP1 op1 )
+       preds: last to use dst
+       succs: next to use dst
+
+add,sub,mul
+(ADD :dest dst :op1 op1 :op2 op2)
+      preds: last to use op1,op2
+      succs: next to use dst
+
+initbase
+(INITBASE :BASE base)
+       preds: none/previous instruction
+       succs: label immediately following
+
+clear
+(CLEAR :LOCALSIZE lsize ) // sets the first lsize 
+       preds: label immediately preceding
+       succs: next to use anything in lsize
+
+copy
+(COPY :DEST dst :OP1 op1 :OP2 len )
+      preds: last to use op1 through op1+len
+      succs: next to use dest through dest+len
+
+mkptr
+(MKPTR :DEST dst )
+      preds: last to use dst
+      succs: next to use dst
+
+
+// copy-indir and indir-copy are bottlenecks
+// when we reach one, we much process everything else in the queue before we can proceed
+// this is the cost of pointers, unless we update our preds and succs dynamically
+
+copy-indir
+(COPY-INDIR :DEST dst :OP1 src :OP2 len )
+      preds: last to use (src, src+len)
+      succs: all following instructions (non dynamic)
+this is a tough one, because it's hard to know what the destination will be
+      "block"
+            
+indir-copy
+(INDIR-COPY :DEST dst :OP1 src :OP2 len )
+      preds: all previous instructions (non dynamic)
+      succs: all following instructions (non dynamic)
+      "block"
+
+call
+(CALL :NEWBASE nbase :FNAME name )
+     preds: all previous instructions (since the stack will be set up immediately before)
+     succs: function called with name (and instruction immediately after)
+     "block"
+
+ret
+(RET :VALUE wireptr )
+     preds: all previous instructions
+     succs: instruction following the call
+     "block"
+
+branch
+(BRANCH :CND cnd-wire :TARG lbl )
+     preds: last to use cnd wire
+     succs: lbl pointing to, instruction following (pick)
+
+label
+(LABEL :STR lblname )
+     preds: prev instruction, branches pointing to it 
+            in case branches point to it, only need to check that lower-
+            numbered predecessors have passed. otherwise must add to ready queue after every branch instruction (if chosen)
+     succs: next instruction
+
+join
+(JOIN :DEST dst-wire :OP1 (list of input wires) )
+    preds: last to use input wires
+    succs: next to use dst-wire

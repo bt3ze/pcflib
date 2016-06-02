@@ -48,6 +48,9 @@ extern "C" {
 #define BILLION 1E9
   //static double accum = 0.0;
 
+#define NUM_WIRES 200000
+
+  enum pcfops_t {GATE_OP,BITS_OP,CONST_OP,ADD_OP,SUB_OP,MUL_OP,INITBASE_OP,CLEAR_OP,COPY_OP,MKPTR_OP,COPY_INDIR_OP,INDIR_COPY_OP,CALL_OP,RET_OP,BRANCH_OP,LABEL_OP,JOIN_OP };
 
   struct PCFState;
 
@@ -55,6 +58,7 @@ extern "C" {
 typedef struct PCFOP {
   void * data;
   void (* op)(struct PCFState*, struct PCFOP*);
+  pcfops_t type;
 }PCFOP;
 
 typedef struct PCFGate {

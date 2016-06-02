@@ -77,6 +77,7 @@ PCFOP * read_label(const char * line, struct PCFState * st, uint32_t iptr)
   check_alloc(ret);
 
   ret->op = nop;
+  ret->type = LABEL_OP;
 
   bitr = buf;
   
@@ -136,6 +137,7 @@ PCFOP * read_initbase(const char * line)
   check_alloc(ret);
 
   ret->op = initbase_op;
+  ret->type = INITBASE_OP;
 
   uint32_t base;
   bitr = buf;
@@ -166,6 +168,7 @@ PCFOP * read_gate(const char * line)
   check_alloc(data);
   bitr = buf;
   ret->op = gate_op;
+  ret->type = GATE_OP;
   ret->data = data;
 
   data->tag = TAG_INTERNAL;
@@ -225,8 +228,9 @@ PCFOP * read_copy(const char * line)
   check_alloc(data);
   bitr = buf;
   ret->op = copy_op;
+  ret->type = COPY_OP;
   ret->data = data;
-
+  
   bitr[0] = '\0';
   for(i = 0; i < 3; i++)
     {
@@ -324,6 +328,7 @@ PCFOP * read_copy_indir(const char * line)
   check_alloc(data);
   bitr = buf;
   ret->op = copy_indir_op;
+  ret->type = COPY_INDIR_OP;
   ret->data = data;
 
   bitr[0] = '\0';
@@ -369,6 +374,7 @@ PCFOP * read_indir_copy(const char * line)
   check_alloc(data);
   bitr = buf;
   ret->op = indir_copy_op;
+  ret->type = INDIR_COPY_OP;
   ret->data = data;
 
   bitr[0] = '\0';
@@ -416,6 +422,7 @@ PCFOP * read_const(const char * line)
   bitr = buf;
 
   ret->op = const_op;
+  ret->type = CONST_OP;
   ret->data = data;
 
   bitr[0] = '\0';
@@ -489,6 +496,7 @@ PCFOP * read_bits(const char * line)
   check_alloc(data);
 
   ret->op = bits_op;
+  ret->type = BITS_OP;
   ret->data = data;
   bitr = buf;
 
@@ -564,6 +572,7 @@ PCFOP * read_join(const char * line)
   check_alloc(data);
 
   ret->op = join_op;
+  ret->type = JOIN_OP;
   ret->data = data;
   bitr = buf;
 
@@ -638,6 +647,7 @@ PCFOP * read_mkptr(const char * line)
   check_alloc(data);
 
   ret->op = mkptr_op;
+  ret->type = MKPTR_OP;
   ret->data = data;
 
   bitr = buf;
@@ -672,6 +682,7 @@ PCFOP * read_call(const char * line)
   check_alloc(data);
 
   ret->op = call_op;
+  ret->type = CALL_OP;
   ret->data = data;
   bitr = buf;
 
@@ -731,6 +742,7 @@ PCFOP * read_branch(const char * line)
   check_alloc(data);
 
   ret->op = branch_op;
+  ret->type = BRANCH_OP;
   ret->data = data;
   bitr = buf;
 
@@ -782,6 +794,7 @@ PCFOP * read_ret(const char * line)
 {
   PCFOP * ret = (PCFOP*)malloc(sizeof(PCFOP));
   ret->op = ret_op;
+  ret->type = RET_OP;
   return ret;
 }
 
@@ -795,6 +808,7 @@ PCFOP * read_clear(const char * line)
   check_alloc(data);
 
   ret->op = clear_op;
+  ret->type = CLEAR_OP;
 
   bitr = buf;
   bitr[0] = '\0';
@@ -880,7 +894,7 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void (*co
   uint32_t icount = 0;
   uint32_t i = 0;
 
-  uint32_t num_wires = 200000;
+  uint32_t num_wires = NUM_WIRES;
 
   ret = (PCFState*)malloc(sizeof(struct PCFState));
   check_alloc(ret);
@@ -1012,8 +1026,12 @@ void finalize(PCFState * st)
   //    if(st->wires[i].keydata != 0)
   //      st->delete_key(st->wires[i].keydata);
   //  } 
-  free(st->wires);
-  //  free(st);
+  uint32_t i = 0;
+  for(i=0;i< NUM_WIRES;i++){
+    free(st->wires[i].keydata);
+  }
+  //  free(st->wires);
+  free(st);
   
   //  fprintf(stderr,"done finalize\n");
   
@@ -1036,8 +1054,6 @@ struct PCFGate * get_next_gate(struct PCFState * st)
   while((st->curgate == 0) && (st->done == 0))
   {
       // if curgate is 0, why are we executing things?
-
-    //fprintf(stderr,"curgate: %p",st->curgate);
 
       // call the instruction's op function
 

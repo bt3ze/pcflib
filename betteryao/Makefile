@@ -6,7 +6,7 @@ LIBS       =  -lpbc -lgmp -lcrypto -llog4cxx -lpthread #-lgmpxx
 AESNI = -DAESNI #turn this flag on/off for encryption modes
 HEADERS    =  Algebra.h Aes.h Bytes.h Env.h NetIO.h Prng.h Commitment.h \
 	 #   Circuit.h ClawFree.h  
-OBJS       =  Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o Commitment.o # pcflib_new.o opdefs_new.o
+OBJS       =  Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o Commitment.o garbling.o # pcflib_new.o opdefs_new.o
 #OLDGARB	   = garbled_circuit.o garbled_circuit_hbc.o garbled_circuit_m.o  # 
 GARBLES    = GarbledCircuit.o # 
 #OTEXTENSION = ot-ot.o otextension.o
@@ -103,6 +103,9 @@ server : ipserver.cpp Bytes.o Env.o NetIO.o
 
 GarbledCircuit.o: Aes.h Bytes.h Env.h Prng.h GarbledCircuit.h GarbledCircuit.cpp
 	$(MPI_CXX) -msse2 -maes $(AESNI) $(CXX_CFLAGS) -c GarbledCircuit.cpp
+
+garbling.o: garbling.h Aes.h Bytes.h 
+	$(MPI_CXX) -msse2 -maes $(AESNI) $(CXX_CFLAGS) -c garbling.cpp
 
 Env.o : Algebra.h Bytes.h NetIO.h Env.h Env.cpp  #Circuit.h   ClawFree.h 
 	$(CXX) $(CXX_CFLAGS) -c Env.cpp 

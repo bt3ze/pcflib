@@ -63,6 +63,7 @@
 #include <xmmintrin.h>              /* SSE instructions and _mm_malloc */
 #include <emmintrin.h>              /* SSE2 instructions               */
 #include <openssl/aes.h>
+#include <stdint.h>
 
 
   // new fixed-key AES encryption

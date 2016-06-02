@@ -32,11 +32,6 @@ void *evl_next_gate(struct PCFState *st, struct PCFGate *gate);
 
 #define MESSAGE_LIMIT 300
 
-#define  _mm_extract_epi8(x, imm) \
-        ((((imm) & 0x1) == 0) ?   \
-	_mm_extract_epi16((x), (imm) >> 1) & 0xff : \
-	_mm_extract_epi16( _mm_srli_epi16((x), 8), (imm) >> 1))
-
 const int MAX_OUTPUT_SIZE = 1024;
 
 void print128_num(__m128i var);
@@ -55,8 +50,8 @@ static double copy_time = 0.0;
 static double buffer_time = 0.0;
 static int num_copies = 0;
 static int num_buffers = 0;
-//  static double btime2 = 0.0;
 static struct timespec copy_start, copy_end;
+
 static struct timespec buffer_start, buffer_end;
 
 static int num_b_cpy = 0;
@@ -179,8 +174,8 @@ protected:
     void evaluate_Gate(PCFGate* current_Gate, __m128i &current_key, Bytes & garbling_bufr);
 
  
-    void genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, byte a1, byte a2, byte a3); 
-    void evlHalfGatePair(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr); 
+    //void genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, byte a1, byte a2, byte a3); 
+    //void evlHalfGatePair(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr); 
     
     void genStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & out_bufr,uint8_t truth_table);
     void genStandardGate_old(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & out_bufr,uint8_t truth_table);
