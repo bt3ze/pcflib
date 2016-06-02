@@ -351,14 +351,14 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
 
   if(current_gate->tag == TAG_INTERNAL){
     // actual gate
-    clear_garbling_bufr();
+    //clear_garbling_bufr();
     generate_Gate(current_gate,current_key,m_garbling_bufr);
     increment_index();
   
   } else if(current_gate->tag == TAG_INPUT_A){
 
     // fprintf(stdout, "Alice Input!");
-    clear_garbling_bufr();
+    //clear_garbling_bufr();
     generate_Alice_Input(current_gate, current_key, m_garbling_bufr);
 
     // send two ciphertexts
@@ -374,7 +374,7 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
   } else if (current_gate->tag == TAG_OUTPUT_A) {
     
     // fprintf(stdout,"Alice Output!\n");
-    clear_garbling_bufr();
+    //clear_garbling_bufr();
     generate_Alice_Output(current_gate,current_key, m_garbling_bufr);
     increment_index();
     // return &current_key;
@@ -383,7 +383,7 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
 
     // fprintf(stdout,"Bob Output!\n");
     
-    clear_garbling_bufr();
+    //clear_garbling_bufr();
     generate_Bob_Output(current_gate, current_key, m_garbling_bufr);
     
     Bytes tmp;
@@ -554,11 +554,17 @@ void GarbledCircuit::generate_Alice_Input(PCFGate* current_gate, __m128i &curren
     output_keys[1] = _mm_xor_si128(output_keys[1], _mm_xor_si128(current_key,m_R));
 
     
+    size_t keysize = Env::key_size_in_bytes();
     // send the output keys to Eval for decryption    
-    append_m128i_to_Bytes(output_keys[0],garbling_bufr);
-    append_m128i_to_Bytes(output_keys[1],garbling_bufr);
+    //append_m128i_to_Bytes(output_keys[0],garbling_bufr);
+    //append_m128i_to_Bytes(output_keys[1],garbling_bufr);
 
-    assert(garbling_bufr.size() == 2*Env::key_size_in_bytes());
+    //  _mm_storeu_si128(reinterpret_cast<__m128i*>(&garbling_bufr[0]),num);
+    _mm_storeu_si128(reinterpret_cast<__m128i*>(&garbling_bufr[0]),*reinterpret_cast<__m128i*>(&output_keys[0]));
+    _mm_storeu_si128(reinterpret_cast<__m128i*>(&garbling_bufr[0]+keysize),*reinterpret_cast<__m128i*>(&output_keys[1]));
+
+
+    //assert(garbling_bufr.size() == 2*Env::key_size_in_bytes());
     send_half_gate(garbling_bufr);
 
 }
@@ -574,7 +580,7 @@ void GarbledCircuit::evaluate_Alice_Input(PCFGate* current_gate, __m128i &curren
   //garbling_bufr = read_half_gate();
   read_half_gate(garbling_bufr);
 
-  assert(garbling_bufr.size() == 2*Env::key_size_in_bytes());
+  //assert(garbling_bufr.size() == 2*Env::key_size_in_bytes());
   
   // find the input ciphertext that corresponds to Eval's chosen bit
   uint32_t bit = get_Input_Parity(current_gate->wire1);
@@ -1059,7 +1065,7 @@ void GarbledCircuit::send_full_gate(const Bytes &buf){
   //std::cout << "send full gate " << std::endl << buf.to_hex() << std::endl; 
 
 #ifdef GRR
- num_comms++;
+  num_comms++;
   clock_gettime(CLOCK_REALTIME, &comm_start);
 
 
