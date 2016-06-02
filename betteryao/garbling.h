@@ -44,18 +44,35 @@ void Double(__m128i & key,const __m128i & clear_mask);
    it is destructive of key so must make copies of the inputs first
    it returns H(K) = pi(L) xor L where L = 2key ^ tweak
  */
-void H_Pi(__m128i & destination, __m128i &key, __m128i & tweak, const __m128i & clear_mask,  const AES_KEY_J & fixed_key);
-void H_Pi256(__m128i & destination, __m128i &key1, __m128i &key2, __m128i & tweak,const __m128i & clear_mask,const AES_KEY_J & fixed_key);
+void H_Pi(__m128i & destination, __m128i &key, __m128i & tweak,
+            const __m128i & clear_mask,
+            const AES_KEY_J & fixed_key);
+
+void H_Pi256(__m128i & destination, __m128i &key1, __m128i &key2,
+               __m128i & tweak, const __m128i & clear_mask,
+               const AES_KEY_J & fixed_key);
 
 
 // half gate declarations
-void genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, const byte a1, const byte a2,const byte a3,const size_t keysize, const __m128i & clear_mask, const AES_KEY_J & fixed_key ,const __m128i & R, const uint32_t j1, const uint32_t j2);
+void genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i & key2, Bytes & out_bufr,
+                       const byte a1, const byte a2,const byte a3,const size_t keysize,
+                       const __m128i & clear_mask, const AES_KEY_J & fixed_key ,
+                       const __m128i & R, const uint32_t j1, const uint32_t j2);
 
-void evlHalfGatePair(__m128i& cur_key, __m128i & key1, __m128i & key2, Bytes & in_bufr, const size_t keysize, const __m128i & clear_mask, const AES_KEY_J & fixed_key,const uint32_t j1,const uint32_t j2);
+void evlHalfGatePair(__m128i& cur_key, __m128i & key1, __m128i & key2, Bytes & in_bufr,
+                       const size_t keysize, const __m128i & clear_mask,
+                       const AES_KEY_J & fixed_key, const uint32_t j1,const uint32_t j2);
 
 // standard gate declarations
-void genStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, uint8_t truth_table,const __m128i & R,const size_t keysize, const __m128i & clear_mask,const __m128i & fixed_key, const uint32_t j1);
-void evlStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr,const size_t keysize,const uint32_t j1);
+void genStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2,
+                       Bytes & out_bufr, uint8_t truth_table, const size_t keysize,
+                       const __m128i & clear_mask, const AES_KEY_J & fixed_key,
+                       const __m128i & R, const uint32_t j1);
+
+void evlStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2,
+                       Bytes & in_bufr, const size_t keysize,
+                       const __m128i & clear_mask, const AES_KEY_J & fixed_key,
+                       const uint32_t j1);
 
 
 

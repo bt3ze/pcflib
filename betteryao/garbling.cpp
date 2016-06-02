@@ -39,7 +39,8 @@ void Double(__m128i & key, const __m128i & clear_mask){
    it is destructive of key so must make copies of the inputs first
    it returns H(K) = pi(L) xor L where L = 2key ^ tweak
  */
-void H_Pi(__m128i & destination, __m128i &key, const __m128i & tweak,const __m128i & clear_mask, const AES_KEY_J & fixed_key){
+void H_Pi(__m128i & destination, __m128i &key, const __m128i & tweak,
+          const __m128i & clear_mask, const AES_KEY_J & fixed_key){
   __m128i K; // ,K1;
 
   Double(key, clear_mask);
@@ -213,7 +214,7 @@ void evlHalfGatePair(__m128i &current_key, __m128i & key1, __m128i & key2, Bytes
 }  
 
 
-void genStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, uint8_t truth_table,const __m128i & R,const size_t keysize,const __m128i & clear_mask,const AES_KEY_J & fixed_key ,const uint32_t j1){
+void genStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, uint8_t truth_table, const size_t keysize,const __m128i & clear_mask,const AES_KEY_J & fixed_key, const __m128i & R, const uint32_t j1){
 
   // X and Y are input, Z is output
   __m128i X[2], Y[2], Z[2];
@@ -299,7 +300,7 @@ void genStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes
 }
 
 
-void evlStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr,const size_t keysize,const __m128i & clear_mask,const AES_KEY_J & fixed_key,const uint32_t j1){
+void evlStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr, const size_t keysize, const __m128i & clear_mask, const AES_KEY_J & fixed_key, const uint32_t j1){
   __m128i garble_key[2], aes_plaintext, garble_ciphertext;
   Bytes tmp;
   __m128i a;
@@ -333,7 +334,8 @@ void evlStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes
   //  __m128i key1_in = garble_key[0];
   // __m128i key2_in = garble_key[1];
   //H_Pi256(garble_ciphertext, key1_in, key2_in, tweak, m_clear_mask, m_fixed_key);
-  H_Pi256(garble_ciphertext, garble_key[0], garble_key[1], tweak, clear_mask, fixed_key);
+  H_Pi256(garble_ciphertext, garble_key[0], garble_key[1],
+          tweak, clear_mask, fixed_key);
 
 #endif
   

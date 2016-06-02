@@ -8,6 +8,7 @@
 #include "Prng.h"
 #include "Aes.h"
 #include "Bytes.h"
+#include "garbling.h"
 
 #ifdef __CPLUSPLUS
 extern "C" {
@@ -175,12 +176,10 @@ protected:
 
  
     //void genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i & key2, Bytes & out_bufr, byte a1, byte a2, byte a3); 
-    //void evlHalfGatePair(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr); 
     
-    void genStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & out_bufr,uint8_t truth_table);
-    void genStandardGate_old(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & out_bufr,uint8_t truth_table);
+    //void genStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & out_bufr,uint8_t truth_table);
 
-    void evlStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr);
+    //void evlStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr);
 
     void xor_Gate(__m128i & key1, __m128i & key2, __m128i &current_key);
 

@@ -6,9 +6,9 @@ LIBS       =  -lpbc -lgmp -lcrypto -llog4cxx -lpthread #-lgmpxx
 AESNI = -DAESNI #turn this flag on/off for encryption modes
 HEADERS    =  Algebra.h Aes.h Bytes.h Env.h NetIO.h Prng.h Commitment.h \
 	 #   Circuit.h ClawFree.h  
-OBJS       =  Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o Commitment.o garbling.o # pcflib_new.o opdefs_new.o
+OBJS       =  Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o Commitment.o # pcflib_new.o opdefs_new.o
 #OLDGARB	   = garbled_circuit.o garbled_circuit_hbc.o garbled_circuit_m.o  # 
-GARBLES    = GarbledCircuit.o # 
+GARBLES    =  garbling.o  GarbledCircuit.o #
 #OTEXTENSION = ot-ot.o otextension.o
 #OT-UTILS =  parse_options.o cbitvector.o
 #OT-CRYPTO = crypto.o ecc-pk-crypto.o gmp-pk-crypto.o
@@ -29,19 +29,19 @@ MACROS    = macros.cpp
 #MIRACL_LIB = -lpthread $(OTE)/util/Miracl/miracl.a -lssl
 
 
-all : pcflib pcflib otextension.o ot-ot.o ot-crypto.o ot-util.o betteryao5
+all : pcflib by5-hbc # otextension.o ot-ot.o ot-crypto.o ot-util.o betteryao5
 
-betteryao: $(MAINS) $(OBJS) $(OLDGARB)
-	$(MPI_CXX) -o evl -DEVL_CODE $(CXX_CFLAGS) $^ $(LIBS)
-	$(MPI_CXX) -o gen -DGEN_CODE $(CXX_CFLAGS) $^ $(LIBS)
+#betteryao: $(MAINS) $(OBJS) $(OLDGARB)
+#	$(MPI_CXX) -o evl -DEVL_CODE $(CXX_CFLAGS) $^ $(LIBS)
+#	$(MPI_CXX) -o gen -DGEN_CODE $(CXX_CFLAGS) $^ $(LIBS)
 
 #betteryao5: $(MAINS5) $(OBJS) $(GARBLES) $(MACROS) $(OTX) $(OT-ALSZ) $(OT-UTILS) $(OT-CRYPTO)
 #	$(MPI_CXX) -o evl5 -DEVL_CODE -DYAO5 $(CXX_CFLAGS) $^ -I. $(OBJECTS_MIRACL) $(MIRACL_PATH) $(MIRACL_LIB) $(LIBS) 
 #	$(MPI_CXX) -o gen5 -DGEN_CODE -DYAO5 $(CXX_CFLAGS) $^ -I. $(OBJECTS_MIRACL) $(MIRACL_PATH) $(MIRACL_LIB) $(LIBS)
 
-betteryao5: $(MAINS5) $(GARBLES) $(OBJS) $(MACROS)
-	$(MPI_CXX) -o evl5 -DEVL_CODE -DYAO5 $(CXX_CFLAGS) $^ $(LIBS) 
-	$(MPI_CXX) -o gen5 -DGEN_CODE -DYAO5 $(CXX_CFLAGS) $^ $(LIBS)
+#betteryao5: $(MAINS5) $(GARBLES) $(OBJS) $(MACROS)
+#	$(MPI_CXX) -o evl5 -DEVL_CODE -DYAO5 $(CXX_CFLAGS) $^ $(LIBS) 
+#	$(MPI_CXX) -o gen5 -DGEN_CODE -DYAO5 $(CXX_CFLAGS) $^ $(LIBS)
 
 by5-hbc: $(MAINS5HBC) $(GARBLES) $(OBJS) $(MACROS)
 	$(MPI_CXX) -o evl5hbc -DEVL_CODE -DYAO5 $(CXX_CFLAGS) $^ $(LIBS) 
@@ -101,7 +101,7 @@ opdefs.o: ../opdefs.cpp ../pcflib.h ../opdefs.h
 server : ipserver.cpp Bytes.o Env.o NetIO.o
 	$(CXX) -pthread -o server $(CXX_CFLAGS) $(CXX_LFLAGS) $^ $(LIBS)
 
-GarbledCircuit.o: Aes.h Bytes.h Env.h Prng.h GarbledCircuit.h GarbledCircuit.cpp
+GarbledCircuit.o: Aes.h Bytes.h Env.h Prng.h garbling.h GarbledCircuit.h GarbledCircuit.cpp
 	$(MPI_CXX) -msse2 -maes $(AESNI) $(CXX_CFLAGS) -c GarbledCircuit.cpp
 
 garbling.o: garbling.h Aes.h Bytes.h 

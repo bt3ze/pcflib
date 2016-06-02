@@ -6,7 +6,7 @@
 #include <iostream>
 #include <time.h>
 #include <algorithm> 
-#include "garbling.h"
+//#include "garbling.h"
 
 /**
    ACCESSORY FUNCTIONS
@@ -728,13 +728,22 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key, 
     half_gates++;
     clock_gettime(CLOCK_REALTIME, &half_start); 
 
+    uint32_t j1 = increment_index();
+    uint32_t j2 = increment_index();
+
     if(current_gate->truth_table == 0x01){ // AND Gate            
-      genHalfGatePair(current_key, key1, key2, m_garbling_bufr, 0, 0, 0,Env::key_size_in_bytes(),m_clear_mask,m_fixed_key);
+      genHalfGatePair(current_key, key1, key2,
+                      m_garbling_bufr, 0, 0, 0,
+                      Env::key_size_in_bytes(),m_clear_mask,m_fixed_key,
+                      m_R, j1,j2);
       send_half_gate(m_garbling_bufr);
     }
     
     else if(current_gate->truth_table == 0x07){ // OR Gate
-      genHalfGatePair(current_key, key1, key2, m_garbling_bufr, 1, 1, 1,Env::key_size_in_bytes(),m_clear_mask,m_fixed_key);
+      genHalfGatePair(current_key, key1, key2,
+                      m_garbling_bufr, 1, 1, 1,
+                      Env::key_size_in_bytes(),m_clear_mask,m_fixed_key,
+                      m_R, j1,j2);
       send_half_gate(m_garbling_bufr);
     }
     
@@ -760,7 +769,10 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key, 
     other_gates++;
     clock_gettime(CLOCK_REALTIME, &og_start);
     
-    genStandardGate(current_key, key1, key2, garbling_bufr, current_gate->truth_table,Env::key_size_in_bytes(),m_clear_mask, m_fixed_key);
+    uint32_t j1 = increment_index();
+    genStandardGate(current_key, key1, key2, garbling_bufr, 
+                    current_gate->truth_table,Env::key_size_in_bytes(),
+                    m_clear_mask, m_fixed_key, m_R, j1);
     send_full_gate(garbling_bufr);
 
     clock_gettime(CLOCK_REALTIME, &og_end);
@@ -807,18 +819,21 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key, 
     half_gates++;
     clock_gettime(CLOCK_REALTIME, &half_start); 
    
+    uint32_t j1 = increment_index();
+    uint32_t j2 = increment_index();
+
     if(current_gate->truth_table == 0x01){ // AND Gate
       // fprintf(stdout,"AND GATE!\n");
       read_half_gate(garbling_bufr);
       //garbling_bufr = read_half_gate();
-      evlHalfGatePair(current_key, key1,key2, garbling_bufr,Env::key_size_in_bytes(),m_clear_mask,m_fixed_key);
+      evlHalfGatePair(current_key, key1,key2, garbling_bufr,Env::key_size_in_bytes(),m_clear_mask,m_fixed_key,j1,j2);
       
     } 
     else if(current_gate->truth_table == 0x07){ // OR gate
       // fprintf(stdout,"OR GATE!\n");
       //garbling_bufr = read_half_gate();
       read_half_gate(garbling_bufr);
-      evlHalfGatePair(current_key, key1,key2, garbling_bufr,Env::key_size_in_bytes(),m_clear_mask,m_fixed_key);
+      evlHalfGatePair(current_key, key1,key2, garbling_bufr,Env::key_size_in_bytes(),m_clear_mask,m_fixed_key,j1,j2);
       
     }
 
@@ -843,7 +858,8 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key, 
     
     read_full_gate(garbling_bufr);
     //garbling_bufr = read_full_gate();
-    evlStandardGate(current_key, key1, key2, garbling_bufr,Env::key_size_in_bytes(),m_clear_mask, m_fixed_key);      
+    uint32_t j1 = increment_index();
+    evlStandardGate(current_key, key1, key2, garbling_bufr,Env::key_size_in_bytes(),m_clear_mask, m_fixed_key, j1);
       
     clock_gettime(CLOCK_REALTIME, &og_end);
     og_time += ( og_end.tv_sec - og_start.tv_sec )
@@ -947,7 +963,8 @@ void GarbledCircuit::evl_next_hash_row(Bytes & row, Bytes & in_bufr){
   }
     
   __m128i output_key;
-  evlStandardGate(output_key, row_key, row_key, in_bufr,Env::key_size_in_bytes(),m_clear_mask, m_fixed_key);
+  uint32_t j1 = increment_index();
+  evlStandardGate(output_key, row_key, row_key, in_bufr,Env::key_size_in_bytes(),m_clear_mask, m_fixed_key,j1);
   in_bufr.clear();
 
   // now get output bit
