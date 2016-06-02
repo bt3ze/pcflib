@@ -84,8 +84,9 @@ void initbase_op(struct PCFState * st, struct PCFOP * op)
 void mkptr_op(struct PCFState * st, struct PCFOP * op)
 {
   uint32_t idx = *((uint32_t*)op->data);
-  assert(st->wires[idx + st->base].flags == KNOWN_WIRE);
+  //assert(st->wires[idx + st->base].flags == KNOWN_WIRE);
 
+  
   //if(DEBUG_OUTPUT)
   // fprintf(stderr, "Making pointer %d -> %d\n", st->wires[idx + st->base].value, st->wires[idx+st->base].value + st->base);
   
@@ -109,7 +110,7 @@ void const_op(struct PCFState * st, struct PCFOP * op)
   }
   else
     {
-      assert((data->value == 0) || (data->value == 1));
+      //assert((data->value == 0) || (data->value == 1));
       
       //st->copy_key(st->constant_keys[data->value],st->wires[idx].keydata);
       copy_key1(st->constant_keys[data->value],st->wires[idx].keydata);
@@ -121,8 +122,8 @@ void const_op(struct PCFState * st, struct PCFOP * op)
 void add_op(struct PCFState * st, struct PCFOP* op)
 {
   struct arith_op_data * data = (arith_op_data *) op->data;
-  assert(st->wires[st->base + data->op1].flags == KNOWN_WIRE);
-  assert(st->wires[st->base + data->op2].flags == KNOWN_WIRE);
+  //assert(st->wires[st->base + data->op1].flags == KNOWN_WIRE);
+  //assert(st->wires[st->base + data->op2].flags == KNOWN_WIRE);
   st->wires[st->base + data->dest].flags = KNOWN_WIRE;
 
   st->wires[st->base + data->dest].value =
@@ -138,8 +139,8 @@ void add_op(struct PCFState * st, struct PCFOP* op)
 void mul_op(struct PCFState * st, struct PCFOP* op)
 {
   struct arith_op_data * data =(arith_op_data *) op->data;
-  assert(st->wires[st->base + data->op1].flags == KNOWN_WIRE);
-  assert(st->wires[st->base + data->op2].flags == KNOWN_WIRE);
+  //assert(st->wires[st->base + data->op1].flags == KNOWN_WIRE);
+  //assert(st->wires[st->base + data->op2].flags == KNOWN_WIRE);
   st->wires[st->base + data->dest].flags = KNOWN_WIRE;
   st->wires[st->base + data->dest].value =
     st->wires[st->base + data->op1].value *
@@ -161,8 +162,8 @@ void join_op(struct PCFState * st, struct PCFOP * op)
   for(i = data->nsources-1; i >= 0; i--)
     {
       cval = cval << 1;
-      assert(st->wires[data->sources[i] + st->base].flags == KNOWN_WIRE);
-      assert(st->wires[data->sources[i] + st->base].value < 2);
+      //assert(st->wires[data->sources[i] + st->base].flags == KNOWN_WIRE);
+      //assert(st->wires[data->sources[i] + st->base].value < 2);
       cval += st->wires[data->sources[i] + st->base].value;
     }
 
@@ -183,12 +184,7 @@ void bits_op(struct PCFState * st, struct PCFOP * op)
   uint32_t s_idx = data->source + st->base;
   uint32_t i = 0, cval;
 
-  assert(st->wires[s_idx].flags == KNOWN_WIRE);
-  //if(DEBUG_OUTPUT){
-  //  fprintf(stderr,"assertion succeeded. ");
-  //    fprintf(stderr,"value: %x ", st->wires[s_idx].value);
-  // }
-
+  //assert(st->wires[s_idx].flags == KNOWN_WIRE);
 
   cval = st->wires[s_idx].value;
   
@@ -241,9 +237,9 @@ void call_op (struct PCFState * st, struct PCFOP * op)
               idx = idx << 1;
 
               // each wire holding the address must have a wire value (0,1)
-              assert(st->wires[st->base + data->newbase - i].value < 2);
+              //assert(st->wires[st->base + data->newbase - i].value < 2);
                // an input MUST be a known wire.
-              assert(st->wires[st->base + data->newbase - i].flags == KNOWN_WIRE);
+              //assert(st->wires[st->base + data->newbase - i].flags == KNOWN_WIRE);
               // gather bit into index accumulator
               idx += st->wires[st->base + data->newbase - i].value;
             }
@@ -319,8 +315,8 @@ void call_op (struct PCFState * st, struct PCFOP * op)
           for(i = 1; i <= 32; i++)
             {
               idx = idx << 1;
-              assert(st->wires[st->base + data->newbase - i].value < 2);
-              assert(st->wires[st->base + data->newbase - i].flags == KNOWN_WIRE);
+              //assert(st->wires[st->base + data->newbase - i].value < 2);
+              //assert(st->wires[st->base + data->newbase - i].flags == KNOWN_WIRE);
               idx += st->wires[st->base + data->newbase - i].value;
             }
           //st->inp_idx = idx * 32;
@@ -443,8 +439,8 @@ void branch_op(struct PCFState * st, struct PCFOP * op)
  
   uint32_t * target = ( uint32_t *)r->data;
 
-  assert(st->wires[data->cnd_wire + st->base].flags == KNOWN_WIRE);
-  assert(st->wires[data->cnd_wire + st->base].value < 2);
+  //assert(st->wires[data->cnd_wire + st->base].flags == KNOWN_WIRE);
+  //assert(st->wires[data->cnd_wire + st->base].value < 2);
 
   //if(DEBUG_OUTPUT)
   //  fprintf(stderr, "Branch: to %s on w %x\n", data->target->key, st->wires[data->cnd_wire + st->base].value);
@@ -479,13 +475,13 @@ void gate_op(struct PCFState * st, struct PCFOP * op)
       tab = tab >> 1;
     }
 
-  //assert(st->curgate == 0);
-  //assert(data->truth_table < 16);
+  ////assert(st->curgate == 0);
+  ////assert(data->truth_table < 16);
   
   if((st->wires[op1idx].flags != KNOWN_WIRE) || (st->wires[op2idx].flags != KNOWN_WIRE))
     {
       // Time for the callback
-      //assert((st->wires[op1idx].keydata != 0) && (st->wires[op2idx].keydata != 0)); // asserts no null pointers, but asserting not known constant wires is unclear. should be taken care of by the KNOWN_WIRE checks
+      ////assert((st->wires[op1idx].keydata != 0) && (st->wires[op2idx].keydata != 0)); // //asserts no null pointers, but //asserting not known constant wires is unclear. should be taken care of by the KNOWN_WIRE checks
  
       st->curgate = &_gate;
 
@@ -524,14 +520,14 @@ void gate_op(struct PCFState * st, struct PCFOP * op)
   else
     {
       // Check that we are dealing only with bits
-      //assert((st->wires[op1idx].value < 2) && (st->wires[op2idx].value < 2));
-      //assert(((st->wires[op1idx].value) + (2*(st->wires[op2idx].value))) < 4);
+      ////assert((st->wires[op1idx].value < 2) && (st->wires[op2idx].value < 2));
+      ////assert(((st->wires[op1idx].value) + (2*(st->wires[op2idx].value))) < 4);
       
       if((bits[(st->wires[op1idx].value) + (2*(st->wires[op2idx].value))]) >= 2){
         fprintf(stderr, "Problem!\n");
       }
       
-      //      assert((bits[(st->wires[op1idx].value) + (2*(st->wires[op2idx].value))]) < 2);
+      //      //assert((bits[(st->wires[op1idx].value) + (2*(st->wires[op2idx].value))]) < 2);
 
       //st->copy_key(st->constant_keys[bits[(st->wires[op1idx].value) + (2*(st->wires[op2idx].value))]], st->wires[destidx].keydata );
       copy_key1(st->constant_keys[bits[(st->wires[op1idx].value) + (2*(st->wires[op2idx].value))]], st->wires[destidx].keydata );
@@ -552,7 +548,7 @@ void copy_op(struct PCFState * st, struct PCFOP * op)
   uint32_t dest = data->dest + st->base;
   uint32_t source = data->source + st->base;
 
-  assert(data->width > 0);
+  //assert(data->width > 0);
   for(i = 0; i < data->width; i++)
     {
       
@@ -578,7 +574,7 @@ void indir_copy_op(struct PCFState * st, struct PCFOP * op)
   uint32_t dest = st->wires[data->dest + st->base].value;
   uint32_t source = data->source + st->base;
   uint32_t i;
-  assert(data->width > 0);
+  //assert(data->width > 0);
   for(i = 0; i < data->width; i++)
     {
 
@@ -588,18 +584,18 @@ void indir_copy_op(struct PCFState * st, struct PCFOP * op)
       //  }      
       //}
 
-      if(st->wires[source+i].keydata != 0) {
-        //st->copy_key(st->wires[source+i].keydata,st->wires[dest+i].keydata);
-        copy_key1(st->wires[source+i].keydata,st->wires[dest+i].keydata);
+      //if(st->wires[source+i].keydata != 0) {
+      //st->copy_key(st->wires[source+i].keydata,st->wires[dest+i].keydata);
+      copy_key1(st->wires[source+i].keydata,st->wires[dest+i].keydata);
 
-      }
+      //}
       
-      else {
-        //st->copy_key(st->constant_keys[0], st->wires[dest+i].keydata);
-        copy_key1(st->constant_keys[0], st->wires[dest+i].keydata);
+      //else {
+      //st->copy_key(st->constant_keys[0], st->wires[dest+i].keydata);
+      //  copy_key1(st->constant_keys[0], st->wires[dest+i].keydata);
 
-        //st->wires[dest+i].keydata = 0;
-      }
+      //st->wires[dest+i].keydata = 0;
+      //}
       
       st->wires[dest+i].value = st->wires[source+i].value;
       st->wires[dest+i].flags = st->wires[source+i].flags;
@@ -612,7 +608,7 @@ void copy_indir_op(struct PCFState * st, struct PCFOP * op)
   uint32_t dest = data->dest + st->base;
   uint32_t source = st->wires[data->source + st->base].value;
   uint32_t i;
-  assert(data->width > 0);
+  //assert(data->width > 0);
   for(i = 0; i < data->width; i++)
     {
       //if(DEBUG_OUTPUT) {
@@ -622,15 +618,17 @@ void copy_indir_op(struct PCFState * st, struct PCFOP * op)
       // }
 
 
-      if(st->wires[source+i].keydata != 0) {
-        //st->copy_key(st->wires[source+i].keydata, st->wires[dest+i].keydata);
-        copy_key1(st->wires[source+i].keydata, st->wires[dest+i].keydata);
-      } else { 
+      //if(st->wires[source+i].keydata != 0) {
+      //st->copy_key(st->wires[source+i].keydata, st->wires[dest+i].keydata);
+      
+      copy_key1(st->wires[source+i].keydata, st->wires[dest+i].keydata);
+     
+      //  } else { 
+      //        
+      //st->copy_key(st->constant_keys[0], st->wires[dest+i].keydata);
+      //  copy_key1(st->constant_keys[0], st->wires[dest+i].keydata);
         
-        //st->copy_key(st->constant_keys[0], st->wires[dest+i].keydata);
-        copy_key1(st->constant_keys[0], st->wires[dest+i].keydata);
-        
-      }
+      // }
 
       st->wires[dest+i].value = st->wires[source+i].value;
       st->wires[dest+i].flags = st->wires[source+i].flags;
