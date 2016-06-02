@@ -39,8 +39,9 @@ void Double(__m128i & key, const __m128i & clear_mask){
    it is destructive of key so must make copies of the inputs first
    it returns H(K) = pi(L) xor L where L = 2key ^ tweak
  */
-void H_Pi(__m128i & destination, __m128i &key, const __m128i & tweak,
-          const __m128i & clear_mask, const AES_KEY_J & fixed_key){
+void H_Pi(__m128i & destination, __m128i &key, __m128i & tweak,
+          const __m128i & clear_mask,
+          const AES_KEY_J & fixed_key){
   __m128i K; // ,K1;
 
   Double(key, clear_mask);
@@ -55,7 +56,9 @@ void H_Pi(__m128i & destination, __m128i &key, const __m128i & tweak,
 /**
    remember to copy the keys before they enter this function, because it's destructive to key1 and key2
  */
-void H_Pi256(__m128i & destination, __m128i &key1, __m128i &key2,const __m128i & tweak, const __m128i & clear_mask, const AES_KEY_J & fixed_key){
+void H_Pi256(__m128i & destination, __m128i &key1, __m128i &key2,
+             __m128i & tweak, const __m128i & clear_mask,
+             const AES_KEY_J & fixed_key){
   // takes two keys and computes a ciphertest, A la JustGarble
   __m128i K;
   

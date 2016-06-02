@@ -102,10 +102,10 @@ server : ipserver.cpp Bytes.o Env.o NetIO.o
 	$(CXX) -pthread -o server $(CXX_CFLAGS) $(CXX_LFLAGS) $^ $(LIBS)
 
 GarbledCircuit.o: Aes.h Bytes.h Env.h Prng.h garbling.h GarbledCircuit.h GarbledCircuit.cpp
-	$(MPI_CXX) -msse2 -maes $(AESNI) $(CXX_CFLAGS) -c GarbledCircuit.cpp
+	$(MPI_CXX) -msse2 -maes $(AESNI) $(CXX_CFLAGS) -lpthread -c GarbledCircuit.cpp
 
-garbling.o: garbling.h Aes.h Bytes.h 
-	$(MPI_CXX) -msse2 -maes $(AESNI) $(CXX_CFLAGS) -c garbling.cpp
+garbling.o: garbling.h Aes.h Bytes.h garbling.cpp
+	$(MPI_CXX) -msse2 -maes $(AESNI) $(CXX_CFLAGS) -lpthread -c garbling.cpp
 
 Env.o : Algebra.h Bytes.h NetIO.h Env.h Env.cpp  #Circuit.h   ClawFree.h 
 	$(CXX) $(CXX_CFLAGS) -c Env.cpp 

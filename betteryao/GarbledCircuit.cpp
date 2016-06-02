@@ -12,21 +12,6 @@
    ACCESSORY FUNCTIONS
  */
 
-/*
-void *copy_key(void *old_key)
-{
-  __m128i *new_key = 0;
-  if (old_key != 0)
-    {
-      // first argument is size, second argument is allignment
-      new_key = (__m128i*)_mm_malloc(sizeof(__m128i), sizeof(__m128i));
-      *new_key = *reinterpret_cast<__m128i*>(old_key);
-    }
-
-  //print128_num(*new_key);
-  return new_key;
-}
-*/
 
 void copy_key(void* source_key, void * dest_key){
   //  __m128i *new_key = 0; 
@@ -366,14 +351,14 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
 
   if(current_gate->tag == TAG_INTERNAL){
     // actual gate
-    //clear_garbling_bufr();
+    clear_garbling_bufr();
     generate_Gate(current_gate,current_key,m_garbling_bufr);
-    //increment_index();
+    increment_index();
   
   } else if(current_gate->tag == TAG_INPUT_A){
 
     // fprintf(stdout, "Alice Input!");
-    //clear_garbling_bufr();
+    clear_garbling_bufr();
     generate_Alice_Input(current_gate, current_key, m_garbling_bufr);
 
     // send two ciphertexts
@@ -389,16 +374,16 @@ void * GarbledCircuit::gen_Next_Gate(PCFGate *current_gate){
   } else if (current_gate->tag == TAG_OUTPUT_A) {
     
     // fprintf(stdout,"Alice Output!\n");
-    //clear_garbling_bufr();
+    clear_garbling_bufr();
     generate_Alice_Output(current_gate,current_key, m_garbling_bufr);
-    //increment_index();
+    increment_index();
     // return &current_key;
 
   } else if (current_gate->tag == TAG_OUTPUT_B){
 
     // fprintf(stdout,"Bob Output!\n");
     
-    //clear_garbling_bufr();
+    clear_garbling_bufr();
     generate_Bob_Output(current_gate, current_key, m_garbling_bufr);
     
     Bytes tmp;
@@ -437,7 +422,8 @@ void * GarbledCircuit::evl_Next_Gate(PCFGate *current_gate){
   
   if(current_gate->tag == TAG_INTERNAL){
     evaluate_Gate(current_gate,current_key, m_garbling_bufr);
-    m_gate_index++;
+    //m_gate_index++;
+    increment_index();
 
   } else if(current_gate->tag == TAG_INPUT_A){
     
@@ -454,8 +440,7 @@ void * GarbledCircuit::evl_Next_Gate(PCFGate *current_gate){
     // fprintf(stdout,"Alice Output!\n");
     
     evaluate_Alice_Output(current_gate,current_key, m_garbling_bufr);
-
-    m_gate_index++;
+    increment_index();
     //return &current_key;
 
   } else if (current_gate->tag == TAG_OUTPUT_B){
@@ -472,7 +457,7 @@ void * GarbledCircuit::evl_Next_Gate(PCFGate *current_gate){
     append_m128i_to_Bytes(current_key,tmp);
     m_gen_output_labels.push_back(tmp);
 
-    m_gate_index++;
+    increment_index();
     //return &current_key;
     
 } else {
