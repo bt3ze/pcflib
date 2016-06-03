@@ -11,6 +11,7 @@
 
 #include "pcflib.h"
 #include "opdefs.h"
+#include "opflows.h"
 
 void check_alloc(void * ptr)
 {
@@ -1042,8 +1043,13 @@ void finalize(PCFState * st)
 
 
 PCFState * build_tree(struct PCFState *st){
+  uint32_t i;
   
-  
+  // run through the list of ops
+  // building dependencies
+  for(i=0; i< st->icount; i++){
+    apply_flow(st->ops[i],st);
+  }
 
   return st;
 }
@@ -1053,7 +1059,7 @@ void evaluate_circuit(struct PCFState *st){
 
   // will need here a couple of threads
   // because no internet, use a threading abstraction for now
-
+  
   // execute circuit on main thread,
   // dispatching gates in parallel
   
@@ -1063,7 +1069,7 @@ void evaluate_circuit(struct PCFState *st){
 #endif
 
   uint32_t i = 0;
-  
+  i++;
   while(st->done != 0)
     {
       if(st->curgate ==0){
