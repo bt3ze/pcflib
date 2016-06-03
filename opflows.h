@@ -5,7 +5,7 @@
 #include "pcflib.h"
 
 
-void bit_flow(struct PCFState * st, struct PCFOP * op);
+void bits_flow(struct PCFState * st, struct PCFOP * op);
 
 void gate_flow(struct PCFState * st, struct PCFOP * op);
 

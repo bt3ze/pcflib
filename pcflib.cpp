@@ -993,8 +993,15 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void (*co
       PCFOP * op;
       fgets(line, LINE_MAX-1, input);
       op = read_instr(ret, line, icount);
+      op->idx = icount;
+
       ret->ops[icount] = *op;
-      free(op); // is this a good idea after setting the pointer to it?
+      
+      //free(op);
+      // is this a good idea after setting the pointer to it?
+      // read_instr uses malloc, and then ret sets the shallow copy
+      // but I really think free is a mistake
+      
       icount++;
     }
 
@@ -1041,6 +1048,59 @@ void finalize(PCFState * st)
 
 }
 
+void apply_flow(struct PCFState *st, struct PCFOP * op){
+  switch (op->type){
+  case GATE_OP:
+    gate_flow(st,op);
+    break;
+  case BITS_OP:
+    bits_flow(st,op);
+    break;
+  case CONST_OP:
+    const_flow(st,op);
+    break;
+  case ADD_OP:
+  case SUB_OP:
+  case MUL_OP:
+    arith_flow(st,op);
+    break;
+  case INITBASE_OP:
+    initbase_flow(st,op);
+    break;
+  case CLEAR_OP:
+    clear_op(st,op);
+    break;
+  case MKPTR_OP:
+    mkprt_flow(st,op);
+    break;
+  case COPY_INDIR_OP:
+    copy_indir_flow(st,op);
+    break;
+  case INDIR_COPY_OP:
+    indir_copy_flow(st,op);
+    break;
+  case CALL_OP:
+    call_flow(st,op);
+    break;
+  case RET_OP:
+    ret_flow(st,op);
+    break;
+  case BRANCH_OP:
+    branch_flow(st,op);
+    break;
+  case LABEL_OP:
+    label_flow(st,op);
+    break;
+  case JOIN_OP:
+    join_flow(st,op);
+    break;
+  default:
+    fprintf(stdout,"error determining op type!");
+    break;
+  }
+  
+}
+
 
 PCFState * build_tree(struct PCFState *st){
   uint32_t i;
@@ -1048,7 +1108,7 @@ PCFState * build_tree(struct PCFState *st){
   // run through the list of ops
   // building dependencies
   for(i=0; i< st->icount; i++){
-    apply_flow(st->ops[i],st);
+    apply_flow(st,&st->ops[i]);
   }
 
   return st;

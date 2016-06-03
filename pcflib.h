@@ -62,6 +62,8 @@ typedef struct PCFOP {
   
   // bookkeeping for parallelism
   pcfops_t type; // help specify rules for dependency tree
+  uint32_t idx; // know what the index is for comparison with friends
+  uint32_t num_exec; // count the number of times that  
   // predecessors (needed?)
   // successors
   // # times executed?
