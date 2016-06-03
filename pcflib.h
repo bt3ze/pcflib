@@ -56,9 +56,15 @@ extern "C" {
 
   /* This should be immutable -- we should be able to safely make a shallow copy. */
 typedef struct PCFOP {
+  // original information
   void * data;
   void (* op)(struct PCFState*, struct PCFOP*);
-  pcfops_t type;
+  
+  // bookkeeping for parallelism
+  pcfops_t type; // help specify rules for dependency tree
+  // predecessors (needed?)
+  // successors
+  // # times executed?
 }PCFOP;
 
 typedef struct PCFGate {
@@ -101,10 +107,7 @@ typedef struct wire {
      external function. */
   void * keydata;
 } wire;
-
-  void * getWireKey(struct wire *);
-  void setWireKey(struct wire *, void *);
-
+  
 
   // the activation record is used as one would expect
   // it's a linked list that contains return addresses and base pointers
@@ -205,6 +208,11 @@ typedef struct PCFState {
   //  void set_key_copy_function(struct PCFState *, void *(*)(void*));
   void set_key_copy_function(struct PCFState *, void (*f)(void*,void*));
   void set_callback(struct PCFState *, void* (*)(struct PCFState *, struct PCFGate *));
+
+
+  // we will try to make this one execute a parallel evaluation
+  void evaluate_circuit(struct PCFState *st);
+
   PCFGate * get_next_gate(PCFState *);
   //PCFState * load_pcf_file(const char *, void *, void *, void *(*)(void*));
   PCFState * load_pcf_file(const char *, void *, void *, void (*)(void*,void*));
@@ -213,9 +221,9 @@ typedef struct PCFState {
 
   uint32_t get_input_size(PCFState *, uint32_t);
 
-  wire * getWire(struct PCFState *, uint32_t);
+  // wire * getWire(struct PCFState *, uint32_t);
   void * get_wire_key(struct PCFState *, uint32_t);
-  void set_wire_key(struct PCFState *, uint32_t, void *);
+  // void set_wire_key(struct PCFState *, uint32_t, void *);
 
   uint32_t read_alice_length(const char *);
   uint32_t read_bob_length(const char *); 

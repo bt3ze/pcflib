@@ -467,8 +467,6 @@ void gate_op(struct PCFState * st, struct PCFOP * op)
   //        st->wires[op1idx].keydata, st->wires[op2idx].keydata);
 
 
-
-
   for(i = 0; i < 4; i++)
     {
       bits[i] = tab & 0x01;
@@ -481,7 +479,7 @@ void gate_op(struct PCFState * st, struct PCFOP * op)
   if((st->wires[op1idx].flags != KNOWN_WIRE) || (st->wires[op2idx].flags != KNOWN_WIRE))
     {
       // Time for the callback
-      ////assert((st->wires[op1idx].keydata != 0) && (st->wires[op2idx].keydata != 0)); // //asserts no null pointers, but //asserting not known constant wires is unclear. should be taken care of by the KNOWN_WIRE checks
+      ////assert((st->wires[op1idx].keydata != 0) && (st->wires[op2idx].keydata != 0)); // //asserts no null pointers, but asserting not known constant wires is unclear. should be taken care of by the KNOWN_WIRE checks
  
       st->curgate = &_gate;
 
@@ -506,6 +504,7 @@ void gate_op(struct PCFState * st, struct PCFOP * op)
       st->curgate->tag = TAG_INTERNAL;
       
       clock_gettime(CLOCK_REALTIME, &(st->requestStart2));
+      
       //st->copy_key(st->callback(st, st->curgate),st->wires[destidx].keydata);
       copy_key1(st->callback(st, st->curgate),st->wires[destidx].keydata);
       
@@ -523,9 +522,9 @@ void gate_op(struct PCFState * st, struct PCFOP * op)
       ////assert((st->wires[op1idx].value < 2) && (st->wires[op2idx].value < 2));
       ////assert(((st->wires[op1idx].value) + (2*(st->wires[op2idx].value))) < 4);
       
-      if((bits[(st->wires[op1idx].value) + (2*(st->wires[op2idx].value))]) >= 2){
-        fprintf(stderr, "Problem!\n");
-      }
+      //if((bits[(st->wires[op1idx].value) + (2*(st->wires[op2idx].value))]) >= 2){
+      //  fprintf(stderr, "Problem!\n");
+      // }
       
       //      //assert((bits[(st->wires[op1idx].value) + (2*(st->wires[op2idx].value))]) < 2);
 

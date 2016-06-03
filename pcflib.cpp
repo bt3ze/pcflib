@@ -1040,6 +1040,77 @@ void finalize(PCFState * st)
 
 }
 
+
+PCFState * build_tree(struct PCFState *st){
+  
+  
+
+  return st;
+}
+
+
+void evaluate_circuit(struct PCFState *st){
+
+  // will need here a couple of threads
+  // because no internet, use a threading abstraction for now
+
+  // execute circuit on main thread,
+  // dispatching gates in parallel
+  
+
+#ifndef __APPLE__
+  clock_gettime(CLOCK_REALTIME, &(st->requestStart)); 
+#endif
+
+  uint32_t i = 0;
+  
+  while(st->done != 0)
+    {
+      if(st->curgate ==0){
+        //dispatch
+      } else{
+        // take the top off of the ready queue
+        // execute it
+        // add successors to ready queue, if ready
+        // continue
+
+        // in fact, I think this can be evaluated in parallel as well
+
+        /*
+         PCFOP op = readyQueue.pop();
+         // this pop should be atomic and blocking
+         // so only one thread at a time can get it
+         
+         if(op != 0){
+           //
+           
+
+         } else{
+           // nothing on the ready queue
+           // either an error or we just need to wait
+           // figure that out later
+         }
+        */
+
+      }
+      // note that first I am implementing the parallel garbler,
+      // then I can make adaptations to communicate properly with the evaluator
+      // but want to do first construct the parallel infrastructure to run in sequence
+    }
+
+
+
+#ifndef __APPLE__
+  clock_gettime(CLOCK_REALTIME, &(st->requestEnd));
+  st->accum += ( st->requestEnd.tv_sec - st->requestStart.tv_sec )
+    + ( st->requestEnd.tv_nsec - st->requestStart.tv_nsec )
+    / BILLION;
+#endif
+
+}
+
+// this function will change for parallel garbler
+// and really the whole execution paradigm
 struct PCFGate * get_next_gate(struct PCFState * st)
 {
   
@@ -1053,20 +1124,22 @@ struct PCFGate * get_next_gate(struct PCFState * st)
   //fprintf(stderr,"program counter: %u\n",st->PC);
   while((st->curgate == 0) && (st->done == 0))
   {
-      // if curgate is 0, why are we executing things?
+    // if curgate is 0, why are we executing things?
+    // that check is an indicator (a null pointer)
+    // that we are on a non-gate instruction
+
 
       // call the instruction's op function
-
       st->ops[st->PC].op(st, &st->ops[st->PC]);
       // then increment the program counter
       st->PC++;
       // and verify that the PC has not eclipsed the instruction count
-      assert((st->PC < st->icount));
+      //assert((st->PC < st->icount));
     }
 
   //  if((st->curgate == 0) || (st->done != 0))
   // this seems redundant, since st->curgate should only be 0 after the above loop if st->done is nonzero
-
+  // might want to look this up in an old version of PCF - June 3 2016
  
 #ifndef __APPLE__
   clock_gettime(CLOCK_REALTIME, &(st->requestEnd));
@@ -1093,16 +1166,19 @@ void * get_wire_key(struct PCFState * st, uint32_t idx)
 {
   return st->wires[idx].keydata;
 }
-
+/*
 void set_wire_key(struct PCFState * st, uint32_t idx, void * kd)
 {
   setWireKey(&st->wires[idx], kd);
 }
+*/
 
+/*
 wire * getWire(struct PCFState * st, uint32_t idx)
 {
   return &st->wires[idx];
 }
+*/
 
 void set_external_circuit(struct PCFState * st, void * ec)
 {
@@ -1112,16 +1188,6 @@ void set_external_circuit(struct PCFState * st, void * ec)
 void * get_external_circuit(struct PCFState * st)
 {
   return st->external_circuit;
-}
-
-void * getWireKey(struct wire * w)
-{
-  return w->keydata;
-}
-
-void setWireKey(struct wire * w, void * k)
-{
-  w->keydata = k;
 }
 
 void set_callback(struct PCFState * st, void* (*callback)(struct PCFState *,struct PCFGate*))
