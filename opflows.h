@@ -5,36 +5,36 @@
 #include "pcflib.h"
 
 
-void bits_flow(struct PCFState * st, struct PCFOP * op);
+void bits_flow(struct PCFState * st, struct PCFOP * op, uint32_t * owned_by);
 
-void gate_flow(struct PCFState * st, struct PCFOP * op);
+void gate_flow(struct PCFState * st, struct PCFOP * op, uint32_t * owned_by);
 
-void const_flow(struct PCFState * st, struct PCFOP * op);
+void const_flow(struct PCFState * st, struct PCFOP * op, uint32_t * owned_by);
 
 // add, sub, mul
-void arith_flow(struct PCFState * st, struct PCFOP * op);
+void arith_flow(struct PCFState * st, struct PCFOP * op, uint32_t * owned_by);
 
-void initbase_flow(struct PCFState * st, struct PCFOP * op);
+void initbase_flow(struct PCFState * st, struct PCFOP * op, uint32_t * owned_by);
 
-void clear_flow(struct PCFState * st, struct PCFOP * op);
+void clear_flow(struct PCFState * st, struct PCFOP * op, uint32_t * owned_by);
 
-void copy_flow(struct PCFState * st, struct PCFOP * op);
+void copy_flow(struct PCFState * st, struct PCFOP * op, uint32_t * owned_by);
 
-void mkprt_flow(struct PCFState * st, struct PCFOP * op);
+void mkprt_flow(struct PCFState * st, struct PCFOP * op, uint32_t * owned_by);
 
-void copy_indir_flow(struct PCFState * st, struct PCFOP * op);
+void copy_indir_flow(struct PCFState * st, struct PCFOP * op, uint32_t * owned_by);
 
-void indir_copy_flow(struct PCFState * st, struct PCFOP * op);
+void indir_copy_flow(struct PCFState * st, struct PCFOP * op, uint32_t * owned_by);
 
-void call_flow(struct PCFState * st, struct PCFOP * op);
+void call_flow(struct PCFState * st, struct PCFOP * op, uint32_t * owned_by);
 
-void ret_flow(struct PCFState * st, struct PCFOP * op);
+void ret_flow(struct PCFState * st, struct PCFOP * op, uint32_t * owned_by);
 
-void branch_flow(struct PCFState * st, struct PCFOP * op);
+void branch_flow(struct PCFState * st, struct PCFOP * op, uint32_t * owned_by);
 
-void label_flow(struct PCFState * st, struct PCFOP * op);
+void label_flow(struct PCFState * st, struct PCFOP * op, uint32_t * owned_by);
 
-void join_flow(struct PCFState * st, struct PCFOP * op);
+void join_flow(struct PCFState * st, struct PCFOP * op, uint32_t * owned_by);
 
 
 #endif

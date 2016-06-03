@@ -151,16 +151,16 @@ typedef struct PCFState {
   // of all of the functions and is used to look them up
   // during function calls
   struct hsearch_data * labels;
-
+  
   // input size counters
   uint32_t alice_in_size;
   uint32_t bob_in_size;
-
+  
   // these two are indices that deal with how inputs are collected
   int32_t inp_i; // not sure specific purpose
   uint32_t inp_idx; // not sure specific purpose
-
-
+  
+  
   // pointer to the currently evaluated gates
   PCFGate * curgate;
   

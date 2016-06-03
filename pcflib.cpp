@@ -1048,51 +1048,51 @@ void finalize(PCFState * st)
 
 }
 
-void apply_flow(struct PCFState *st, struct PCFOP * op){
+void apply_flow(struct PCFState *st, struct PCFOP * op, uint32_t * table){
   switch (op->type){
   case GATE_OP:
-    gate_flow(st,op);
+    gate_flow(st,op,table);
     break;
   case BITS_OP:
-    bits_flow(st,op);
+    bits_flow(st,op,table);
     break;
   case CONST_OP:
-    const_flow(st,op);
+    const_flow(st,op,table);
     break;
   case ADD_OP:
   case SUB_OP:
   case MUL_OP:
-    arith_flow(st,op);
+    arith_flow(st,op,table);
     break;
   case INITBASE_OP:
-    initbase_flow(st,op);
+    initbase_flow(st,op,table);
     break;
   case CLEAR_OP:
-    clear_op(st,op);
+    clear_flow(st,op,table);
     break;
   case MKPTR_OP:
-    mkprt_flow(st,op);
+    mkprt_flow(st,op,table);
     break;
   case COPY_INDIR_OP:
-    copy_indir_flow(st,op);
+    copy_indir_flow(st,op,table);
     break;
   case INDIR_COPY_OP:
-    indir_copy_flow(st,op);
+    indir_copy_flow(st,op,table);
     break;
   case CALL_OP:
-    call_flow(st,op);
+    call_flow(st,op,table);
     break;
   case RET_OP:
-    ret_flow(st,op);
+    ret_flow(st,op,table);
     break;
   case BRANCH_OP:
-    branch_flow(st,op);
+    branch_flow(st,op,table);
     break;
   case LABEL_OP:
-    label_flow(st,op);
+    label_flow(st,op,table);
     break;
   case JOIN_OP:
-    join_flow(st,op);
+    join_flow(st,op,table);
     break;
   default:
     fprintf(stdout,"error determining op type!");
@@ -1104,11 +1104,18 @@ void apply_flow(struct PCFState *st, struct PCFOP * op){
 
 PCFState * build_tree(struct PCFState *st){
   uint32_t i;
-  
+
+  // table good for the whole circuit, in the worst case
+  // must be cleared for each function though
+  uint32_t * p = (uint32_t *)malloc(sizeof(uint32_t*)*st->icount);
+  for(uint32_t j = 0; j < st->icount; j++){
+    p[j]=0;
+  }
+
   // run through the list of ops
   // building dependencies
   for(i=0; i< st->icount; i++){
-    apply_flow(st,&st->ops[i]);
+    apply_flow(st,&st->ops[i],p);
   }
 
   return st;

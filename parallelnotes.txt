@@ -16,6 +16,25 @@ idea:
 - need lookup for who last owned value:
   map: wire number -> instruction #
 
+architecture:
+        walk through instructions in order
+        dispatch to ready queue or waiting queue
+        --> waiting queue should be small so that it fills up
+        while waiting queue is not full (or blocked), add to ready queue
+        when waiting queue is full, process ready queue until empty
+        resume with waiting queue (if still not ready, pop and add to end)
+        
+        big question: who updates the ready state?
+        do we update the ready state of other nodes when we finish executing an instruction (lock-free, since we can only update to true, or increment upwards in case of gate ops)
+
+
+useful data structures:
+       wires[] - wires table contains indices to each individual wire
+       ops[] - table of all the ops
+       owned_by[] - for reach wire, gives the index of the op that owns the wire
+
+       
+
 
 
 specs: op, preds, and succs
