@@ -1048,7 +1048,7 @@ void finalize(PCFState * st)
 
 }
 
-void apply_flow(struct PCFState *st, struct PCFOP * op, uint32_t * table){
+void apply_flow(struct PCFState *st, struct PCFOP * op, int32_t * table){
   switch (op->type){
   case GATE_OP:
     gate_flow(st,op,table);
@@ -1107,9 +1107,9 @@ PCFState * build_tree(struct PCFState *st){
 
   // table good for the whole circuit, in the worst case
   // must be cleared for each function though
-  uint32_t * p = (uint32_t *)malloc(sizeof(uint32_t*)*st->icount);
-  for(uint32_t j = 0; j < st->icount; j++){
-    p[j]=0;
+  int32_t * p = (int32_t *)malloc(sizeof(int32_t*)*st->icount);
+  for(int32_t j = 0; j < (int32_t)st->icount; j++){
+    p[j]=-1; // note that -1 means "unowned"
   }
 
   // run through the list of ops
@@ -1117,6 +1117,8 @@ PCFState * build_tree(struct PCFState *st){
   for(i=0; i< st->icount; i++){
     apply_flow(st,&st->ops[i],p);
   }
+
+  free(p); // don't need it after the graph has been built
 
   return st;
 }
@@ -1148,6 +1150,11 @@ void evaluate_circuit(struct PCFState *st){
         // continue
 
         // in fact, I think this can be evaluated in parallel as well
+        // note that whenever we get an indir_copy the data ownership analysis fails,
+        // so we must think about some sequentiality
+        // or figure out how to bottleneck until that operation is done 
+        // it can only execute after all those before it
+        // and others can only execute after it is done
 
         /*
          PCFOP op = readyQueue.pop();
