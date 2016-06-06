@@ -1,13 +1,16 @@
-all: pcflib.o  # test pcflib_new.o
+all: pcflib.o opdefs.o opflows.o opgen.o # test pcflib_new.o
 
-pcflib.o: pcflib.c pcflib.h opdefs.h opflows.h
-	gcc -fPIC pcflib.c -c -Wall -Werror -g
+pcflib.o: pcflib.cpp pcflib.h opdefs.h opflows.h opgen.h
+	gcc -fPIC pcflib.cpp -c -Wall -Werror -g
 
 opdefs.o: opdefs.cpp opdefs.h pcflib.h
 	g++ -fPIC opdefs.cpp -c -Wall -Werror -g
 
 opflows.o: opflows.cpp opflows.h opdefs.h pcflib.h
 	g++ -fPIC opflows.cpp -c -Wall -Werror -g
+
+opgen.o: opgen.cpp opdefs.h opgen.h pcflib.h
+	g++ -fPIC opgen.cpp -c -Wall -Werror -g
 
 #pcflib_new.o: pcflib_new.c pcflib_new.h opdefs_new.c
 #	gcc -fPIC pcflib_new.c -c -Wall -Werror -g
@@ -18,11 +21,11 @@ opflows.o: opflows.cpp opflows.h opdefs.h pcflib.h
 #circuitgraph.o: pcflib.h opdefs.h circuitgraph.h circuitgraph.c
 #	gcc -fPIC circuitgraph.c -c -Wall -Werror -g
 
-test: pcflib.o opdefs.o test.c
-	gcc -fPIC -o test test.c pcflib.o opdefs.o -Wall -Werror -g
+#test: pcflib.o opdefs.o test.c
+#	gcc -fPIC -o test test.c pcflib.o opdefs.o -Wall -Werror -g
 
-cirgen: pcflib.o opdefs.o cirgen.c
-	gcc -fPIC -o cirgen cirgen.c pcflib.o opdefs.o -Wall -Werror -g
+#cirgen: pcflib.o opdefs.o cirgen.c
+#	gcc -fPIC -o cirgen cirgen.c pcflib.o opdefs.o -Wall -Werror -g
 
 clean: 
-	rm pcflib.o opdefs.o cirgen test 
+	rm pcflib.o opdefs.o opflows.o opgen.o cirgen test 

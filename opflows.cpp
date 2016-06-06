@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-
+#include <vector>
 
 /**
    in these definitions, we don't need to care much for the state of the stack
@@ -17,12 +17,37 @@
    it must mark that data as owned
    so that data are not used before ready
    or pulled out from beneath us before we use them
+   ^ the above may not be strictly necessarly. i think we may be able to get away
+   with only claiming successors, since future operations really should not ever 
+   have to pull out data before it's used
+   can come back to this later though
+   
+   
  */
+
+#define declare_swap_vars(idx,pred) uint32_t a,b;
+#define set_owner(new_owner,idx) owned_by[idx]=new_owner;
+#define get_owner(old_owner,idx) old_owner = owned_by[idx];
+#define add_pred(succ_op,pred_op)\
+  succ_op.preds.push_back(&pred_op);
+#define add_succ(pred_op, succ_op)\
+  pred_op.succs.push_back(&succ_op);
+
+
+/*
+#define exchange_ownership_and_pointers(pred,dest,idx)        \
+  declare_swap_vars(pred,idx)                                 \
+  get_prev_owner(pred,idx)                                    \
+  set_owner(dest,idx)
+*/
+
 void bits_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
 /*
 (BITS :dest (dest-list) :op1 wire1)  
-       preds: next to use wire1
-       succs: last to use (d for d in dest-list)
+       succs: next to use wire1
+       preds: last to use (d for d in dest-list)
+n successors
+1 predecessor
  */
 {
 
@@ -31,13 +56,24 @@ void bits_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
   struct bits_op_data * data = (bits_op_data *)op->data;
   uint32_t ndests = data->ndests;
   for(uint32_t i = 0; i < ndests;i++){
+    
+    uint32_t old_owner;
+    get_owner(old_owner, data->dests[i]);
+    
+    add_succ((*op),st->ops[old_owner]);
+    add_pred(st->ops[old_owner],(*op));
+    
+    //(*op).succs.push_back(&(st->ops[i]));
+    //    (st->ops[i]).preds.push_back(op);
+
     // get the ith dest
     // set its ownership
-    owned_by[data->dests[i]] = op->idx;
+    set_owner(op->idx,data->dests[i]);
+    //owned_by[data->dests[i]] = op->idx;
   }
   // claim the source
-  owned_by[data->source] = op->idx;
-
+  //owned_by[data->source] = op->idx;
+  set_owner(op->idx,data->source);
 }
 
 
@@ -51,13 +87,19 @@ void join_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
   struct join_op_data * data = (join_op_data *)op->data;
   uint32_t nsources = data->nsources;
   for(uint32_t i = 0; i < nsources;i++){
+
+    add_succ((*op),st->ops[i]);
+    add_pred(st->ops[i],(*op));
+    
     // get the ith source
     // claim it
-    owned_by[data->sources[i]] = op->idx;
+    //owned_by[data->sources[i]] = op->idx;
+    set_owner(op->idx,data->sources[i]);
   }
   // claim the destination
-  owned_by[data->dest] = op->idx;
-
+  //  owned_by[data->dest] = op->idx;
+  set_owner(op->idx,data->dest);
+  
 }
 
 
@@ -69,7 +111,11 @@ void gate_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
  */
 {
   struct PCFGate * data = (struct PCFGate*)op->data;
-  owned_by[data->reswire] = op->idx;
+  //owned_by[data->reswire] = op->idx;
+
+  set_owner(op->idx,data->reswire);
+  set_owner(op->idx,data->wire1);
+  set_owner(op->idx,data->wire2);
 
   //uint32_t op1idx = data->wire1;
   //uint32_t op2idx = data->wire2;
@@ -84,7 +130,9 @@ void const_flow(struct PCFState * st, struct PCFOP * op,int32_t * owned_by)
  */
 {
   struct const_op_data * data = (const_op_data *) op->data;
-  owned_by[data->dest] = op->idx;
+  //owned_by[data->dest] = op->idx;
+  set_owner(op->idx,data->dest);
+
 }
 
 // add, sub, mul
@@ -97,9 +145,12 @@ void arith_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
 {
   struct arith_op_data * data = (arith_op_data *) op->data;
   //uint32_t sum = data->dest + data->op1 + data->op2;
-  owned_by[data->dest] = op->idx;
-  owned_by[data->op1] = op->idx;
-  owned_by[data->op2] = op->idx;
+  //owned_by[data->dest] = op->idx;
+  //owned_by[data->op1] = op->idx;
+  //owned_by[data->op2] = op->idx;
+  set_owner(op->idx, data->dest);
+  set_owner(op->idx, data->op1);
+  set_owner(op->idx, data->op2);
 }
 
 void initbase_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
@@ -125,9 +176,17 @@ void clear_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
 {
   struct clear_op_data * data = (struct clear_op_data*)op->data;
   uint32_t i;
+  //  uint32_t pred;
   for(i = 0; i < data->localsize; i++)
     {
-      owned_by[i] = op->idx;
+      //pred = owned_by[i];
+      //TODO
+      // fill in pred
+
+
+      // set new ownership
+      //owned_by[i] = op->idx;
+      set_owner(op->idx,i);
     }
 
 }
@@ -143,21 +202,31 @@ void copy_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
   uint32_t dest = data->dest;
   uint32_t source = data->source;
   uint32_t i;
+  //  uint32_t pred;
 
   // we need to mark both the source and the destination
   // as owned by this instruction to make sure
   // that nothing changes from beneath us
   for(i = 0; i < data->width; i++)
     {
-      // all of these now owned by this guy
-      owned_by[source + i] = op->idx;
 
+      //      pred = owned_by[source+i];
+      //TODO
+      // fill in pred
+
+      // all of these now owned by this guy
+      //owned_by[source + i] = op->idx;
+      set_owner(op->idx,source+i);
     }
   for(i = 0; i < data->width; i++)
     {
-      // all of these now owned by this guy
-      owned_by[dest + i] = op->idx;
+      //pred = owned_by[dest+i];
+      //TODO
+      // fill in pred
 
+      // all of these now owned by this guy
+      //owned_by[dest + i] = op->idx;
+      set_owner(op->idx,dest+i);
     }
 }
 
@@ -168,11 +237,15 @@ void mkprt_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
       succs: next to use dst
  */
 {
-  // TODO
-  // come back here
   uint32_t idx = *((uint32_t*)op->data);
-  owned_by[idx] = op->idx;
 
+  //uint32_t pred = owned_by[idx];
+  
+  //TODO
+  // fill in pred
+
+  //owned_by[idx] = op->idx;
+  set_owner(op->idx,idx);
 }
 
 void copy_indir_flow(struct PCFState * st, struct PCFOP * op,int32_t * owned_by)
@@ -194,7 +267,8 @@ this is a tough one, because it's hard to know what the destination will be
   for(i = 0; i < data->width; i++)
     {
       // do something (if possible!)
-      owned_by[data->dest+i] = op->idx; 
+      set_owner(op->idx, data->dest+i);
+      //owned_by[data->dest+i] = op->idx; 
     }
   // but very hard to figure out how to claim the source addresses
 }
@@ -214,7 +288,8 @@ void indir_copy_flow(struct PCFState * st, struct PCFOP * op,int32_t * owned_by)
   //assert(data->width > 0);
   for(i = 0; i < data->width; i++)
     {
-      owned_by[source+i] = op->idx; 
+      //owned_by[source+i] = op->idx; 
+      set_owner(op->idx,source+i);
     }
   // but very hard to figure out how to claim the destinations
 }
@@ -223,7 +298,8 @@ void call_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
 /*
 (CALL :NEWBASE nbase :FNAME name )
      preds: all previous instructions (since the stack will be set up immediately before)
-     succs: function called with name (and instruction immediately after)
+     succs: function called with name (and instruction immediately after, which will always depend on data owned by the call instruction if there is a return)
+     note that we may have issues with global data if it's manipulated within function calls. copy-indir and indir-copy really control those accesses
      "block"
  */
 {
@@ -235,31 +311,37 @@ void call_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
   if(strcmp(data->target->key, "alice") == 0)
     {
       for(uint32_t i = 0; i < 32; i++){
-        owned_by[data->newbase + i] = op->idx;
+        //owned_by[data->newbase + i] = op->idx;
+        set_owner(op->idx,data->newbase+i);
       }
     }
   else if(strcmp(data->target->key, "bob") == 0)
     {
       for(uint32_t i = 0; i < 32; i++){
-        owned_by[data->newbase + i] = op->idx;
+        //owned_by[data->newbase + i] = op->idx;
+        set_owner(op->idx,data->newbase+i);
       }
     }
   else if(strcmp(data->target->key, "output_alice") == 0)
     {
       for(uint32_t i = 0; i < 32; i++){
-        owned_by[data->newbase -i-1] = op->idx;
+        //owned_by[data->newbase -i-1] = op->idx;
+        set_owner(op->idx,data->newbase-i-1);
       }
     }
   else if(strcmp(data->target->key, "output_bob") == 0)
     {
       for(uint32_t i = 0; i < 32; i++){
-        owned_by[data->newbase -i-1] = op->idx;
+        //owned_by[data->newbase -i-1] = op->idx;
+        set_owner(op->idx,data->newbase-i-1);
       }
     }
   else
     {
-      //struct activation_record * newtop = (activation_record *)  malloc(sizeof(struct activation_record));
-      
+      for(uint32_t i = 0; i < 32; i++){
+        set_owner(op->idx,data->newbase+i);
+        //owned_by[data->newbase + i] = op->idx;
+      }
     }
 }
 
@@ -307,7 +389,8 @@ void branch_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
   //  st->PC = *target;
   
   struct branch_op_data * data = (struct branch_op_data *)op->data;
-  owned_by[data->cnd_wire] = op->idx;
+  //owned_by[data->cnd_wire] = op->idx;
+  set_owner(op->idx, data->cnd_wire);
 }
 
 void label_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)

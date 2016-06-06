@@ -10,9 +10,9 @@
 #include "Bytes.h"
 #include "garbling.h"
 
-#ifdef __CPLUSPLUS
-extern "C" {
-#endif
+//#ifdef __CPLUSPLUS
+//extern "C" {
+//#endif
 
 #include "../pcflib.h"
 
@@ -26,9 +26,9 @@ void *evl_next_gate(struct PCFState *st, struct PCFGate *gate);
 
 #include "macros.h"
 
-#ifdef __CPLUSPLUS
-}
-#endif
+//#ifdef __CPLUSPLUS
+//}
+//#endif
 
 
 #define MESSAGE_LIMIT 300

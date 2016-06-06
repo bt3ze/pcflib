@@ -29,23 +29,24 @@
 #ifndef __PCFLIB_H
 #define __PCFLIB_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+//#ifdef __cplusplus
+//extern "C" {
+//#endif
 
 #include <stdint.h>
 #include <pthread.h>
+#include <vector>
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
 #include <search.h>
 
-  //  static double btime;
 
 #include <time.h>
 
 #define BILLION 1E9
+  //  static double btime;
   //static double accum = 0.0;
 
 #define NUM_WIRES 200000
@@ -55,6 +56,7 @@ extern "C" {
   struct PCFState;
 
   /* This should be immutable -- we should be able to safely make a shallow copy. */
+  // shallow copies need not be immutable though...
 typedef struct PCFOP {
   // original information
   void * data;
@@ -64,9 +66,19 @@ typedef struct PCFOP {
   pcfops_t type; // help specify rules for dependency tree
   uint32_t idx; // know what the index is for comparison with friends
   uint32_t num_exec; // count the number of times that  
+
   // predecessors (needed?)
   // successors
   // # times executed?
+
+  //uint32_t num_succs;
+  //uint32_t num_preds;
+  //PCFOP * preds;
+  //PCFOP * succs;
+  std::vector<PCFOP*> preds;
+  std::vector<PCFOP*> succs;
+
+
 }PCFOP;
 
 typedef struct PCFGate {
@@ -138,8 +150,8 @@ typedef struct PCFState {
   wire * wires;
   uint32_t wire_table_size;
 
-  // pointer to the ops
-  // come back to this one
+  // pointer to the op table
+  // indexed by order of appearance
   PCFOP * ops;
 
   // instruction count?
@@ -211,9 +223,14 @@ typedef struct PCFState {
   void set_key_copy_function(struct PCFState *, void (*f)(void*,void*));
   void set_callback(struct PCFState *, void* (*)(struct PCFState *, struct PCFGate *));
 
+  // ciruit dependency analysis
+  PCFState * build_tree(struct PCFState * st);
+  void apply_flow(struct PCFState *st, struct PCFOP * op, int32_t * table);
 
   // we will try to make this one execute a parallel evaluation
   void evaluate_circuit(struct PCFState *st);
+
+
 
   PCFGate * get_next_gate(PCFState *);
   //PCFState * load_pcf_file(const char *, void *, void *, void *(*)(void*));
@@ -240,7 +257,7 @@ typedef struct PCFState {
     void make_internal_thread(PCFState * st);
   */
 
-#ifdef __cplusplus
-}
-#endif
+//#ifdef __cplusplus
+//}
+//#endif
 #endif //__PCFLIB_H
