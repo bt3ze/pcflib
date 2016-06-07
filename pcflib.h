@@ -52,6 +52,11 @@
 #define NUM_WIRES 200000
 
   enum pcfops_t {GATE_OP,BITS_OP,CONST_OP,ADD_OP,SUB_OP,MUL_OP,INITBASE_OP,CLEAR_OP,COPY_OP,MKPTR_OP,COPY_INDIR_OP,INDIR_COPY_OP,CALL_OP,RET_OP,BRANCH_OP,LABEL_OP,JOIN_OP };
+  // pcf op type map:
+  // 0 | GATE     4 | SUB        8 | COPY         12 | CALL   16 | JOIN
+  // 1 | BITS     5 | MUL        9 | MKPRT        13 | RET  
+  // 2 | CONST    6 | INITBASE  10 | COPY_INDIR   14 | BRANCH
+  // 3 | ADD      7 | CLEAR     11 | INDIR_COPY   15 | LABEL
 
   struct PCFState;
 

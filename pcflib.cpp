@@ -259,6 +259,7 @@ PCFState * build_tree(struct PCFState *st){
   int32_t * owned_by = (int32_t *)malloc(sizeof(int32_t*)*st->icount);
   for(int32_t j = 0; j < (int32_t)st->icount; j++){
     owned_by[j]=-1; // note that -1 means "unowned"
+    // or should we really set the initial owner of every wire to 0 -- the first instruction?
   }
 
   clock_gettime(CLOCK_REALTIME, &(st->requestStart2));
