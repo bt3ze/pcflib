@@ -96,8 +96,8 @@ n successors
       //add_succ(&st->ops[old_owner],op);
       //add_pred(op,&st->ops[old_owner]);
 
-      op->succs.push_back(old_owner);
-          st->ops[old_owner].preds.push_back(op->idx);
+      op->preds.push_back(old_owner);
+      st->ops[old_owner].succs.push_back(op->idx);
       
     }
      // get the ith dest, set its ownership
