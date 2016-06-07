@@ -258,7 +258,7 @@ PCFState * build_tree(struct PCFState *st){
   // must be cleared for each function though
   int32_t * owned_by = (int32_t *)malloc(sizeof(int32_t*)*st->icount);
   for(int32_t j = 0; j < (int32_t)st->icount; j++){
-    owned_by[j]=-1; // note that -1 means "unowned"
+    owned_by[j]=(unsigned int)-1; // note that -1 means "unowned"
     // or should we really set the initial owner of every wire to 0 -- the first instruction?
   }
 
@@ -274,10 +274,30 @@ PCFState * build_tree(struct PCFState *st){
   clock_gettime(CLOCK_REALTIME, &(st->requestEnd2));
 
   
-  fprintf(stdout,"\nbuild time: %f\n", ( st->requestEnd2.tv_sec - st->requestStart2.tv_sec )
+  for(i=0; i< st->icount; i++){
+    st->ops[i].preds.clear();
+    st->ops[i].succs.clear();
+    apply_flow(st,&st->ops[i],owned_by);
+  }
+
+  fprintf(stdout,"\nbuild time: %f\n",
+          ( st->requestEnd2.tv_sec - st->requestStart2.tv_sec )
           + ( st->requestEnd2.tv_nsec - st->requestStart2.tv_nsec )
           / BILLION);
+  
 
+  for(i=0; i < st->icount;i++){
+    PCFOP * op = &st->ops[i];
+    fprintf(stdout,"idx: %i\ttype: %i\n preds:",i,op->type);
+    for(unsigned int j = 0; j < op->preds.size(); j++){
+      fprintf(stdout,"%i\t",op->preds[j]);
+    }
+    fprintf(stdout,"succs:\t");
+    for(unsigned int j = 0; j < op->succs.size(); j++){
+      fprintf(stdout,"%i\t",op->succs[j]);
+    }
+    fprintf(stdout,"\n");
+  }
   free(owned_by); // don't need it after the graph has been built
 
   return st;
@@ -292,6 +312,18 @@ void evaluate_circuit(struct PCFState *st){
   // execute circuit on main thread,
   // dispatching gates in parallel
   
+
+  // note: we can implement the gate queue as a heap
+  // and execute gates if all of the dependencies have been met
+  // notice that if we arrive at an instruction in the heap
+  // then it should be necessary that all of its predecessors have been executed 
+  // since we start with a topological sort
+  // some checking may still be necessary
+  // but the idea is:
+  // when finished executing an instruction, add all of its successors to the heap
+  // make sure that the heap has unique entries (don't add a gate address twice)
+  // ... unfortunately, a heap might not do such a great job of exploiting parallelism
+  // ... still under design
 
 #ifndef __APPLE__
   clock_gettime(CLOCK_REALTIME, &(st->requestStart)); 

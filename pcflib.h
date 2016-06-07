@@ -80,8 +80,8 @@ typedef struct PCFOP {
   //uint32_t num_preds;
   //PCFOP * preds;
   //PCFOP * succs;
-  std::vector<PCFOP*> preds;
-  std::vector<PCFOP*> succs;
+  std::vector<uint32_t> preds;
+  std::vector<uint32_t> succs;
 
 
 }PCFOP;

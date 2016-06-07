@@ -31,13 +31,24 @@
 #define set_owner(new_owner,idx) owned_by[idx]=new_owner;
 #define get_owner(old_owner,idx) old_owner = owned_by[idx];
 
+
 // the following two macros deal with ops 
-#define add_succ(pred_op, succ_op)\
-  (*pred_op).succs.push_back(&succ_op);
+/*
+#define add_succ(pred_op, succ_op)            \
+  pred_op.succs.push_back(succ_op->idx);
+*/
+void add_succ(PCFOP * pred_op, PCFOP * succ_op){
+  pred_op->succs.push_back(succ_op->idx);
+}
 
-#define add_pred(succ_op,pred_op)\
-  succ_op.preds.push_back(pred_op);
+void add_pred (PCFOP * succ_op, PCFOP* pred_op){
+  succ_op->preds.push_back(pred_op->idx);
+}
 
+/*
+#define add_pred(succ_op,pred_op)          \   
+  succ_op.preds.push_back(pred_op.idx);
+*/
 
 #define DEBUG_OUTPUT 1
 
@@ -79,19 +90,30 @@ n successors
         fprintf(stdout,"BITS succs \t dest: %i\t owner: %i\n", data->dests[i], old_owner);    
         fprintf(stdout,"BITS preds \t pred idx: %i\t pred type %i \t succ id: %i\t succ type %i\n",st->ops[old_owner].idx, st->ops[old_owner].type, op->idx, op->type);        
       }
+      
 
-      add_succ(op,st->ops[old_owner]);
-      add_pred(st->ops[old_owner],op);
+      
+      //add_succ(&st->ops[old_owner],op);
+      //add_pred(op,&st->ops[old_owner]);
+
+      op->succs.push_back(old_owner);
+          st->ops[old_owner].preds.push_back(op->idx);
+      
     }
-
-    // get the ith dest, set its ownership
+     // get the ith dest, set its ownership
     set_owner(op->idx,data->dests[i]);
   }
 
   
   // claim the source
   //owned_by[data->source] = op->idx;
-  set_owner(op->idx,data->source);
+  //set_owner(op->idx,data->source);
+
+
+  for(unsigned int j = 0; j < op->preds.size();j++){
+    fprintf(stdout,"%i\t",op->preds[j]);
+  }
+  fprintf(stdout,"\n");
 }
 
 
@@ -120,8 +142,8 @@ void join_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
         fprintf(stdout,"JOIN\t old_owner: %i \t old_type %i\t op_idx: %i\t op_type %i \n",st->ops[old_owner].idx,st->ops[old_owner].type, op->idx, op->type);
       }
 
-      add_succ(op,st->ops[old_owner]);      
-      add_pred(st->ops[old_owner],op);
+      add_succ(&st->ops[old_owner],op);      
+      add_pred(op,&st->ops[old_owner]);
     }
 
 
@@ -154,14 +176,21 @@ void gate_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
     fprintf(stdout,"GATE\t op_idx: %i \t pred1: %i\t wire1: %i\t pred2: %i\t wire2 %i \t outwire: %i\n", op->idx, pred1, data->wire1, pred2, data->wire2, data->reswire); 
   }
 
-  add_pred(st->ops[pred1],op);
-  add_pred(st->ops[pred2],op);
-  add_succ(op,st->ops[pred1]);
-  add_succ(op,st->ops[pred2]);
+  //add_pred(op,&st->ops[pred1]);
+  //add_pred(op,&st->ops[pred2]);
+  //add_succ(&st->ops[pred1],op);
+  //add_succ(&st->ops[pred2],op);
+  op->preds.push_back(pred1);
+  op->preds.push_back(pred2);
+  st->ops[pred1].succs.push_back(op->idx);
+  st->ops[pred2].succs.push_back(op->idx);
+
+  fprintf(stdout,"indices: %i %i %i / %i %i\n",op->idx, pred1, pred2, op->preds[0], op->preds[1]);
 
   set_owner(op->idx,data->reswire);
-  set_owner(op->idx,data->wire1);
-  set_owner(op->idx,data->wire2);
+  // the gate only really owns the result wire, not the inputs. they might be reused.
+  //  set_owner(op->idx,data->wire1);
+  //set_owner(op->idx,data->wire2);
 
   //uint32_t op1idx = data->wire1;
   //uint32_t op2idx = data->wire2;
@@ -185,8 +214,8 @@ void const_flow(struct PCFState * st, struct PCFOP * op,int32_t * owned_by)
   }
   
   if(old_owner != (uint32_t) -1){
-    add_pred(st->ops[old_owner],op);
-    add_succ(op, st->ops[old_owner]);
+    add_succ(&st->ops[old_owner],op);      
+    add_pred(op,&st->ops[old_owner]);
   }
 
   set_owner(op->idx,data->dest);
@@ -203,8 +232,8 @@ void arith_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
 {
   struct arith_op_data * data = (arith_op_data *) op->data;
   set_owner(op->idx, data->dest);
-  set_owner(op->idx, data->op1);
-  set_owner(op->idx, data->op2);
+  //  set_owner(op->idx, data->op1);
+  //set_owner(op->idx, data->op2);
 }
 
 void initbase_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
@@ -233,13 +262,13 @@ void clear_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
   //  uint32_t pred;
   for(i = 0; i < data->localsize; i++)
     {
-      //pred = owned_by[i];
-      // fill in pred
-
-      // not really anything to do with predecessors. successors will set themselves later
-
+      // this only shows up at the beginning of a function, so
+      // there should be no predecessors at the beginning of a function
+      // successors will set themselves later
+ 
       // set new ownership
-      //owned_by[i] = op->idx;
+      //uint32_t old_owner;
+      //get_owner(old_owner, i);
       set_owner(op->idx,i);
     }
 
@@ -261,6 +290,11 @@ void copy_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
   // we need to mark both the source and the destination
   // as owned by this instruction to make sure
   // that nothing changes from beneath us
+
+  if(DEBUG_OUTPUT){
+    fprintf(stdout,"COPY: idx: %i \t src: %i \t dst: %i \t width: %i\n",op->idx, source,dest,data->width); 
+  }
+
   for(i = 0; i < data->width; i++)
     {
 
@@ -268,24 +302,29 @@ void copy_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
       get_owner(old_owner, source+i);
       
       if(old_owner != (uint32_t) -1){
-        add_succ(op, st->ops[old_owner]);
-        add_pred(st->ops[old_owner],op);
+
+        if(DEBUG_OUTPUT){
+          fprintf(stdout,"source: %i\t old owner: %i\t new owner: %i\n",source+i, old_owner, op->idx);
+        }
+
+        add_succ(&st->ops[old_owner],op);      
+        add_pred(op,&st->ops[old_owner]);
+  
       }
-      set_owner(op->idx,source+i);
+      //set_owner(op->idx,source+i);
     }
   for(i = 0; i < data->width; i++)
     {
-      //pred = owned_by[dest+i];
-      //TODO
-      // fill in pred
-
-
       uint32_t old_owner;
       get_owner(old_owner, dest+i);
       if(old_owner != (uint32_t) -1){      
-        add_succ(op, st->ops[old_owner]);
-        add_pred(st->ops[old_owner],op);
 
+        if(DEBUG_OUTPUT){
+          fprintf(stdout,"dest: %i\t old owner: %i\t new owner: %i\n",dest+i, old_owner, op->idx);
+        }
+
+        add_succ(&st->ops[old_owner],op);      
+        add_pred(op,&st->ops[old_owner]);
       }
       set_owner(op->idx,dest+i);
     }
@@ -308,8 +347,8 @@ void mkprt_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
   }
   
   if(old_owner != (uint32_t) -1){
-    add_pred(st->ops[old_owner],op);
-    add_succ(op, st->ops[old_owner]);
+    add_succ(&st->ops[old_owner],op);      
+    add_pred(op,&st->ops[old_owner]);
   }
 
   set_owner(op->idx,dest);
@@ -327,19 +366,32 @@ this is a tough one, because it's hard to know what the destination will be
  */
 {
   struct copy_op_data * data = (struct copy_op_data*)op->data;
-  //  uint32_t dest = data->dest + st->base;
-  //uint32_t source = st->wires[data->source + st->base].value;
   uint32_t i;
+  uint32_t dest = data->dest;
 
-  //assert(data->width > 0);
+  if(DEBUG_OUTPUT){
+    fprintf(stdout,"COPY-INDIR \t dest: %i\t source: %i\t width %i \n", data->dest, data->source, data->width);
+  }
 
   for(i = 0; i < data->width; i++)
     {
-      // do something (if possible!)
-      set_owner(op->idx, data->dest+i);
-      //owned_by[data->dest+i] = op->idx; 
+      
+      uint32_t old_owner;
+      get_owner(old_owner, dest+i);
+      if(old_owner != (uint32_t) -1){      
+
+        if(DEBUG_OUTPUT){
+          fprintf(stdout,"dest: %i\t old owner: %i\t new owner: %i\n",dest+i, old_owner, op->idx);
+        }
+        add_succ(&st->ops[old_owner],op);
+        add_pred(op,&st->ops[old_owner]);
+      }
+      set_owner(op->idx,dest+i);
+      // I now own the destination addresses
+      
     }
-  // but very hard to figure out how to claim the source addresses
+
+  // very hard to figure out how to claim the source addresses
 }
 
 void indir_copy_flow(struct PCFState * st, struct PCFOP * op,int32_t * owned_by)
@@ -351,15 +403,20 @@ void indir_copy_flow(struct PCFState * st, struct PCFOP * op,int32_t * owned_by)
  */
 {
   struct copy_op_data * data = (struct copy_op_data*)op->data;
-  //  uint32_t dest = st->wires[data->dest + st->base].value;
-  uint32_t source = data->source + st->base;
+  uint32_t source = data->source;
   uint32_t i;
-  //assert(data->width > 0);
   for(i = 0; i < data->width; i++)
     {
-      //owned_by[source+i] = op->idx; 
+      uint32_t old_owner;
+      get_owner(old_owner, source+i);
+      
+      if(old_owner != (uint32_t) -1){
+        add_succ(&st->ops[old_owner],op);
+        add_pred(op,&st->ops[old_owner]);
+      }
       set_owner(op->idx,source+i);
     }
+
   // but very hard to figure out how to claim the destinations
 }
 
@@ -442,24 +499,42 @@ void branch_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
      succs: lbl pointing to, instruction following (pick)
  */
 {
-  //struct branch_op_data * data = (struct branch_op_data *)op->data;
-  //ENTRY * ent, * r;
-  //ent = data->target;
-  //if(hsearch_r(*ent, FIND, &r, st->labels) == 0)
-  // {
-  // fprintf(stderr, "Problem searching hash table for %s: %s\n", ent->key, strerror(errno));
-  //   abort();
-  //  }
+  struct branch_op_data * data = (struct branch_op_data *)op->data;
+  ENTRY * ent, * r;
+  ent = data->target;
+  if(hsearch_r(*ent, FIND, &r, st->labels) == 0)
+   {
+     fprintf(stderr, "Problem searching hash table for %s: %s\n", ent->key, strerror(errno));
+     abort();
+   }
   
-  //uint32_t * target = ( uint32_t *)r->data;
+  uint32_t * target = ( uint32_t *)r->data;
   
-  //  (*target)++;
+  fprintf(stdout,"BRANCH:\t target: %i\t idx: %i\n",*target,op->idx);
+  //(*target)++;
   //if(st->wires[data->cnd_wire + st->base].value == 1)
   //  st->PC = *target;
   
-  struct branch_op_data * data = (struct branch_op_data *)op->data;
+  // update branching and label targets
+  add_succ(&st->ops[*target],op);
+  add_pred(op,&st->ops[*target]);
+
+  // and update the condition wire
+  uint32_t old_owner;
+  get_owner(old_owner,data->cnd_wire);
+
+  add_succ(&st->ops[old_owner],op);
+  add_pred(op,&st->ops[old_owner]);
+
   //owned_by[data->cnd_wire] = op->idx;
   set_owner(op->idx, data->cnd_wire);
+
+
+  for(unsigned int j = 0; j < op->preds.size();j++){
+    fprintf(stdout,"%i \t",op->preds[j]);
+  }
+  fprintf(stdout,"\n");
+  
 }
 
 void label_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
@@ -473,6 +548,8 @@ void label_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
 {
   // point to previous instruction
   // branches to be handled elsewhere
-  
+
+  // do we need to set it as a dependent on the previous instruction?
+  // unsure
 }
 
