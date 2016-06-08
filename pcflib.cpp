@@ -13,6 +13,7 @@
 #include "opdefs.h"
 #include "opflows.h"
 #include "opgen.h"
+#include "cthreadpool/thpool.h"
 
 void check_alloc(void * ptr)
 {
@@ -338,22 +339,32 @@ void evaluate_circuit(struct PCFState *st){
   // ... unfortunately, a heap might not do such a great job of exploiting parallelism
   // ... still under design
 
+
+  // must allocate threads
+  // _and_ a garbling buffer for each thread
+
+
+  
+
 #ifndef __APPLE__
   clock_gettime(CLOCK_REALTIME, &(st->requestStart)); 
 #endif
 
-  //  uint32_t i = 0;
-  //i++;
-  
-  st->curgate = 0; // =0
-
-  
   while(st->done == 0)
     {
-
-      st->ops[st->PC].op(st, &st->ops[st->PC]);
+      thread_arg arg;
+      arg.PC = st->PC;
+      arg.st = st;
+      
+      // at this point, add checks for blocking instructions
+      // if (blocking) wait
+      
+      // else:
+      execute_op(&arg);
       st->PC++;
-      /*
+
+
+    /*
       if(st->curgate == 0){
         //dispatch
 

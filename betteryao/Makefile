@@ -6,7 +6,7 @@ LIBS       =  -lpbc -lgmp -lcrypto -llog4cxx -lpthread #-lgmpxx
 AESNI = -DAESNI #turn this flag on/off for encryption modes
 HEADERS    =  Algebra.h Aes.h Bytes.h Env.h NetIO.h Prng.h Commitment.h \
 	 #   Circuit.h ClawFree.h  
-OBJS       =  Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o opflows.o opgen.o Commitment.o # pcflib_new.o opdefs_new.o
+OBJS       =  Algebra.o Bytes.o Env.o NetIO.o Prng.o Aes.o pcflib.o opdefs.o opflows.o opgen.o thpool.o Commitment.o # pcflib_new.o opdefs_new.o
 GARBLES    =  garbling.o  GarbledCircuit.o #
 
 #ot extensions
@@ -71,6 +71,10 @@ opflows.o: ../opflows.cpp ../pcflib.h ../opflows.h ../opdefs.h
 
 opgen.o: ../opgen.cpp ../pcflib.h ../opgen.h ../opdefs.h
 	gcc -Wall -Werror -c -fPIC ../opgen.cpp -g -DBETTERYAO
+
+thpool.o: ../cthreadpool/thpool.c ../cthreadpool/thpool.h
+	gcc -Wall -Werror -c -fPIC ../cthreadpool/thpool.c -g -lpthread
+
 
 #alsz.o:  $(OTE)/ot/*.cpp
 #	$(CC) -c -IOTExtension/util $(OT-CFLAGS) OTExtension/ot/*.cpp

@@ -1,4 +1,4 @@
-all: pcflib.o opdefs.o opflows.o opgen.o # test pcflib_new.o
+all: pcflib.o opdefs.o opflows.o opgen.o threads.o # test pcflib_new.o
 
 pcflib.o: pcflib.cpp pcflib.h opdefs.h opflows.h opgen.h
 	gcc -fPIC pcflib.cpp -c -Wall -Werror -g
@@ -11,6 +11,9 @@ opflows.o: opflows.cpp opflows.h opdefs.h pcflib.h
 
 opgen.o: opgen.cpp opdefs.h opgen.h pcflib.h
 	g++ -fPIC opgen.cpp -c -Wall -Werror -g
+
+threads.o: cthreadpool/thpool.c cthreadpool/thpool.h
+	gcc -fPIC cthreadpool/thpool.c -c -Wall -Werror -g -lpthread
 
 #pcflib_new.o: pcflib_new.c pcflib_new.h opdefs_new.c
 #	gcc -fPIC pcflib_new.c -c -Wall -Werror -g
