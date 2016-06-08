@@ -34,7 +34,11 @@ useful data structures:
        owned_by[] - for reach wire, gives the index of the op that owns the wire
 
        
-
+blocking ops:
+         call
+         copy-indir
+         indir-copy
+         branch
 
 
 specs: op, preds, and succs

@@ -256,8 +256,8 @@ PCFState * build_tree(struct PCFState *st){
 
   // table good for the whole circuit, in the worst case
   // must be cleared for each function though
-  int32_t * owned_by = (int32_t *)malloc(sizeof(int32_t*)*st->icount);
-  for(int32_t j = 0; j < (int32_t)st->icount; j++){
+  int32_t * owned_by = (int32_t *)malloc(sizeof(int32_t*)*NUM_WIRES);
+  for(int32_t j = 0; j < (int32_t)NUM_WIRES; j++){
     owned_by[j]=(unsigned int)-1; // note that -1 means "unowned"
     // or should we really set the initial owner of every wire to 0 -- the first instruction?
   }
@@ -304,6 +304,19 @@ PCFState * build_tree(struct PCFState *st){
 }
 
 
+typedef struct thread_arg{
+  PCFState * st;
+  uint32_t PC;
+} thread_arg;
+
+
+void execute_op(void * arg){
+  PCFState * st = ((thread_arg *)(arg))->st;
+  uint32_t PC = ((thread_arg *)(arg))->PC;
+  st->ops[PC].op(st, &st->ops[PC]);
+  
+}
+
 void evaluate_circuit(struct PCFState *st){
 
   // will need here a couple of threads
@@ -329,12 +342,28 @@ void evaluate_circuit(struct PCFState *st){
   clock_gettime(CLOCK_REALTIME, &(st->requestStart)); 
 #endif
 
-  uint32_t i = 0;
-  i++;
-  while(st->done != 0)
+  //  uint32_t i = 0;
+  //i++;
+  
+  st->curgate = 0; // =0
+
+  
+  while(st->done == 0)
     {
-      if(st->curgate ==0){
+
+      st->ops[st->PC].op(st, &st->ops[st->PC]);
+      st->PC++;
+      /*
+      if(st->curgate == 0){
         //dispatch
+
+        
+
+        // call the instruction's op function
+        st->ops[st->PC].op(st, &st->ops[st->PC]);
+        // then increment the program counter
+        st->PC++;
+
       } else{
         // take the top off of the ready queue
         // execute it
@@ -348,23 +377,23 @@ void evaluate_circuit(struct PCFState *st){
         // it can only execute after all those before it
         // and others can only execute after it is done
 
-        /*
-         PCFOP op = readyQueue.pop();
+        
+         //PCFOP op = readyQueue.pop();
          // this pop should be atomic and blocking
          // so only one thread at a time can get it
          
-         if(op != 0){
+        // if(op != 0){
            //
            
 
-         } else{
+        // } else{
            // nothing on the ready queue
            // either an error or we just need to wait
            // figure that out later
-         }
+        // }
         */
 
-      }
+      //  }
       // note that first I am implementing the parallel garbler,
       // then I can make adaptations to communicate properly with the evaluator
       // but want to do first construct the parallel infrastructure to run in sequence

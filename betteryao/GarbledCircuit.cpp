@@ -318,15 +318,17 @@ uint32_t GarbledCircuit::get_Input_Parity(uint32_t idx){
    EVALUATION/GARBLING FUNCTION
  */
 void GarbledCircuit::Garble_Circuit(){
-  while(get_next_gate(m_st)){
-  }
+  //while(get_next_gate(m_st)){
+  //}
+  evaluate_circuit(m_st);
   send_buffer(); // last send, in case there's something left over
 }
 
 void GarbledCircuit::Evaluate_Circuit(){
-  do {
+  //  do {
     
-  } while(get_next_gate(m_st));
+  // } while(get_next_gate(m_st));
+  evaluate_circuit(m_st);
   //retrieve_buffer();
   fprintf(stderr,"finish evaluating\n");
 }

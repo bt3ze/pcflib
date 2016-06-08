@@ -5,6 +5,7 @@
 #include <string.h>
 #include <errno.h>
 #include <vector>
+#include <assert.h>
 
 /**
    in these definitions, we don't need to care much for the state of the stack
@@ -68,8 +69,6 @@ n successors
 1 predecessor
  */
 {
-
-
   // update ownership
   struct bits_op_data * data = (bits_op_data *)op->data;
   uint32_t ndests = data->ndests;
@@ -81,17 +80,16 @@ n successors
   for(uint32_t i = 0; i < ndests;i++){
 
     uint32_t old_owner;
-    //    fprintf(stdout,"get owner fails?\n");    
     get_owner(old_owner, data->dests[i]);
     
     if(old_owner != (uint32_t)-1){
      
+      assert(old_owner != 0);
+
       if(DEBUG_OUTPUT){
         fprintf(stdout,"BITS succs \t dest: %i\t owner: %i\n", data->dests[i], old_owner);    
         fprintf(stdout,"BITS preds \t pred idx: %i\t pred type %i \t succ id: %i\t succ type %i\n",st->ops[old_owner].idx, st->ops[old_owner].type, op->idx, op->type);        
       }
-      
-
       
       //add_succ(&st->ops[old_owner],op);
       //add_pred(op,&st->ops[old_owner]);
@@ -99,11 +97,14 @@ n successors
       op->preds.push_back(old_owner);
       st->ops[old_owner].succs.push_back(op->idx);
       
+
     }
      // get the ith dest, set its ownership
-    set_owner(op->idx,data->dests[i]);
   }
 
+  for(uint32_t i =0; i < ndests; i++){
+    set_owner(op->idx,data->dests[i]);
+  }
   
   // claim the source
   //owned_by[data->source] = op->idx;
@@ -185,7 +186,6 @@ void gate_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
   st->ops[pred1].succs.push_back(op->idx);
   st->ops[pred2].succs.push_back(op->idx);
 
-  fprintf(stdout,"indices: %i %i %i / %i %i\n",op->idx, pred1, pred2, op->preds[0], op->preds[1]);
 
   set_owner(op->idx,data->reswire);
   // the gate only really owns the result wire, not the inputs. they might be reused.
@@ -231,6 +231,16 @@ void arith_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
  */
 {
   struct arith_op_data * data = (arith_op_data *) op->data;
+
+
+  uint32_t pred1, pred2;
+  get_owner(pred1, data->op1);
+  get_owner(pred2, data->op2);
+  op->preds.push_back(pred1);
+  op->preds.push_back(pred2);
+  st->ops[pred1].succs.push_back(op->idx);
+  st->ops[pred2].succs.push_back(op->idx);
+
   set_owner(op->idx, data->dest);
   //  set_owner(op->idx, data->op1);
   //set_owner(op->idx, data->op2);
@@ -304,7 +314,7 @@ void copy_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
       if(old_owner != (uint32_t) -1){
 
         if(DEBUG_OUTPUT){
-          fprintf(stdout,"source: %i\t old owner: %i\t new owner: %i\n",source+i, old_owner, op->idx);
+          fprintf(stdout,"source: %i\t owner: %i\t \n",source+i, old_owner);
         }
 
         add_succ(&st->ops[old_owner],op);      
@@ -414,7 +424,7 @@ void indir_copy_flow(struct PCFState * st, struct PCFOP * op,int32_t * owned_by)
         add_succ(&st->ops[old_owner],op);
         add_pred(op,&st->ops[old_owner]);
       }
-      set_owner(op->idx,source+i);
+      //set_owner(op->idx,source+i);
     }
 
   // but very hard to figure out how to claim the destinations
@@ -511,13 +521,13 @@ void branch_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
   uint32_t * target = ( uint32_t *)r->data;
   
   fprintf(stdout,"BRANCH:\t target: %i\t idx: %i\n",*target,op->idx);
-  //(*target)++;
-  //if(st->wires[data->cnd_wire + st->base].value == 1)
-  //  st->PC = *target;
   
   // update branching and label targets
   add_succ(&st->ops[*target],op);
   add_pred(op,&st->ops[*target]);
+  
+  add_succ(&st->ops[op->idx+1],op);
+  add_pred(op, &st->ops[op->idx+1]);
 
   // and update the condition wire
   uint32_t old_owner;
