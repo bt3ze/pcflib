@@ -1,16 +1,16 @@
 all: pcflib.o opdefs.o opflows.o opgen.o threads.o # test pcflib_new.o
 
-pcflib.o: pcflib.cpp pcflib.h opdefs.h opflows.h opgen.h
-	gcc -fPIC pcflib.cpp -c -Wall -Werror -g
+pcflib.o: pcflib.cpp pcflib.h opdefs.h opflows.h opgen.h cthreadpool/thpool.h
+	g++ -fPIC -std=c++11 pcflib.cpp -c -Wall -Werror -g -lpthread
 
 opdefs.o: opdefs.cpp opdefs.h pcflib.h
-	g++ -fPIC opdefs.cpp -c -Wall -Werror -g
+	g++ -fPIC -std=c++11 opdefs.cpp -c -Wall -Werror -g
 
 opflows.o: opflows.cpp opflows.h opdefs.h pcflib.h
-	g++ -fPIC opflows.cpp -c -Wall -Werror -g
+	g++ -fPIC -std=c++11 opflows.cpp -c -Wall -Werror -g
 
 opgen.o: opgen.cpp opdefs.h opgen.h pcflib.h
-	g++ -fPIC opgen.cpp -c -Wall -Werror -g
+	g++ -fPIC -std=c++11 opgen.cpp -c -Wall -Werror -g
 
 threads.o: cthreadpool/thpool.c cthreadpool/thpool.h
 	gcc -fPIC cthreadpool/thpool.c -c -Wall -Werror -g -lpthread

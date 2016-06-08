@@ -1,4 +1,4 @@
-CXX_CFLAGS = -I$(HOME)/lccyao2/pcflib/ -I$(HOME)/include/ -I$(HOME)/local/include -g -L $(HOME)/lib -L$(HOME)/local/lib -Wno-deprecated -D__STDC_LIMIT_MACROS -DFREE_XOR -DRAND_SEED -DGRR  -D_BETTERYAO -DBETTERYAO -O3  -maes -march=native
+CXX_CFLAGS = -I$(HOME)/lccyao2/pcflib/ -I$(HOME)/include/ -I$(HOME)/local/include -g -L $(HOME)/lib -L$(HOME)/local/lib -Wno-deprecated -D__STDC_LIMIT_MACROS -DFREE_XOR -DRAND_SEED -DGRR  -D_BETTERYAO -DBETTERYAO -O3 -maes -march=native
 CXX        = g++
 MPI_CXX    = mpicxx
 CC = cc
@@ -61,7 +61,7 @@ pcflib_new: pcflib_new.o
 #	gcc -Wall -Werror -c -fPIC ../pcflib.c -g
 
 pcflib.o: ../pcflib.cpp ../pcflib.h
-	gcc -Wall -Werror -c -fPIC ../pcflib.cpp -g -DBETTERYAO
+	gcc -Wall -Werror -c -fPIC ../pcflib.cpp -g -DBETTERYAO -lpthread
 
 opdefs.o: ../opdefs.cpp ../pcflib.h ../opdefs.h 
 	gcc -Wall -Werror -c -fPIC ../opdefs.cpp -g -DBETTERYAO

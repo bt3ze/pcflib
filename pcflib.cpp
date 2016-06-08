@@ -13,7 +13,19 @@
 #include "opdefs.h"
 #include "opflows.h"
 #include "opgen.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "cthreadpool/thpool.h"
+
+#ifdef __cplusplus
+}
+#endif
+
+
+
 
 void check_alloc(void * ptr)
 {
@@ -140,6 +152,7 @@ PCFState * load_pcf_file(const char * fname, void * key0, void * key1, void (*co
       fgets(line, LINE_MAX-1, input);
       op = read_instr(ret, line, icount);
       op->idx = icount;
+      op->num_exec = 0;
 
       ret->ops[icount] = *op;
       
@@ -276,6 +289,7 @@ PCFState * build_tree(struct PCFState *st){
 
   
   for(i=0; i< st->icount; i++){
+    //st->ops[i].num_exec= 0;
     st->ops[i].preds.clear();
     st->ops[i].succs.clear();
     apply_flow(st,&st->ops[i],owned_by);
@@ -311,11 +325,12 @@ typedef struct thread_arg{
 } thread_arg;
 
 
-void execute_op(void * arg){
+void * execute_op(void * arg){
   PCFState * st = ((thread_arg *)(arg))->st;
   uint32_t PC = ((thread_arg *)(arg))->PC;
   st->ops[PC].op(st, &st->ops[PC]);
-  
+  st->ops[PC].num_exec++;
+  return st;
 }
 
 void evaluate_circuit(struct PCFState *st){
@@ -343,8 +358,11 @@ void evaluate_circuit(struct PCFState *st){
   // must allocate threads
   // _and_ a garbling buffer for each thread
 
+  // if a branch target is earlier than a branch, then must decrement the number of times each op has been executed in between them by 1
 
   
+  threadpool queuepool = thpool_init(2);
+  //  threadpool workpool = thpool_init(2);
 
 #ifndef __APPLE__
   clock_gettime(CLOCK_REALTIME, &(st->requestStart)); 
@@ -358,11 +376,17 @@ void evaluate_circuit(struct PCFState *st){
       
       // at this point, add checks for blocking instructions
       // if (blocking) wait
+        uint32_t optype = st->ops[st->PC].type;
+      if(optype == BRANCH_OP || optype == COPY_INDIR_OP || optype == INDIR_COPY_OP || optype == CALL_OP){
+        thpool_wait(queuepool);
+        
+      }
       
-      // else:
-      execute_op(&arg);
+      thpool_add_work(queuepool, execute_op,(void *)&arg);
+      //queuepool.
+      //execute_op(&arg);
       st->PC++;
-
+      
 
     /*
       if(st->curgate == 0){
