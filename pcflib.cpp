@@ -319,18 +319,30 @@ PCFState * build_tree(struct PCFState *st){
 }
 
 
-typedef struct thread_arg{
+typedef struct exec_op_arg{
   PCFState * st;
   uint32_t PC;
-} thread_arg;
+} exec_op_arg;
 
 
 void * execute_op(void * arg){
-  PCFState * st = ((thread_arg *)(arg))->st;
-  uint32_t PC = ((thread_arg *)(arg))->PC;
+  PCFState * st = ((exec_op_arg *)(arg))->st;
+  uint32_t PC = ((exec_op_arg *)(arg))->PC;
   st->ops[PC].op(st, &st->ops[PC]);
   st->ops[PC].num_exec++;
   return st;
+}
+
+void * execute_queue(void * arg){
+  // this is what the ready op manager queue should do
+  
+
+  while(true){
+    
+    
+
+  }
+  return arg;
 }
 
 void evaluate_circuit(struct PCFState *st){
@@ -361,7 +373,7 @@ void evaluate_circuit(struct PCFState *st){
   // if a branch target is earlier than a branch, then must decrement the number of times each op has been executed in between them by 1
 
   
-  threadpool queuepool = thpool_init(2);
+  //  threadpool queuepool = thpool_init(2);
   //  threadpool workpool = thpool_init(2);
 
 #ifndef __APPLE__
@@ -370,21 +382,22 @@ void evaluate_circuit(struct PCFState *st){
 
   while(st->done == 0)
     {
-      thread_arg arg;
+      exec_op_arg arg;
       arg.PC = st->PC;
       arg.st = st;
       
       // at this point, add checks for blocking instructions
       // if (blocking) wait
-        uint32_t optype = st->ops[st->PC].type;
-      if(optype == BRANCH_OP || optype == COPY_INDIR_OP || optype == INDIR_COPY_OP || optype == CALL_OP){
-        thpool_wait(queuepool);
+      // uint32_t optype = st->ops[st->PC].type;
+      //   if(optype == BRANCH_OP || optype == COPY_INDIR_OP || optype == INDIR_COPY_OP || optype == CALL_OP){
+      //   thpool_wait(queuepool);
         
-      }
+      //   }
       
-      thpool_add_work(queuepool, execute_op,(void *)&arg);
-      //queuepool.
-      //execute_op(&arg);
+        // thpool_add_work(queuepool, execute_op,(void *)&arg);
+      //thpool_wait(queuepool);
+      
+        execute_op(&arg);
       st->PC++;
       
 
@@ -433,7 +446,7 @@ void evaluate_circuit(struct PCFState *st){
       // then I can make adaptations to communicate properly with the evaluator
       // but want to do first construct the parallel infrastructure to run in sequence
     }
-
+// thpool_wait(queuepool);
 
 
 #ifndef __APPLE__
