@@ -12,6 +12,7 @@
    ACCESSORY FUNCTIONS
  */
 
+#define _GC_TIMING 1
 
 void copy_key(void* source_key, void * dest_key){
   //  __m128i *new_key = 0; 
@@ -23,15 +24,19 @@ void copy_key(void* source_key, void * dest_key){
       // first argument is size, second argument is allignment
       //new_key = (__m128i*)_mm_malloc(sizeof(__m128i), sizeof(__m128i));
 
+#ifdef _GC_TIMING
       num_copies++;
       clock_gettime(CLOCK_REALTIME, &copy_start);
-      
+#endif      
+
       _mm_storeu_si128(reinterpret_cast<__m128i*>(dest_key),*reinterpret_cast<__m128i*>(source_key));
      
+#ifdef _GC_TIMING
       clock_gettime(CLOCK_REALTIME, &copy_end);
       copy_time += ( copy_end.tv_sec - copy_start.tv_sec )
         + ( copy_end.tv_nsec - copy_start.tv_nsec )
         / BILN;
+#endif
 
     } else{
     fprintf(stderr,"no copy\n");
@@ -49,8 +54,10 @@ void delete_key(void *key)
 
 
 void save_Key_to_128bit(const Bytes & key, __m128i & destination){
+ #ifdef _GC_TIMING
   num_buffers++;
   clock_gettime(CLOCK_REALTIME, &buffer_start);
+#endif
 
   Bytes tmp = key;
 
@@ -58,19 +65,21 @@ void save_Key_to_128bit(const Bytes & key, __m128i & destination){
   destination = _mm_loadu_si128(reinterpret_cast<__m128i*>(&tmp[0]));
 
   //destination = _mm_loadu_si128(reinterpret_cast<__m128i*>(key[0]));
-
+#ifdef _GC_TIMING
   clock_gettime(CLOCK_REALTIME, &buffer_end);
   buffer_time += ( buffer_end.tv_sec - buffer_start.tv_sec )
     + ( buffer_end.tv_nsec - buffer_start.tv_nsec )
     / BILN;
+#endif
 }
 
 void append_m128i_to_Bytes(const __m128i & num, Bytes & dest){
   Bytes tmp;
   
+#ifdef _GC_TIMING
   num_buffers++;
   clock_gettime(CLOCK_REALTIME, &buffer_start);
-  
+#endif
 
   tmp.resize(16,0);
   _mm_storeu_si128(reinterpret_cast<__m128i*>(&tmp[0]),num);
@@ -82,12 +91,12 @@ void append_m128i_to_Bytes(const __m128i & num, Bytes & dest){
   
   //  _mm_storeu_si128(reinterpret_cast<__m128i*>(&dest[0]),num);
   
-
+#ifdef _GC_TIMING
   clock_gettime(CLOCK_REALTIME, &buffer_end);
   buffer_time += ( buffer_end.tv_sec - buffer_start.tv_sec )
     + ( buffer_end.tv_nsec - buffer_start.tv_nsec )
     / BILN;
-
+#endif
 }
 
 
@@ -691,29 +700,35 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key, 
   __m128i key1 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire1));
   __m128i key2 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire2));
 
+#ifdef _GC_TIMING
   total_gates++;
   clock_gettime(CLOCK_REALTIME, &garble_start);    
+#endif
 
 #ifdef FREE_XOR
   if(current_gate->truth_table == 0x06){ // if XOR gate
   
+#ifdef _GC_TIMING
     xor_gates++;
     clock_gettime(CLOCK_REALTIME, &xor_start);    
-   
+#endif   
+
     xor_Gate(key1, key2, current_key);
 
+#ifdef _GC_TIMING
     clock_gettime(CLOCK_REALTIME, &xor_end);
     xor_time += ( xor_end.tv_sec - xor_start.tv_sec )
       + ( xor_end.tv_nsec - xor_start.tv_nsec )
       / BILN;
-
+#endif
 
   } else if (current_gate->truth_table == 0x01 || current_gate->truth_table == 0x07)   {
   
     //fprintf(stderr,"%i\n",current_gate->truth_table);
-
+#ifdef _GC_TIMING
     half_gates++;
     clock_gettime(CLOCK_REALTIME, &half_start); 
+#endif
 
     uint32_t j1 = increment_index();
     uint32_t j2 = increment_index();
@@ -734,12 +749,13 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key, 
       send_half_gate(m_garbling_bufr);
     }
     
-    
+#ifdef _GC_TIMING
     clock_gettime(CLOCK_REALTIME, &half_end);
     hg_time += ( half_end.tv_sec - half_start.tv_sec )
       + ( half_end.tv_nsec - half_start.tv_nsec )
       / BILN;
-    
+#endif
+
   } else { 
 
 #endif
@@ -752,30 +768,35 @@ void GarbledCircuit::generate_Gate(PCFGate* current_gate, __m128i &current_key, 
     // but since they can't be garbled with half gates, we garble with GRR
     // NOT or XNOR gates, however, might be a bit cryptographically dangerous
     // we also use this method for output gates
-    
+
+#ifdef _GC_TIMING    
     other_gates++;
     clock_gettime(CLOCK_REALTIME, &og_start);
-    
+#endif    
+
     uint32_t j1 = increment_index();
     genStandardGate(current_key, key1, key2, garbling_bufr, 
                     current_gate->truth_table,Env::key_size_in_bytes(),
                     m_clear_mask, m_fixed_key, m_R, j1);
     send_full_gate(garbling_bufr);
 
+#ifdef _GC_TIMING
     clock_gettime(CLOCK_REALTIME, &og_end);
     og_time += ( og_end.tv_sec - og_start.tv_sec )
       + ( og_end.tv_nsec - og_start.tv_nsec )
       / BILN;
+#endif
 
 #ifdef FREE_XOR
     }
 #endif
 
-    
+#ifdef _GC_TIMING
   clock_gettime(CLOCK_REALTIME, &garble_end);
   garble_time += ( garble_end.tv_sec - garble_start.tv_sec )
     + ( garble_end.tv_nsec - garble_start.tv_nsec )
     / BILN;
+#endif
 
 }
 
@@ -785,27 +806,35 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key, 
   __m128i key1 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire1));
   __m128i key2 = *reinterpret_cast<__m128i*>(get_wire_key(m_st, current_gate->wire2));
 
+#ifdef _GC_TIMING
   total_gates++;
   clock_gettime(CLOCK_REALTIME, &garble_start);    
+#endif
 
 #ifdef FREE_XOR
   if (current_gate->truth_table == 0x06)
     {
+#ifdef _GC_TIMING
       xor_gates++;
       clock_gettime(CLOCK_REALTIME, &xor_start);    
+#endif
 
       xor_Gate(key1, key2, current_key);
 
+#ifdef _GC_TIMING
       clock_gettime(CLOCK_REALTIME, &xor_end);
       xor_time += ( xor_end.tv_sec - xor_start.tv_sec )
         + ( xor_end.tv_nsec - xor_start.tv_nsec )
         / BILN;
-      
+#endif      
+
     } else if(current_gate->truth_table == 0x01 || current_gate->truth_table == 0x07) {
   
+#ifdef _GC_TIMING
     half_gates++;
     clock_gettime(CLOCK_REALTIME, &half_start); 
-   
+#endif   
+
     uint32_t j1 = increment_index();
     uint32_t j2 = increment_index();
 
@@ -824,20 +853,22 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key, 
       
     }
 
-        
+#ifdef _GC_TIMING        
     clock_gettime(CLOCK_REALTIME, &half_end);
     hg_time += ( half_end.tv_sec - half_start.tv_sec )
       + ( half_end.tv_nsec - half_start.tv_nsec )
       / BILN;
+#endif
 
   }else { 
 
 #endif
 
-
+#ifdef _GC_TIMING
     other_gates++;
     clock_gettime(CLOCK_REALTIME, &og_start);
-    
+#endif    
+
     // here (most likely) we have a NOT gate or an XNOR gate 
       // the compiler's optimizer should do its best to remove them
       // but since they can't be garbled with half gates, we garble with GRR
@@ -848,10 +879,12 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key, 
     uint32_t j1 = increment_index();
     evlStandardGate(current_key, key1, key2, garbling_bufr,Env::key_size_in_bytes(),m_clear_mask, m_fixed_key, j1);
       
+#ifdef _GC_TIMING
     clock_gettime(CLOCK_REALTIME, &og_end);
     og_time += ( og_end.tv_sec - og_start.tv_sec )
       + ( og_end.tv_nsec - og_start.tv_nsec )
       / BILN;
+#endif
     
 #ifdef FREE_XOR
 
@@ -860,11 +893,12 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key, 
 
   // current_key will be available to the calling function
 
-  
+#ifdef _GC_TIMING
   clock_gettime(CLOCK_REALTIME, &garble_end);
   garble_time += ( garble_end.tv_sec - garble_start.tv_sec )
     + ( garble_end.tv_nsec - garble_start.tv_nsec )
     / BILN;
+#endif
 
 }
 
@@ -982,7 +1016,7 @@ Bytes GarbledCircuit::get_alice_out(){
   //  fprintf(stdout,"benchmark time: %f\n",benchmark_time);
   //fprintf(stdout,"benchmark time2: %f\n",btime2);
 
-
+#ifdef _GC_TIMING
   fprintf(stdout,"xor gates  : %i \t xor time  : %f\n",xor_gates,xor_time);
   fprintf(stdout,"half gates : %i \t hgate time: %f\n",half_gates,hg_time);
   fprintf(stdout,"other gates: %i \t other time: %f\n",other_gates,og_time);
@@ -992,6 +1026,7 @@ Bytes GarbledCircuit::get_alice_out(){
   fprintf(stdout,"num b cpy  : %i \t b_cpy time: %f\n",num_b_cpy, b_cpy_time);
   fprintf(stdout,"num comm   : %i \t comm time: %f\n",num_comms, comm_time);
   //fprintf(stdout,"num send   : %i \t send time: %f\n",num_sends, send_time);
+#endif
 
   return m_alice_out;
 }
@@ -999,6 +1034,7 @@ Bytes GarbledCircuit::get_alice_out(){
 Bytes GarbledCircuit::get_bob_out(){
   //  fprintf(stdout,"benchmark time: %f\n",benchmark_time);
 
+#ifdef _GC_TIMING
   fprintf(stdout,"xor gates  : %i \t xor time  : %f\n",xor_gates,xor_time);
   fprintf(stdout,"half gates : %i \t hgate time: %f\n",half_gates,hg_time);
   fprintf(stdout,"other gates: %i \t other time: %f\n",other_gates,og_time);
@@ -1008,7 +1044,7 @@ Bytes GarbledCircuit::get_bob_out(){
   fprintf(stdout,"num b cpy  : %i \t b_cpy time: %f\n",num_b_cpy, b_cpy_time);
   fprintf(stdout,"num comm   : %i \t comm time: %f\n",num_comms, comm_time);
   //fprintf(stdout,"num send   : %i \t send time: %f\n",num_sends, send_time);
-  
+#endif  
 
   return m_bob_out;
 }
@@ -1038,19 +1074,21 @@ void GarbledCircuit::send_half_gate(const Bytes &buf){
   //start_t = clock();
 
   // std::cout << "enqueue half gate " << std::endl << buf.to_hex() << std::endl; 
-  
+#ifdef _GC_TIMING
   num_comms++;
   clock_gettime(CLOCK_REALTIME, &comm_start);
+#endif
 
   // Env::remote()->write_2_ciphertexts(buf);
   enqueue_messages(buf,2);
   //m_comm_time += (double) (clock() - start_t)/CLOCKS_PER_SEC;
 
-  
+#ifdef _GC_TIMING
   clock_gettime(CLOCK_REALTIME, &comm_end);
   comm_time += ( comm_end.tv_sec - comm_start.tv_sec )
     + ( comm_end.tv_nsec - comm_start.tv_nsec )
     / BILN;
+#endif
 
 }
 
@@ -1061,18 +1099,20 @@ void GarbledCircuit::send_full_gate(const Bytes &buf){
   //std::cout << "send full gate " << std::endl << buf.to_hex() << std::endl; 
 
 #ifdef GRR
+#ifdef _GC_TIMING
   num_comms++;
   clock_gettime(CLOCK_REALTIME, &comm_start);
-
+#endif
 
   enqueue_messages(buf,3);
   //Env::remote()->write_3_ciphertexts(buf);
 
-  
+#ifdef _GC_TIMING
   clock_gettime(CLOCK_REALTIME, &comm_end);
   comm_time += ( comm_end.tv_sec - comm_start.tv_sec )
     + ( comm_end.tv_nsec - comm_start.tv_nsec )
     / BILN;
+#endif
 #else
   enqueue_messages(buf,4);
   //Env::remote()->write_4_ciphertexts(buf);
@@ -1087,20 +1127,20 @@ void GarbledCircuit::send_full_gate(const Bytes &buf){
 void GarbledCircuit::read_half_gate(Bytes & buf){
   //clock_t start_t;
   //start_t = clock();
-
+#ifdef _GC_TIMING
   num_comms++;
   clock_gettime(CLOCK_REALTIME, &comm_start);
-  
+#endif  
+
   //Bytes ret =  Env::remote()->read_2_ciphertexts();
   retrieve_ciphertexts(buf,2);
 
-  
-  
+#ifdef _GC_TIMING
   clock_gettime(CLOCK_REALTIME, &comm_end);
   comm_time += ( comm_end.tv_sec - comm_start.tv_sec )
     + ( comm_end.tv_nsec - comm_start.tv_nsec )
     / BILN;
-  
+#endif  
 
   //  std::cout << "read half gate " << std::endl << ret.to_hex() << std::endl; 
 
@@ -1116,18 +1156,21 @@ void GarbledCircuit::read_full_gate(Bytes & buf){
   
 
 #ifdef GRR
-   num_comms++;
+#ifdef _GC_TIMING
+  num_comms++;
   clock_gettime(CLOCK_REALTIME, &comm_start);
-
+#endif
+  
   retrieve_ciphertexts(buf,3);
   //Bytes ret = retrieve_ciphertexts(3);
   //return Env::remote()->read_3_ciphertexts();
 
- 
+#ifdef _GC_TIMING
   clock_gettime(CLOCK_REALTIME, &comm_end);
   comm_time += ( comm_end.tv_sec - comm_start.tv_sec )
     + ( comm_end.tv_nsec - comm_start.tv_nsec )
     / BILN;
+#endif
 #else
   retrieve_ciphertexts(buf,4);
 //Bytes ret =  retrieve_ciphertexts(4);

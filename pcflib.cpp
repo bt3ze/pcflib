@@ -24,7 +24,8 @@ extern "C" {
 }
 #endif
 
-
+//#define _parallel_exec 1
+#define _serial_exec 1
 
 
 void check_alloc(void * ptr)
@@ -397,16 +398,20 @@ void evaluate_circuit(struct PCFState *st){
 
   // if a branch target is earlier than a branch, then must decrement the number of times each op has been executed in between them by 1
 
-  
-  threadpool queuepool = thpool_init(2);
-  threadpool workpool = thpool_init(3);
-
-    // some kind of new instruction queue here
-    // some kind of ready instruction queue here
 
 #ifndef __APPLE__
   clock_gettime(CLOCK_REALTIME, &(st->requestStart)); 
 #endif
+
+
+#ifdef _parallel_exec
+
+  threadpool queuepool = thpool_init(1);
+  threadpool workpool = thpool_init(1);
+
+    // some kind of new instruction queue here
+    // some kind of ready instruction queue here
+
 
   while(st->done == 0)
     {
@@ -446,52 +451,24 @@ void evaluate_circuit(struct PCFState *st){
       st->PC++;
       
 
-    /*
-      if(st->curgate == 0){
-        //dispatch
-
-        
-
-        // call the instruction's op function
-        st->ops[st->PC].op(st, &st->ops[st->PC]);
-        // then increment the program counter
-        st->PC++;
-
-      } else{
-        // take the top off of the ready queue
-        // execute it
-        // add successors to ready queue, if ready
-        // continue
-
-        // in fact, I think this can be evaluated in parallel as well
-        // note that whenever we get an indir_copy the data ownership analysis fails,
-        // so we must think about some sequentiality
-        // or figure out how to bottleneck until that operation is done 
-        // it can only execute after all those before it
-        // and others can only execute after it is done
-
-        
-         //PCFOP op = readyQueue.pop();
-         // this pop should be atomic and blocking
-         // so only one thread at a time can get it
-         
-        // if(op != 0){
-           //
-           
-
-        // } else{
-           // nothing on the ready queue
-           // either an error or we just need to wait
-           // figure that out later
-        // }
-        */
-
       //  }
       // note that first I am implementing the parallel garbler,
       // then I can make adaptations to communicate properly with the evaluator
       // but want to do first construct the parallel infrastructure to run in sequence
     }
-// thpool_wait(queuepool);
+  // thpool_wait(queuepool);
+#endif
+
+#ifdef _serial_exec
+   while(st->done == 0)
+    {
+      static exec_op_arg arg;
+      arg.PC = st->PC;
+      arg.st = st;
+      execute_op(&arg);
+      st->PC++;
+    }
+#endif
 
 
 #ifndef __APPLE__
