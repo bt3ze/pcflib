@@ -52,6 +52,8 @@ void H_Pi256(__m128i & destination, __m128i &key1, __m128i &key2,
                __m128i & tweak, const __m128i & clear_mask,
                const AES_KEY_J & fixed_key);
 
+void xor_Gate(__m128i & key1, __m128i & key2, __m128i &current_key);
+
 
 // half gate declarations
 void genHalfGatePair(__m128i& out_key, __m128i & key1, __m128i & key2, Bytes & out_bufr,

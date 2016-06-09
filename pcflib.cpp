@@ -300,7 +300,7 @@ PCFState * build_tree(struct PCFState *st){
           + ( st->requestEnd2.tv_nsec - st->requestStart2.tv_nsec )
           / BILLION);
   
-
+  /*
   for(i=0; i < st->icount;i++){
     PCFOP * op = &st->ops[i];
     fprintf(stdout,"idx: %i\ttype: %i\n preds:",i,op->type);
@@ -313,6 +313,7 @@ PCFState * build_tree(struct PCFState *st){
     }
     fprintf(stdout,"\n");
   }
+  */
   free(owned_by); // don't need it after the graph has been built
 
   return st;
@@ -325,6 +326,14 @@ typedef struct exec_op_arg{
 } exec_op_arg;
 
 
+typedef struct queue_op_arg{
+  PCFState * st;
+  uint32_t PC;
+  PCFOP * op;
+  threadpool * qpool;
+  threadpool * wpool;
+} queue_op_arg;
+
 void * execute_op(void * arg){
   PCFState * st = ((exec_op_arg *)(arg))->st;
   uint32_t PC = ((exec_op_arg *)(arg))->PC;
@@ -333,16 +342,32 @@ void * execute_op(void * arg){
   return st;
 }
 
+
 void * execute_queue(void * arg){
   // this is what the ready op manager queue should do
+  PCFState * st = ((queue_op_arg *)(arg))->st;
+  uint32_t PC = ((queue_op_arg *)(arg))->PC;
+  PCFOP * op = ((queue_op_arg *)(arg))->op;
+
+  threadpool * qpool = ((queue_op_arg *)(arg))->qpool;
+  threadpool * wpool = ((queue_op_arg *)(arg))->wpool;
+
+
+  uint32_t num_exec = op->num_exec;
+  //bool valid = true;
   
-
-  while(true){
-    
-    
-
+  for(uint32_t j = 0; j < op->succs.size();j++){
+    if(st->ops[op->succs[j]].num_exec <= num_exec){
+      thpool_add_work(*qpool, execute_queue,arg);
+      return st;
+    }
   }
-  return arg;
+  static exec_op_arg warg;
+  warg.PC = PC;
+  warg.st = st;
+  thpool_add_work(*wpool, execute_op,(void *)&warg);
+  return st;
+
 }
 
 void evaluate_circuit(struct PCFState *st){
@@ -373,8 +398,11 @@ void evaluate_circuit(struct PCFState *st){
   // if a branch target is earlier than a branch, then must decrement the number of times each op has been executed in between them by 1
 
   
-  //  threadpool queuepool = thpool_init(2);
-  //  threadpool workpool = thpool_init(2);
+  threadpool queuepool = thpool_init(2);
+  threadpool workpool = thpool_init(3);
+
+    // some kind of new instruction queue here
+    // some kind of ready instruction queue here
 
 #ifndef __APPLE__
   clock_gettime(CLOCK_REALTIME, &(st->requestStart)); 
@@ -382,22 +410,39 @@ void evaluate_circuit(struct PCFState *st){
 
   while(st->done == 0)
     {
-      exec_op_arg arg;
+      static exec_op_arg arg;
       arg.PC = st->PC;
       arg.st = st;
       
-      // at this point, add checks for blocking instructions
+      //   at this point, add checks for blocking instructions
       // if (blocking) wait
-      // uint32_t optype = st->ops[st->PC].type;
-      //   if(optype == BRANCH_OP || optype == COPY_INDIR_OP || optype == INDIR_COPY_OP || optype == CALL_OP){
-      //   thpool_wait(queuepool);
-        
-      //   }
+      uint32_t optype = st->ops[st->PC].type;
+       // if(optype == BRANCH_OP || optype == COPY_INDIR_OP || optype == INDIR_COPY_OP || optype == CALL_OP){
+       //thpool_wait(queuepool);
+       //thpool_wait(workpool);
+       // }
       
-        // thpool_add_work(queuepool, execute_op,(void *)&arg);
-      //thpool_wait(queuepool);
-      
-        execute_op(&arg);
+       //thpool_add_work(queuepool, execute_op,(void *)&arg);
+
+      if(optype==GATE_OP || optype == COPY_OP || optype == BITS_OP || optype == JOIN_OP){
+        thpool_add_work(queuepool, execute_op,(void *)&arg);
+      } 
+      else{
+        if( optype == COPY_INDIR_OP || optype == INDIR_COPY_OP){
+          thpool_wait(queuepool);
+          thpool_add_work(queuepool, execute_op,(void *)&arg);
+        } else{
+
+          if(optype == BRANCH_OP || optype == CALL_OP){
+            thpool_wait(queuepool);
+            thpool_wait(workpool);
+          }
+          
+
+        //     Execute  (&arg);
+          execute_op(&arg);
+        }
+      }
       st->PC++;
       
 

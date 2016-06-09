@@ -482,13 +482,7 @@ void * GarbledCircuit::evl_Next_Gate(PCFGate *current_gate){
 }
 
 
-void GarbledCircuit::xor_Gate(__m128i & key1, __m128i & key2, __m128i &current_key){
 
-  current_key = _mm_xor_si128(key1,key2);
-
-
-
-}
 
 uint32_t GarbledCircuit::increment_index(){
   return m_gate_index++;
@@ -877,7 +871,7 @@ void GarbledCircuit::evaluate_Gate(PCFGate* current_gate, __m128i &current_key, 
 
 
 void GarbledCircuit::clear_garbling_bufr(){
-  m_garbling_bufr.clear();
+  //m_garbling_bufr.clear();
   //std::fill(m_garbling_bufr.begin(),m_garbling_bufr.end(),0);
 }
 

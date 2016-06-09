@@ -181,7 +181,7 @@ protected:
 
     //void evlStandardGate(__m128i& current_key, __m128i & key1, __m128i & key2, Bytes & in_bufr);
 
-    void xor_Gate(__m128i & key1, __m128i & key2, __m128i &current_key);
+    //void xor_Gate(__m128i & key1, __m128i & key2, __m128i &current_key);
 
 
     uint32_t increment_index();

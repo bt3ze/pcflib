@@ -51,7 +51,7 @@ void add_pred (PCFOP * succ_op, PCFOP* pred_op){
   succ_op.preds.push_back(pred_op.idx);
 */
 
-#define DEBUG_OUTPUT 1
+#define DEBUG_OUTPUT 0
 
 /*
 #define exchange_ownership_and_pointers(pred,dest,idx)        \
@@ -111,10 +111,12 @@ n successors
   //set_owner(op->idx,data->source);
 
 
+  if(DEBUG_OUTPUT){
   for(unsigned int j = 0; j < op->preds.size();j++){
     fprintf(stdout,"%i\t",op->preds[j]);
   }
   fprintf(stdout,"\n");
+  }
 }
 
 
@@ -520,8 +522,10 @@ void branch_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
   
   uint32_t * target = ( uint32_t *)r->data;
   
-  fprintf(stdout,"BRANCH:\t target: %i\t idx: %i\n",*target,op->idx);
-  
+  if(DEBUG_OUTPUT){
+    fprintf(stdout,"BRANCH:\t target: %i\t idx: %i\n",*target,op->idx);
+  }
+
   // update branching and label targets
   add_succ(&st->ops[*target],op);
   add_pred(op,&st->ops[*target]);
@@ -539,12 +543,12 @@ void branch_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
   //owned_by[data->cnd_wire] = op->idx;
   set_owner(op->idx, data->cnd_wire);
 
-
-  for(unsigned int j = 0; j < op->preds.size();j++){
-    fprintf(stdout,"%i \t",op->preds[j]);
+  if(DEBUG_OUTPUT){
+    for(unsigned int j = 0; j < op->preds.size();j++){
+      fprintf(stdout,"%i \t",op->preds[j]);
+    }
+    fprintf(stdout,"\n");
   }
-  fprintf(stdout,"\n");
-  
 }
 
 void label_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)

@@ -445,8 +445,15 @@ void branch_op(struct PCFState * st, struct PCFOP * op)
   //if(DEBUG_OUTPUT)
   //  fprintf(stderr, "Branch: to %s on w %x\n", data->target->key, st->wires[data->cnd_wire + st->base].value);
 
+  uint32_t old_PC = st->PC;
   if(st->wires[data->cnd_wire + st->base].value == 1)
     st->PC = *target;
+  
+  if(old_PC > *target){
+    for(uint32_t j = *target; j < old_PC; j++){
+      st->ops[j].num_exec--;
+    }
+  }
 }
 
 void gate_op(struct PCFState * st, struct PCFOP * op)
