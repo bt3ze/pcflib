@@ -29,13 +29,19 @@
 #ifndef __PCFLIB_H
 #define __PCFLIB_H
 
-//#ifdef __cplusplus
-//extern "C" {
-//#endif
-
 #include <stdint.h>
 #include <pthread.h>
 #include <vector>
+#include <emmintrin.h>
+
+#ifdef __cplusplus
+extern "C" {
+#include "cthreadpool/thpool.h"
+#endif
+#ifdef __cplusplus
+}
+#endif
+
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -138,6 +144,13 @@ struct activation_record {
 };
 
 
+// some structs for rearranging how we do garbling
+typedef struct garble_cb_arg{
+  PCFState * st;
+  PCFGate * gate;
+} garble_cb_arg;
+
+
   // check_alloc is used frequently to ensure that memory has been allocated properly from the heap. if not, the program quits
   void check_alloc(void * ptr);
 
@@ -204,7 +217,8 @@ typedef struct PCFState {
   /* This function is called when a gate should be emitted.  It should
      create the appropriate keys for the output wire of the gate, and
      return them. */
-  void * (*callback)(struct PCFState *, struct PCFGate*);
+  //  void * (*callback)(struct PCFState *, struct PCFGate*);
+  void * (*callback)(struct garble_cb_arg *);
 
   /* The function that will be used to make copies of the keys
      associated with a wire. */
@@ -226,7 +240,9 @@ typedef struct PCFState {
   void set_key_delete_function(struct PCFState *, void (*)(void*));
   //  void set_key_copy_function(struct PCFState *, void *(*)(void*));
   void set_key_copy_function(struct PCFState *, void (*f)(void*,void*));
-  void set_callback(struct PCFState *, void* (*)(struct PCFState *, struct PCFGate *));
+//void set_callback(struct PCFState *, void* (*)(struct PCFState *, struct PCFGate *));
+void set_callback(struct PCFState *, void * (*callback)(struct garble_cb_arg *));
+
 
   // ciruit dependency analysis
   PCFState * build_tree(struct PCFState * st);
@@ -261,6 +277,51 @@ typedef struct PCFState {
     PCFState * copy_pcf_state(struct PCFState *);
     void make_internal_thread(PCFState * st);
   */
+
+
+/**
+   The following are useful for our parallel implementation
+   
+ */
+
+/*
+  The exec_op argument struct is passed to a thread 
+  that will simply execute the operation corresponding
+  to the given value of the program counter
+ */
+typedef struct exec_op_arg{
+  PCFState * st;
+  uint32_t PC;
+} exec_op_arg;
+
+
+/*
+  The queue op argument is passed to the queue management thread
+  which determines which operations are ready to be dispatched for execution.
+  If an operation is not yet ready, it reinserts the job into the queue.
+ */
+typedef struct queue_op_arg{
+  PCFState * st;
+  uint32_t PC;
+  PCFOP * op;
+  threadpool * qpool;
+  threadpool * wpool;
+} queue_op_arg;
+
+
+
+/*
+  Exec op is simply the function that the worker threads receive to 
+  execute a given operation, supplied in arg
+ */
+void * exec_op(void * arg);
+/*
+  Execute queue is the function given to the queue management thread
+  which determines whether an operation is ready to be executed,
+  and if so, dispatches it to the worker threads.
+ */
+void * execute_queue(void * arg);
+
 
 //#ifdef __cplusplus
 //}

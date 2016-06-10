@@ -51,7 +51,7 @@ void add_pred (PCFOP * succ_op, PCFOP* pred_op){
   succ_op.preds.push_back(pred_op.idx);
 */
 
-#define DEBUG_OUTPUT 0
+#define DEBUG_OUTPUT 1
 
 /*
 #define exchange_ownership_and_pointers(pred,dest,idx)        \
@@ -84,7 +84,7 @@ n successors
     
     if(old_owner != (uint32_t)-1){
      
-      assert(old_owner != 0);
+      //assert(old_owner != 0);
 
       if(DEBUG_OUTPUT){
         fprintf(stdout,"BITS succs \t dest: %i\t owner: %i\n", data->dests[i], old_owner);    
@@ -179,6 +179,8 @@ void gate_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
     fprintf(stdout,"GATE\t op_idx: %i \t pred1: %i\t wire1: %i\t pred2: %i\t wire2 %i \t outwire: %i\n", op->idx, pred1, data->wire1, pred2, data->wire2, data->reswire); 
   }
 
+  //assert(pred1 > -1);
+  //assert(pred2 > -1);
   //add_pred(op,&st->ops[pred1]);
   //add_pred(op,&st->ops[pred2]);
   //add_succ(&st->ops[pred1],op);
@@ -329,12 +331,11 @@ void copy_flow(struct PCFState * st, struct PCFOP * op, int32_t * owned_by)
     {
       uint32_t old_owner;
       get_owner(old_owner, dest+i);
-      if(old_owner != (uint32_t) -1){      
-
-        if(DEBUG_OUTPUT){
-          fprintf(stdout,"dest: %i\t old owner: %i\t new owner: %i\n",dest+i, old_owner, op->idx);
-        }
-
+      if(DEBUG_OUTPUT){
+        fprintf(stdout,"dest: %i\t old owner: %i\t new owner: %i\n",dest+i, old_owner, op->idx);
+      }      
+      if(old_owner != (uint32_t) -1){  
+        
         add_succ(&st->ops[old_owner],op);      
         add_pred(op,&st->ops[old_owner]);
       }

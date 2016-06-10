@@ -278,9 +278,13 @@ void call_op (struct PCFState * st, struct PCFOP * op)
               // fprintf(stderr,"A\t");
               
               //st->copy_key(st->callback(st, &st->input_g), st->wires[st->input_g.reswire].keydata);
-              copy_key1(st->callback(st, &st->input_g), st->wires[st->input_g.reswire].keydata);
-
               st->curgate = &st->input_g;
+              
+              //copy_key1(st->callback(st, &st->input_g), st->wires[st->input_g.reswire].keydata);
+              static garble_cb_arg * cb_arg;
+              cb_arg->st = st;
+              cb_arg->gate = &st->input_g;
+              st->callback(cb_arg);
             }
           else 
             { // otherwise, fill with zeros
@@ -288,6 +292,7 @@ void call_op (struct PCFState * st, struct PCFOP * op)
               //fprintf(stdout,"filling zeros for uninitialized wire");
               //st->copy_key(st->constant_keys[0],st->wires[st->input_g.reswire].keydata);
               copy_key1(st->constant_keys[0],st->wires[st->input_g.reswire].keydata);
+
             }
           
           st->wires[st->input_g.reswire].flags = UNKNOWN_WIRE;
@@ -340,8 +345,15 @@ void call_op (struct PCFState * st, struct PCFOP * op)
           if(st->inp_idx + i < st->bob_in_size)
             {
               //st->copy_key(st->callback(st, &st->input_g), st->wires[st->input_g.reswire].keydata);
-              copy_key1(st->callback(st, &st->input_g), st->wires[st->input_g.reswire].keydata);
-              st->curgate = &st->input_g;
+              //copy_key1(st->callback(st, &st->input_g), st->wires[st->input_g.reswire].keydata);
+              
+              // questionable if we even need this line
+              // st->curgate = &st->input_g;
+              
+              static garble_cb_arg * cb_arg;
+              cb_arg->st = st;
+              cb_arg->gate = &st->input_g;
+              st->callback(cb_arg);
             }
           else
             {
@@ -374,9 +386,14 @@ void call_op (struct PCFState * st, struct PCFOP * op)
           st->input_g.reswire = st->base + data->newbase - (32 - i);
           st->input_g.truth_table = 5;
           st->input_g.tag = TAG_OUTPUT_A;
-          st->callback(st, &st->input_g);
           st->curgate = &st->input_g;
           st->PC--;
+          static garble_cb_arg * cb_arg;
+          cb_arg->st = st;
+          cb_arg->gate = &st->input_g;
+          st->callback(cb_arg);
+          //st->callback(st, &st->input_g);
+
         }
       else
         st->inp_i = 0;
@@ -393,9 +410,14 @@ void call_op (struct PCFState * st, struct PCFOP * op)
           st->input_g.reswire = st->base + data->newbase - (32 - i);
           st->input_g.truth_table = 5;
           st->input_g.tag = TAG_OUTPUT_B;
-          st->callback(st, &st->input_g);
           st->curgate = &st->input_g;
           st->PC--;
+          static garble_cb_arg * cb_arg;
+          cb_arg->st = st;
+          cb_arg->gate = &st->input_g;
+          st->callback(cb_arg);
+          //st->callback(st, &st->input_g);
+          
         }
       else
         st->inp_i = 0;
@@ -509,19 +531,26 @@ void gate_op(struct PCFState * st, struct PCFOP * op)
 
       st->curgate->truth_table = tab;
       st->curgate->tag = TAG_INTERNAL;
+      st->wires[destidx].flags = UNKNOWN_WIRE;
+
       
       clock_gettime(CLOCK_REALTIME, &(st->requestStart2));
       
-      //st->copy_key(st->callback(st, st->curgate),st->wires[destidx].keydata);
-      copy_key1(st->callback(st, st->curgate),st->wires[destidx].keydata);
-      
+      // note: we will be replacing this line with just the callback,
+      // and make sure that the copy key is evaluated as part of the callback
+      //copy_key1(st->callback(st, st->curgate),st->wires[destidx].keydata);
+
+      //st->callback(st,st->curgate);
+      static garble_cb_arg * cb_arg;
+      cb_arg->st = st;
+      cb_arg->gate = &st->input_g;
+      st->callback(cb_arg);
+
       clock_gettime(CLOCK_REALTIME, &(st->requestEnd2));
       st->accum2 += ( st->requestEnd2.tv_sec - st->requestStart2.tv_sec )
         + ( st->requestEnd2.tv_nsec - st->requestStart2.tv_nsec )
         / BILLION;
-
-
-      st->wires[destidx].flags = UNKNOWN_WIRE;
+      
     }
   else
     {

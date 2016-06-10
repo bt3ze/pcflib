@@ -17,6 +17,16 @@
 #include "../pcflib.h"
 
 
+/*
+#ifdef __cplusplus
+extern "C" {
+#include "cthreadpool/thpool.h"
+#endif
+#ifdef __cplusplus
+}
+#endif
+*/
+
 //  void *copy_key(void *);
 void copy_key(void *, void*);
 void delete_key(void *);
@@ -127,7 +137,7 @@ public:
     // timing communication
     double m_comm_time;
 
-      void send_buffer();
+    void send_buffer();
 
 protected:
 
@@ -222,6 +232,15 @@ protected:
     //Bytes m_temp_bufr;
     //__m128i key_bufr[4];
 
+    /**
+       Parallel implementation additions
+       we want to garble about MESSAGE_LIMIT gates at a time (or in a batch)
+       and need a specific garbling address for each to ensure no data races hurt us
+       also need a garbling buffer for each one
+     */
+    __m128i m_parallel_keys[MESSAGE_LIMIT];
+    Bytes m_parallel_buffers[MESSAGE_LIMIT];
+    uint32_t m_batch_index;
 
     void send_half_gate(const Bytes &buf);
     void send_full_gate(const Bytes &buf);
@@ -266,6 +285,10 @@ protected:
 
     Bytes m_message_queue;
     Bytes m_ciphertext_buff; // should always be two or three ciphertexts long
+
+    // serial implementation!
+    // follows the next few
+
     uint32_t m_message_limit;
     uint32_t m_messages_waiting; // provide similar functions
     uint32_t m_queue_index; // provide similar functions
@@ -278,8 +301,41 @@ protected:
 
     void retrieve_buffer();
     void retrieve_ciphertexts(Bytes & buf, uint32_t num_ctexts);
+
+
+    // parallel implementation:
+    // the message buffer itself will have to be (3*keysize)*NUM_MESSAGES bytes
+    // so to get the benefits of halfgates we'd need to actually eliminate all GRR gates (TODO)
+    // the reason is that we will assign an index to every gate
+    // and insert its garbled ciphertexts in a slotted position
+    // in order to avoid parallel data races
+    // once we've garbled the right number of gates,
+    // we send off the whole buffer at once
+
+    void insert_garbled_ciphertext(const Bytes & buf, const uint32_t idx, const uint32_t ctext_per_gate, const uint32_t keysize_bytes);
+    void send_full_message_queue();
     
+    void * gen_Next_Gate_Parallel(PCFGate * current_gate);
+
 };
+
+
+/*
+We can send each gate separately to a thread to be evaluated
+
+ */
+
+
+typedef struct garble_gate_arg{
+  PCFState * st;
+  PCFGate * current_gate;
+  __m128i * current_key;
+  Bytes * garbling_bufr;
+} garble_gate_arg;
+
+
+
+void * garble_gate_parallel(void * arg);
 
 
 

@@ -14,15 +14,15 @@
 #include "opflows.h"
 #include "opgen.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+//#ifdef __cplusplus
+//extern "C" {
+//#endif
 
-#include "cthreadpool/thpool.h"
+//#include "cthreadpool/thpool.h"
 
-#ifdef __cplusplus
-}
-#endif
+//#ifdef __cplusplus
+//}
+//#endif
 
 //#define _parallel_exec 1
 #define _serial_exec 1
@@ -269,15 +269,20 @@ void apply_flow(struct PCFState *st, struct PCFOP * op, int32_t * table){
 PCFState * build_tree(struct PCFState *st){
   uint32_t i;
 
+  fprintf(stdout,"build begin\n");
+
   // table good for the whole circuit, in the worst case
   // must be cleared for each function though
   int32_t * owned_by = (int32_t *)malloc(sizeof(int32_t*)*NUM_WIRES);
+  
   for(int32_t j = 0; j < (int32_t)NUM_WIRES; j++){
-    owned_by[j]=(unsigned int)-1; // note that -1 means "unowned"
+    owned_by[j]=0; // note that -1 means "unowned"
     // or should we really set the initial owner of every wire to 0 -- the first instruction?
   }
 
   clock_gettime(CLOCK_REALTIME, &(st->requestStart2));
+
+  fprintf(stdout,"apply flow\n");
 
   // run through the list of ops
   // building dependencies
@@ -320,21 +325,6 @@ PCFState * build_tree(struct PCFState *st){
   return st;
 }
 
-
-typedef struct exec_op_arg{
-  PCFState * st;
-  uint32_t PC;
-} exec_op_arg;
-
-
-typedef struct queue_op_arg{
-  PCFState * st;
-  uint32_t PC;
-  PCFOP * op;
-  threadpool * qpool;
-  threadpool * wpool;
-} queue_op_arg;
-
 void * execute_op(void * arg){
   PCFState * st = ((exec_op_arg *)(arg))->st;
   uint32_t PC = ((exec_op_arg *)(arg))->PC;
@@ -346,16 +336,16 @@ void * execute_op(void * arg){
 
 void * execute_queue(void * arg){
   // this is what the ready op manager queue should do
-  PCFState * st = ((queue_op_arg *)(arg))->st;
-  uint32_t PC = ((queue_op_arg *)(arg))->PC;
-  PCFOP * op = ((queue_op_arg *)(arg))->op;
-
-  threadpool * qpool = ((queue_op_arg *)(arg))->qpool;
-  threadpool * wpool = ((queue_op_arg *)(arg))->wpool;
+  queue_op_arg * ar = (queue_op_arg *)arg;
+  PCFState * st = ar->st;
+  uint32_t PC = ar->PC;
+  PCFOP * op = ar->op;
+  threadpool * qpool = ar->qpool;
+  threadpool * wpool = ar->wpool;
 
 
   uint32_t num_exec = op->num_exec;
-  //bool valid = true;
+  //bool valid = true; qq
   
   for(uint32_t j = 0; j < op->succs.size();j++){
     if(st->ops[op->succs[j]].num_exec <= num_exec){
@@ -429,11 +419,11 @@ void evaluate_circuit(struct PCFState *st){
       
        //thpool_add_work(queuepool, execute_op,(void *)&arg);
 
-      if(optype==GATE_OP || optype == COPY_OP || optype == BITS_OP || optype == JOIN_OP){
+      if(optype == COPY_OP || optype == BITS_OP || optype == JOIN_OP){
         thpool_add_work(queuepool, execute_op,(void *)&arg);
       } 
-      else{
-        if( optype == COPY_INDIR_OP || optype == INDIR_COPY_OP){
+      else {
+        if(optype == GATE_OP ||  optype == COPY_INDIR_OP || optype == INDIR_COPY_OP){
           thpool_wait(queuepool);
           thpool_add_work(queuepool, execute_op,(void *)&arg);
         } else{
@@ -443,7 +433,7 @@ void evaluate_circuit(struct PCFState *st){
             thpool_wait(workpool);
           }
           
-
+          
         //     Execute  (&arg);
           execute_op(&arg);
         }
@@ -561,7 +551,9 @@ void * get_external_circuit(struct PCFState * st)
   return st->external_circuit;
 }
 
-void set_callback(struct PCFState * st, void* (*callback)(struct PCFState *,struct PCFGate*))
+//void set_callback(struct PCFState * st, void* (*callback)(struct PCFState *,struct PCFGate*))
+
+void set_callback(struct PCFState * st, void* (*callback)(struct garble_cb_arg *))
 {
   st->callback = callback;
 }

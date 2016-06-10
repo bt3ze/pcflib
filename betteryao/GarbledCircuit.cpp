@@ -8,11 +8,13 @@
 #include <algorithm> 
 //#include "garbling.h"
 
+
+
 /**
    ACCESSORY FUNCTIONS
  */
 
-#define _GC_TIMING 1
+//#define _GC_TIMING 1
 
 void copy_key(void* source_key, void * dest_key){
   //  __m128i *new_key = 0; 
@@ -140,6 +142,38 @@ void * evl_next_gate(PCFState *st, PCFGate *current_gate){
   return cct.evl_Next_Gate(current_gate);
  }
 
+/**
+   These functions serve as intermediaries
+   to get back to the Garbled Circuit object
+   since we go through such crazy calling loops with 
+   the pcf interpreter struct
+ */
+void * gen_next_gate_parallel(garble_cb_arg * cb_arg){
+
+  // returns void pointer, which is pointer to a key?
+  // use this one to call the Garbled Circuit object again
+  PCFState * st  = cb_arg->st;
+  PCFGate * current_gate = cb_arg->gate;  
+
+  //fprintf(stdout,"get next gate\n");
+  GarbledCircuit &cct = *reinterpret_cast<GarbledCircuit*>(get_external_circuit(st));
+
+  return cct.gen_Next_Gate(current_gate);
+ }
+
+void * evl_next_gate_parallel(garble_cb_arg * cb_arg){
+  // returns void pointer, which is pointer to a key
+  // use this one to call the Garbled Circuit object again
+
+  //fprintf(stdout,"evl next gate\n");
+  PCFState * st  = cb_arg->st;
+  PCFGate * current_gate = cb_arg->gate;
+
+  GarbledCircuit &cct = *reinterpret_cast<GarbledCircuit*>(get_external_circuit(st));
+  
+  // now, call the appropriate function from cct
+  return cct.evl_Next_Gate(current_gate);
+ }
 
 
 /**
@@ -165,14 +199,17 @@ GarbledCircuit::GarbledCircuit(): m_gate_index(0), m_bob_out_ix(0),m_alice_out_i
 void GarbledCircuit::set_Gen_Circuit_Functions(){
   set_key_copy_function(m_st, copy_key);
   set_key_delete_function(m_st, delete_key);
-  set_callback(m_st,gen_next_gate);  
+//set_callback(m_st,gen_next_gate);  
+  set_callback(m_st, gen_next_gate_parallel);
 }
 
 
 void GarbledCircuit::set_Evl_Circuit_Functions(){
   set_key_copy_function(m_st, copy_key);
   set_key_delete_function(m_st, delete_key);
-  set_callback(m_st,evl_next_gate);
+//  set_callback(m_st,evl_next_gate);
+  set_callback(m_st, evl_next_gate_parallel);
+
 }
 
 
@@ -224,11 +261,17 @@ void GarbledCircuit::init_Generation_Circuit(const std::vector<Bytes> * gen_keys
   m_queue_index = 0;
 
 
+  // parallel implementation
+  uint32_t i;
+  for(i=0; i < MESSAGE_LIMIT; i++) {
+    m_parallel_buffers[i].resize(256,0);
+  }
+  m_batch_index = 0;
+
+  // timing 
   xor_gates = half_gates = other_gates = total_gates = 0;
   xor_time = hg_time = og_time = garble_time = 0.0;
   
-  
-
 }
 
 void GarbledCircuit::init_Evaluation_Circuit(const std::vector<Bytes> * gen_keys, const std::vector<Bytes> * evl_keys,const uint32_t gen_inp_size, const Bytes & evl_input, const Bytes &zero_key, const Bytes & one_key){
@@ -508,10 +551,6 @@ void GarbledCircuit::generate_Bob_Input(PCFGate* current_gate, __m128i &current_
   
   save_Key_to_128bit(gen_input,current_key);
   
-  // we need to set the garbling buffer to something (or nothing)
-  // because it will be sent by default between gates
-  // m_garbling_bufr = Bytes(0);
-
 }
 
 void GarbledCircuit::evaluate_Bob_Input(PCFGate* current_gate, __m128i &current_key){
@@ -1303,6 +1342,30 @@ void GarbledCircuit::retrieve_buffer(){
   
   // std::cout << "buffer retrieve " << std::endl << m_message_queue.to_hex() << std::endl; 
 
+}
+
+/**
+   some parallel functions
+ */
+
+// the objectives for this function are different from what we are used to
+// now, instead of executing the gate op using the information defined in opdefs
+// we want to execute the Gate op within the garbled circuit
+// and use the reference to the PCF state to handle bookkeeping as necessary
+// but now we frame computation as a set of callbacks to be evaluated by the thread pool
+void * GarbledCircuit::gen_Next_Gate_Parallel(PCFGate *current_gate){
+  
+}
+
+void GarbledCircuit::insert_garbled_ciphertext(const Bytes & src, const uint32_t idx, const uint32_t ctext_per_gate, const uint32_t keysize_bytes){
+  m_message_queue.insert(m_message_queue.begin()+ctext_per_gate*idx*keysize_bytes,src.begin(),src.begin()+ctext_per_gate*keysize_bytes);
+
+}
+
+void GarbledCircuit::send_full_message_queue(){
+  // todo: make sure m_message_limit is set properly. otherwise should be OK
+  // as long as we're still putting all the garbled gates into m_message_queue
+  Env::remote()->write_n_ciphertexts(m_message_queue, m_message_limit);
 }
 
 #endif
